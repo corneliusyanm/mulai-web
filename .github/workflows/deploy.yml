@@ -20,8 +20,7 @@ jobs:
             git pull
             docker build -t mulai_web \
               --build-arg DJANGO_SECRET_KEY="${{ secrets.DJANGO_SECRET_KEY }}" \
-              --build-arg DJANGO_DEBUG=False \
-              --build-arg ALLOWED_HOSTS="${{ secrets.ALLOWED_HOSTS }}" .
+              --build-arg DJANGO_DEBUG=False .
             docker stop mulai_web || true
             docker rm mulai_web || true
             docker run -d \
