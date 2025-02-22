@@ -1,0 +1,36 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_list %}
+
+{% block content %}
+<div id="content-main">
+    <div class="module">
+        <h2>Visit History</h2>
+        <div class="results">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Member</th>
+                        <th>Check In Time</th>
+                        <th>Check Out Time</th>
+                        <th>Duration</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for visit in visits %}
+                    <tr>
+                        <td>{{ visit.member.name }} ({{ visit.member.email }})</td>
+                        <td>{{ visit.check_in_time|date:"d M Y H:i" }}</td>
+                        <td>{{ visit.check_out_time|date:"d M Y H:i" }}</td>
+                        <td>{{ visit.check_in_time|timesince:visit.check_out_time }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4">No visit history found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %} 

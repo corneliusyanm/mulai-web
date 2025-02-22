@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block title %}Quick Check Out - Mulai Gym{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="mb-0">Quick Check Out</h2>
+                </div>
+                <div class="card-body text-center">
+                    <h3 class="mb-4">Goodbye, {{ member.name }}!</h3>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="email" value="{{ member.email }}">
+                        <button type="submit" class="btn btn-primary btn-lg mb-3">Check Out Now</button>
+                    </form>
+                    
+                    <p class="mb-0">
+                        Not {{ member.name }}? 
+                        <a href="{% url 'forget_member' %}">Click here</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

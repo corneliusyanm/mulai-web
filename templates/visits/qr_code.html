@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Check-in QR Code - Mulai Gym{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="mb-0">My Check-in QR Code</h2>
+                </div>
+                <div class="card-body text-center">
+                    <div id="qrcode" class="mb-4"></div>
+                    <p class="mb-4">Scan this QR code at the gym to check in</p>
+                    <a href="{% url 'member_details' %}" class="btn btn-primary">Back to My Account</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Include QR Code library -->
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script>
+    // Generate QR code
+    var qrcode = new QRCode(document.getElementById("qrcode"), {
+        text: "{{ request.scheme }}://{{ request.get_host }}{% url 'check_in' member.check_in_code %}",
+        width: 256,
+        height: 256
+    });
+</script>
+{% endblock %} 

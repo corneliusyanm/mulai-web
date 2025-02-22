@@ -1,0 +1,32 @@
+name: Deploy to Production
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Deploy to Digital Ocean droplet
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.DROPLET_IP }}
+          username: ${{ secrets.DROPLET_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /root/mulai_web
+            git pull
+            docker build -t mulai_web \
+              --build-arg DJANGO_SECRET_KEY="${{ secrets.DJANGO_SECRET_KEY }}" \
+              --build-arg DJANGO_DEBUG=False \
+              --build-arg ALLOWED_HOSTS="${{ secrets.ALLOWED_HOSTS }}" .
+            docker stop mulai_web || true
+            docker rm mulai_web || true
+            docker run -d \
+              --name mulai_web \
+              -p 8000:8000 \
+              -v /root/mulai_web/media:/app/media \
+              -v /root/mulai_web/staticfiles:/app/staticfiles \
+              mulai_web 

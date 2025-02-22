@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% load visit_extras %}
+
+{% block title %}My Account - Mulai Gym{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-12 mb-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1>My Account</h1>
+                <a href="{% url 'member_logout' %}" class="btn btn-outline-danger">Logout</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">Personal Information</h3>
+                </div>
+                <div class="card-body">
+                    <p><strong>Name:</strong> {{ member.name }}</p>
+                    <p><strong>Email:</strong> {{ member.email }}</p>
+                    <p><strong>Phone:</strong> {{ member.phone_number }}</p>
+                    <p><strong>Gender:</strong> {{ member.get_gender_display }}</p>
+                    <p><strong>Age:</strong> {{ member.age }}</p>
+                    <p><strong>Height:</strong> {{ member.height }} cm</p>
+                    <p><strong>Weight:</strong> {{ member.weight }} kg</p>
+                    <p><strong>Years of Working Out:</strong> {{ member.years_of_working_out }}</p>
+                    <p><strong>Goals:</strong> {{ member.goals }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">Recent Visits</h3>
+                </div>
+                <div class="card-body">
+                    {% if recent_visits %}
+                        <ul class="list-group">
+                        {% for visit in recent_visits %}
+                            <li class="list-group-item">
+                                <strong>Check-in:</strong> {{ visit.check_in_time|jakarta_time }}
+                                {% if visit.check_out_time %}
+                                    <br><strong>Check-out:</strong> {{ visit.check_out_time|jakarta_time }}
+                                {% endif %}
+                            </li>
+                        {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p>No recent visits</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">Recent Payments</h3>
+                </div>
+                <div class="card-body">
+                    {% if recent_payments %}
+                        <ul class="list-group">
+                        {% for payment in recent_payments %}
+                            <li class="list-group-item">
+                                <strong>Amount:</strong> ${{ payment.amount }}<br>
+                                <strong>Date:</strong> {{ payment.payment_date|jakarta_time }}<br>
+                                <strong>Valid until:</strong> {{ payment.membership_end_date|jakarta_time }}
+                            </li>
+                        {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p>No recent payments</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

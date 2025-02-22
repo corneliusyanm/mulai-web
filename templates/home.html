@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block title %}Welcome to Mulai Gym{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row align-items-center min-vh-75">
+        <div class="col-md-6">
+            <h1 class="display-4 mb-4">Welcome to Mulai Gym</h1>
+            <p class="lead mb-4">Start your fitness journey with us today. Join our community of dedicated fitness enthusiasts and achieve your health goals.</p>
+            
+            {% if not request.session.member_id %}
+            <div class="d-grid gap-3 d-md-block">
+                <a href="{% url 'signup' %}" class="btn btn-primary btn-lg me-md-2">Sign Up Now</a>
+                <a href="{% url 'member_login' %}" class="btn btn-outline-primary btn-lg">Member Login</a>
+            </div>
+            {% else %}
+            <div class="d-grid gap-3 d-md-block">
+                <a href="{% url 'member_details' %}" class="btn btn-primary btn-lg">Go to My Account</a>
+            </div>
+            {% endif %}
+        </div>
+        <div class="col-md-6 text-center">
+            <img src="https://placehold.co/600x400" alt="Gym" class="img-fluid rounded shadow-lg">
+        </div>
+    </div>
+
+    <div class="row mt-5 py-5">
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <h3 class="card-title">Modern Equipment</h3>
+                    <p class="card-text">State-of-the-art fitness equipment for all your workout needs.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <h3 class="card-title">Expert Trainers</h3>
+                    <p class="card-text">Professional trainers to guide you on your fitness journey.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <h3 class="card-title">Flexible Hours</h3>
+                    <p class="card-text">Open daily with extended hours to fit your schedule.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
