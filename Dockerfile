@@ -3,10 +3,7 @@ FROM python:3.9-slim
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    # Set these as build args in production
-    DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY} \
-    DJANGO_DEBUG=${DJANGO_DEBUG}
+    PYTHONUNBUFFERED=1
 
 # Set work directory
 WORKDIR /app
