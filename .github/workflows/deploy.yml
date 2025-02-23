@@ -1,7 +1,9 @@
 name: Deploy to Production
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
   deploy:
@@ -11,6 +13,9 @@ jobs:
       
       - name: Deploy to Digital Ocean droplet
         uses: appleboy/ssh-action@master
+        env:
+          DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+          DJANGO_DEBUG: ${{ vars.DJANGO_DEBUG }}
         with:
           host: ${{ secrets.DROPLET_IP }}
           username: ${{ secrets.DROPLET_USERNAME }}
@@ -26,8 +31,8 @@ jobs:
             docker run -d \
               --name mulai_web \
               -p 8000:8000 \
-              -e DJANGO_SECRET_KEY='${{ secrets.DJANGO_SECRET_KEY }}' \
-              -e DJANGO_DEBUG="${{ vars.DJANGO_DEBUG }}" \
+              -e "DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}" \
+              -e "DJANGO_DEBUG=${DJANGO_DEBUG}" \
               -v /root/mulai_web/media:/app/media \
               -v /root/mulai_web/staticfiles:/app/staticfiles \
               mulai_web 
