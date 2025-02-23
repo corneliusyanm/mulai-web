@@ -17,6 +17,8 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /root/mulai_web
+            # Configure git to use token
+            git config --global url."https://oauth2:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
             git pull
             docker build -t mulai_web .
             docker stop mulai_web || true
@@ -24,7 +26,7 @@ jobs:
             docker run -d \
               --name mulai_web \
               -p 8000:8000 \
-              -e DJANGO_SECRET_KEY="${{ secrets.DJANGO_SECRET_KEY }}" \
+              -e DJANGO_SECRET_KEY='${{ secrets.DJANGO_SECRET_KEY }}' \
               -e DJANGO_DEBUG="${{ vars.DJANGO_DEBUG }}" \
               -v /root/mulai_web/media:/app/media \
               -v /root/mulai_web/staticfiles:/app/staticfiles \
