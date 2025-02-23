@@ -21,7 +21,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Create media and static directories
-RUN mkdir -p /app/media /app/staticfiles /app/static
+RUN mkdir -p /app/media /app/staticfiles /app/static && \
+    python -m pip install --upgrade pip && \
+    python manage.py collectstatic --noinput
 
 # Expose port
 EXPOSE 8000
