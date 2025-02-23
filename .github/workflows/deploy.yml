@@ -14,14 +14,15 @@ jobs:
       
       - name: Deploy to Digital Ocean droplet
         uses: appleboy/ssh-action@master
+        env:
+          DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+          DJANGO_DEBUG: ${{ vars.DJANGO_DEBUG }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         with:
           host: ${{ secrets.DROPLET_IP }}
           username: ${{ secrets.DROPLET_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: |
-            DJANGO_SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}
-            DJANGO_DEBUG=${{ vars.DJANGO_DEBUG }}
-            GH_TOKEN=${{ secrets.GH_TOKEN }}
+          envs: DJANGO_SECRET_KEY,DJANGO_DEBUG,GH_TOKEN
           script: |
             cd /root/mulai_web
             
