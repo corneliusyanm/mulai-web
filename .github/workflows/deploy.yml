@@ -46,6 +46,7 @@ jobs:
               -e "DJANGO_DEBUG=$DJANGO_DEBUG" \
               -v /root/mulai_web/media:/app/media \
               -v /root/mulai_web/staticfiles:/app/staticfiles \
+              -v /root/mulai_web/data:/app/data \
               mulai_web
 
             # Wait for container to be ready

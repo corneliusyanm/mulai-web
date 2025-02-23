@@ -18,11 +18,6 @@ import sys
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Debug environment variables (only print to console, not to response)
-print("Environment variables:", file=sys.stderr)
-print(f"DJANGO_SECRET_KEY set: {'DJANGO_SECRET_KEY' in os.environ}", file=sys.stderr)
-print(f"DJANGO_DEBUG value: {os.environ.get('DJANGO_DEBUG')}", file=sys.stderr)
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
@@ -92,7 +87,7 @@ WSGI_APPLICATION = 'mulai_web.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': BASE_DIR / 'data' / 'db.sqlite3',
     }
 }
 
