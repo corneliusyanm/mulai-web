@@ -8,6 +8,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - uses: actions/checkout@v2
       
@@ -17,7 +18,9 @@ jobs:
           host: ${{ secrets.DROPLET_IP }}
           username: ${{ secrets.DROPLET_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: DJANGO_SECRET_KEY,DJANGO_DEBUG
+          envs: |
+            DJANGO_SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}
+            DJANGO_DEBUG=${{ vars.DJANGO_DEBUG }}
           script: |
             cd /root/mulai_web
             
@@ -31,12 +34,12 @@ jobs:
             docker stop mulai_web || true
             docker rm mulai_web || true
             
-            # Pass the variables directly from secrets/vars
+            # Pass the variables directly
             docker run -d \
               --name mulai_web \
               -p 8000:8000 \
-              -e DJANGO_SECRET_KEY='${{ secrets.DJANGO_SECRET_KEY }}' \
-              -e DJANGO_DEBUG='${{ vars.DJANGO_DEBUG }}' \
+              -e "DJANGO_SECRET_KEY=$DJANGO_SECRET_KEY" \
+              -e "DJANGO_DEBUG=$DJANGO_DEBUG" \
               -v /root/mulai_web/media:/app/media \
               -v /root/mulai_web/staticfiles:/app/staticfiles \
               mulai_web
