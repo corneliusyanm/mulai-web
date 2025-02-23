@@ -13,18 +13,17 @@ jobs:
       
       - name: Deploy to Digital Ocean droplet
         uses: appleboy/ssh-action@master
-        env:
-          DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
-          DJANGO_DEBUG: ${{ vars.DJANGO_DEBUG }}
         with:
           host: ${{ secrets.DROPLET_IP }}
           username: ${{ secrets.DROPLET_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: DJANGO_SECRET_KEY,DJANGO_DEBUG
           script: |
             cd /root/mulai_web
-            # Debug: Print length of secret key (don't print the actual key)
-            echo "Secret key length: ${#DJANGO_SECRET_KEY}"
-            echo "Debug value: ${DJANGO_DEBUG}"
+            
+            # Debug: Print environment variables (safely)
+            echo "Debug value: $DJANGO_DEBUG"
+            echo "Secret key exists: $([[ ! -z "$DJANGO_SECRET_KEY" ]] && echo 'yes' || echo 'no')"
             
             git config --global url."https://oauth2:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
             git pull
@@ -32,15 +31,16 @@ jobs:
             docker stop mulai_web || true
             docker rm mulai_web || true
             
-            # Run with explicit environment variable setting
+            # Pass the variables directly from secrets/vars
             docker run -d \
               --name mulai_web \
               -p 8000:8000 \
-              -e DJANGO_SECRET_KEY="${DJANGO_SECRET_KEY}" \
-              -e DJANGO_DEBUG="${DJANGO_DEBUG}" \
+              -e DJANGO_SECRET_KEY='${{ secrets.DJANGO_SECRET_KEY }}' \
+              -e DJANGO_DEBUG='${{ vars.DJANGO_DEBUG }}' \
               -v /root/mulai_web/media:/app/media \
               -v /root/mulai_web/staticfiles:/app/staticfiles \
               mulai_web
 
-            # Debug: Check environment variables in container
+            # Verify environment variables
+            echo "Container environment variables:"
             docker exec mulai_web env | grep DJANGO 
