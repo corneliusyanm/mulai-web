@@ -21,6 +21,7 @@ jobs:
           envs: |
             DJANGO_SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}
             DJANGO_DEBUG=${{ vars.DJANGO_DEBUG }}
+            GH_TOKEN=${{ secrets.GH_TOKEN }}
           script: |
             cd /root/mulai_web
             
@@ -28,8 +29,10 @@ jobs:
             echo "Debug value: $DJANGO_DEBUG"
             echo "Secret key exists: $([[ ! -z "$DJANGO_SECRET_KEY" ]] && echo 'yes' || echo 'no')"
             
-            git config --global url."https://oauth2:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+            # Update git remote with new token
+            git remote set-url origin "https://oauth2:${GH_TOKEN}@github.com/corneliusyanm/mulai-web.git"
             git pull
+            
             docker build -t mulai_web .
             docker stop mulai_web || true
             docker rm mulai_web || true
@@ -46,4 +49,4 @@ jobs:
 
             # Verify environment variables
             echo "Container environment variables:"
-            docker exec mulai_web env | grep DJANGO 
+            docker exec mulai_web env | grep DJANGO
