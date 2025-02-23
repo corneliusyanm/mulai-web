@@ -31,6 +31,10 @@ if not SECRET_KEY:
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False').lower() == 'true'
 
 ALLOWED_HOSTS = ['.mulaigym.id', 'localhost', '127.0.0.1', '178.128.116.170']
+# Add these for HTTPS
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
 
 # Application definition
 
@@ -84,10 +88,14 @@ WSGI_APPLICATION = 'mulai_web.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+# Create data directory if it doesn't exist
+data_dir = BASE_DIR / 'data'
+data_dir.mkdir(exist_ok=True)
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'data' / 'db.sqlite3',
+        'NAME': data_dir / 'db.sqlite3',
     }
 }
 
