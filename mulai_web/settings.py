@@ -30,7 +30,7 @@ if not SECRET_KEY:
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = ['.mulai.id', 'localhost', '127.0.0.1', '178.128.116.170']
+ALLOWED_HOSTS = ['.mulaigym.id', 'localhost', '127.0.0.1', '178.128.116.170']
 
 # Application definition
 
