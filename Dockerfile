@@ -21,12 +21,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Create media and static directories
-RUN mkdir -p /app/media /app/staticfiles /app/static && \
-    python -m pip install --upgrade pip && \
-    python manage.py collectstatic --noinput
+RUN mkdir -p /app/media /app/staticfiles /app/static
 
 # Expose port
 EXPOSE 8000
 
-# Run gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "mulai_web.wsgi:application"] 
+# Create entrypoint script
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Use entrypoint script
+ENTRYPOINT ["/entrypoint.sh"] 
