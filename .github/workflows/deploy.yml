@@ -48,6 +48,9 @@ jobs:
               -v /root/mulai_web/staticfiles:/app/staticfiles \
               mulai_web
 
+            # Run collectstatic after container is running
+            docker exec mulai_web python manage.py collectstatic --noinput
+
             # Verify environment variables
             echo "Container environment variables:"
             docker exec mulai_web env | grep DJANGO
