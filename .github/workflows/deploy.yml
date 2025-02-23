@@ -22,17 +22,25 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /root/mulai_web
-            # Configure git to use token
+            # Debug: Print length of secret key (don't print the actual key)
+            echo "Secret key length: ${#DJANGO_SECRET_KEY}"
+            echo "Debug value: ${DJANGO_DEBUG}"
+            
             git config --global url."https://oauth2:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
             git pull
             docker build -t mulai_web .
             docker stop mulai_web || true
             docker rm mulai_web || true
+            
+            # Run with explicit environment variable setting
             docker run -d \
               --name mulai_web \
               -p 8000:8000 \
-              -e "DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}" \
-              -e "DJANGO_DEBUG=${DJANGO_DEBUG}" \
+              -e DJANGO_SECRET_KEY="${DJANGO_SECRET_KEY}" \
+              -e DJANGO_DEBUG="${DJANGO_DEBUG}" \
               -v /root/mulai_web/media:/app/media \
               -v /root/mulai_web/staticfiles:/app/staticfiles \
-              mulai_web 
+              mulai_web
+
+            # Debug: Check environment variables in container
+            docker exec mulai_web env | grep DJANGO 
