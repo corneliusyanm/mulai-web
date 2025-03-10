@@ -1,7 +1,8 @@
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, date
+from dateutil.relativedelta import relativedelta
 from accounts.models import Member
 
 class Payment(models.Model):
@@ -29,16 +30,14 @@ class Payment(models.Model):
     )
     
     def save(self, *args, **kwargs):
-        # Determine the actual duration days
-        actual_duration = self.duration_days if self.duration_choice == 0 else self.duration_choice
-        
         # Calculate membership end date based on duration
         if not self.pk or not self.membership_end_date:
+            # Determine start date
             # If member has existing active membership, extend from that date
             try:
                 last_payment = Payment.objects.filter(
                     member=self.member,
-                    membership_end_date__gt=timezone.now()
+                    membership_end_date__gte=timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
                 ).latest('membership_end_date')
                 start_date = last_payment.membership_end_date.date()
             except Payment.DoesNotExist:
@@ -47,11 +46,36 @@ class Payment(models.Model):
                     start_date = self.payment_date.date()
                 else:
                     start_date = timezone.now().date()
-
-            # Set only the date part without time
-            end_date = start_date + timedelta(days=actual_duration)
+            
+            # Calculate end date based on duration choice
+            if self.duration_choice == 1:  # 1 Day
+                # End of current day (23:59:59)
+                end_date = start_date
+                end_time = datetime.max.time()  # 23:59:59.999999
+            elif self.duration_choice == 30:  # 1 Month
+                # Same day next month (or last day if that day doesn't exist)
+                end_date = start_date + relativedelta(months=1) - timedelta(days=1)
+                end_time = datetime.max.time()
+            elif self.duration_choice == 90:  # 3 Months
+                end_date = start_date + relativedelta(months=3) - timedelta(days=1)
+                end_time = datetime.max.time()
+            elif self.duration_choice == 180:  # 6 Months
+                end_date = start_date + relativedelta(months=6) - timedelta(days=1)
+                end_time = datetime.max.time()
+            elif self.duration_choice == 365:  # 12 Months
+                end_date = start_date + relativedelta(months=12) - timedelta(days=1)
+                end_time = datetime.max.time()
+            elif self.duration_choice == 0 and self.duration_days:  # Custom
+                end_date = start_date + timedelta(days=self.duration_days - 1)  # Inclusive of end date
+                end_time = datetime.max.time()
+            else:
+                # Default fallback
+                end_date = start_date
+                end_time = datetime.max.time()
+            
+            # Set the membership end date with the end of the day time
             self.membership_end_date = timezone.make_aware(
-                datetime.combine(end_date, datetime.min.time())
+                datetime.combine(end_date, end_time)
             )
 
         # Update member's active_until field

@@ -29,6 +29,7 @@ if not admin_site._registry.get(Member):
         formatted_active_until.short_description = 'Active Until'
         
         def membership_status(self, obj):
+            # Consider active if end date is today or in the future
             if obj.is_active_member:
                 return 'Active'
             return 'Expired'

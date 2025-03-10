@@ -28,7 +28,11 @@ class User(AbstractUser):
         
     @property
     def is_active_member(self):
-        return self.active_until and self.active_until > timezone.now()
+        if not self.active_until:
+            return False
+        # Consider active if end date is today or in the future
+        today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        return self.active_until >= today_start
 
 class Member(models.Model):
     GENDER_CHOICES = (
@@ -54,7 +58,11 @@ class Member(models.Model):
         
     @property
     def is_active_member(self):
-        return self.active_until and self.active_until > timezone.now()
+        if not self.active_until:
+            return False
+        # Consider active if end date is today or in the future
+        today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        return self.active_until >= today_start
 
     class Meta:
         ordering = ['-created_at']

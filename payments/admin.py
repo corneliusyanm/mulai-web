@@ -58,7 +58,9 @@ class PaymentAdmin(admin.ModelAdmin):
     formatted_membership_end.short_description = 'Membership End Date'
 
     def membership_status(self, obj):
-        if obj.membership_end_date > timezone.now():
+        # Consider active if end date is today or in the future
+        today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        if obj.membership_end_date >= today_start:
             return 'Active'
         return 'Expired'
     membership_status.short_description = 'Status'
