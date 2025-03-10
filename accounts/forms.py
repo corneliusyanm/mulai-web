@@ -12,11 +12,11 @@ class MemberSignUpForm(forms.ModelForm):
         widgets = {
             'goals': forms.Textarea(attrs={'rows': 2}),
             'know_mulai_gym_from': forms.Textarea(attrs={'rows': 2}),
-            'height': forms.NumberInput(attrs={'step': '0.01', 'placeholder': 'Height in meters'}),
+            'height': forms.NumberInput(attrs={'step': '0.1', 'placeholder': 'Height in cm'}),
             'weight': forms.NumberInput(attrs={'step': '0.1', 'placeholder': 'Weight in kg'}),
         }
         labels = { 
-            'height': 'Height (m)',
+            'height': 'Height (cm)',
             'weight': 'Weight (kg)',
             'years_of_working_out': 'Years of Working Out',
             'goals': 'Goals of Working Out',
