@@ -32,6 +32,28 @@
                     <p><strong>Goals:</strong> {{ member.goals }}</p>
                 </div>
             </div>
+            
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="card-title mb-0">Membership Status</h3>
+                </div>
+                <div class="card-body">
+                    <p><strong>Status:</strong> 
+                        {% if member.is_active_member %}
+                            <span class="badge bg-success">Active</span>
+                        {% else %}
+                            <span class="badge bg-danger">Expired</span>
+                        {% endif %}
+                    </p>
+                    <p><strong>Active Until:</strong> 
+                        {% if member.active_until %}
+                            {{ member.active_until|date:"d M Y" }}
+                        {% else %}
+                            Not active
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
         </div>
 
         <div class="col-md-6">
@@ -66,9 +88,15 @@
                         <ul class="list-group">
                         {% for payment in recent_payments %}
                             <li class="list-group-item">
-                                <strong>Amount:</strong> ${{ payment.amount }}<br>
-                                <strong>Date:</strong> {{ payment.payment_date|jakarta_time }}<br>
-                                <strong>Valid until:</strong> {{ payment.membership_end_date|jakarta_time }}
+                                <strong>Amount:</strong> Rp {{ payment.amount|floatformat:0 }}<br>
+                                <strong>Date:</strong> {{ payment.payment_date|date:"d M Y" }}<br>
+                                <strong>Duration:</strong> 
+                                {% if payment.duration_choice == 0 %}
+                                    {{ payment.duration_days }} days (Custom)
+                                {% else %}
+                                    {{ payment.get_duration_choice_display }}
+                                {% endif %}<br>
+                                <strong>Valid until:</strong> {{ payment.membership_end_date|date:"d M Y" }}
                             </li>
                         {% endfor %}
                         </ul>

@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
+from django.utils import timezone
 from .models import User, Member
 
 class CustomUserAdmin(UserAdmin):
@@ -14,7 +15,7 @@ class CustomUserAdmin(UserAdmin):
 
 @admin.register(Member)
 class MemberAdmin(admin.ModelAdmin):
-    list_display = ('name', 'email', 'phone_number', 'created_at')
+    list_display = ('name', 'email', 'phone_number', 'formatted_active_until', 'membership_status', 'created_at')
     list_filter = ('gender', 'created_at')
     search_fields = ('name', 'email', 'phone_number')
     readonly_fields = ('created_at',)
@@ -25,9 +26,24 @@ class MemberAdmin(admin.ModelAdmin):
         ('Physical Information', {
             'fields': ('age', 'height', 'weight', 'years_of_working_out')
         }),
+        ('Membership Information', {
+            'fields': ('active_until',)
+        }),
         ('Additional Information', {
             'fields': ('goals', 'know_mulai_gym_from')
         }),
     )
+    
+    def formatted_active_until(self, obj):
+        if obj.active_until:
+            return timezone.localtime(obj.active_until).strftime("%d %b %Y")
+        return "-"
+    formatted_active_until.short_description = 'Active Until'
+    
+    def membership_status(self, obj):
+        if obj.is_active_member:
+            return 'Active'
+        return 'Expired'
+    membership_status.short_description = 'Status'
 
 admin.site.register(User, CustomUserAdmin)
