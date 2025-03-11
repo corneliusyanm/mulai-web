@@ -14,15 +14,17 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-from django.contrib import admin
-from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from visits.admin import admin_site  # Import the custom admin site
+from django.contrib import admin
+from django.urls import include, path
+
 import visits.admin_init  # Add this import
+from visits.admin import admin_site  # Import the custom admin site
 
 urlpatterns = [
-    path('admin/', admin_site.urls),  # Use custom admin site instead of default
+    # Use custom admin site instead of default
+    path('admin/', admin_site.urls),
     path('', include('accounts.urls')),
     path('', include('visits.urls')),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

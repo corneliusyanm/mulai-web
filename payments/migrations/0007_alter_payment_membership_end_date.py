@@ -6,8 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('payments', '0006_payment_duration_choice_alter_payment_duration_days'),
-    ]
+        ('payments', '0006_payment_duration_choice_alter_payment_duration_days'), ]
 
     operations = [
         migrations.AlterField(

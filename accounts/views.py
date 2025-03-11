@@ -1,16 +1,19 @@
-from django.shortcuts import render, redirect
-from django.views.generic.edit import CreateView
-from django.urls import reverse_lazy
 from django.contrib import messages
-from django.views.generic import DetailView
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.core.exceptions import PermissionDenied
-from .models import Member
-from .forms import MemberSignUpForm, MemberLoginForm
+from django.shortcuts import redirect, render
+from django.urls import reverse_lazy
+from django.views.generic import DetailView
+from django.views.generic.edit import CreateView
+
 from payments.models import Payment
 from visits.models import Visit
 
+from .forms import MemberLoginForm, MemberSignUpForm
+from .models import Member
+
 # Create your views here.
+
 
 class MemberSignUpView(CreateView):
     model = Member
@@ -24,8 +27,10 @@ class MemberSignUpView(CreateView):
         self.request.session['member_id'] = member.id
         return super().form_valid(form)
 
+
 def signup_success(request):
     return render(request, 'accounts/signup_success.html')
+
 
 def member_login(request):
     if request.method == 'POST':
@@ -42,9 +47,11 @@ def member_login(request):
         form = MemberLoginForm()
     return render(request, 'accounts/login.html', {'form': form})
 
+
 def member_logout(request):
     request.session.pop('member_id', None)
     return redirect('member_login')
+
 
 class MemberRequiredMixin:
     def dispatch(self, request, *args, **kwargs):
@@ -52,6 +59,7 @@ class MemberRequiredMixin:
         if not member_id:
             return redirect('member_login')
         return super().dispatch(request, *args, **kwargs)
+
 
 class MemberDetailView(MemberRequiredMixin, DetailView):
     model = Member
@@ -64,9 +72,12 @@ class MemberDetailView(MemberRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         member = self.get_object()
-        context['recent_visits'] = Visit.objects.filter(member=member).order_by('-check_in_time')[:5]
-        context['recent_payments'] = Payment.objects.filter(member=member).order_by('-payment_date')[:5]
+        context['recent_visits'] = Visit.objects.filter(
+            member=member).order_by('-check_in_time')[:5]
+        context['recent_payments'] = Payment.objects.filter(
+            member=member).order_by('-payment_date')[:5]
         return context
+
 
 def home(request):
     return render(request, 'home.html')

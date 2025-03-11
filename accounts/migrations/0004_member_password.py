@@ -6,8 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0003_remove_member_active_until_remove_member_is_active'),
-    ]
+        ('accounts', '0003_remove_member_active_until_remove_member_is_active'), ]
 
     operations = [
         migrations.AddField(

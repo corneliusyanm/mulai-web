@@ -1,5 +1,7 @@
-from django.db import migrations
 from datetime import timedelta
+
+from django.db import migrations
+
 
 def calculate_duration_days(apps, schema_editor):
     Payment = apps.get_model('payments', 'Payment')
@@ -9,12 +11,15 @@ def calculate_duration_days(apps, schema_editor):
         payment.duration_days = delta.days
         payment.save()
 
+
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('payments', '0004_remove_payment_duration_months_payment_duration_days_and_more'),  # Your existing 0004 migration
+        ('payments',
+         '0004_remove_payment_duration_months_payment_duration_days_and_more'),
+        # Your existing 0004 migration
     ]
 
     operations = [
         migrations.RunPython(calculate_duration_days),
-    ] 
+    ]

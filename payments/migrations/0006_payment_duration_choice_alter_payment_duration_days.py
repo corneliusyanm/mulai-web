@@ -13,11 +13,28 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='payment',
             name='duration_choice',
-            field=models.IntegerField(choices=[(1, '1 Day'), (30, '1 Month'), (90, '3 Months'), (180, '6 Months'), (365, '12 Months'), (0, 'Custom')], default=30),
+            field=models.IntegerField(
+                choices=[
+                    (1,
+                     '1 Day'),
+                    (30,
+                     '1 Month'),
+                    (90,
+                     '3 Months'),
+                    (180,
+                     '6 Months'),
+                    (365,
+                     '12 Months'),
+                    (0,
+                     'Custom')],
+                default=30),
         ),
         migrations.AlterField(
             model_name='payment',
             name='duration_days',
-            field=models.IntegerField(blank=True, help_text='Custom duration in days', null=True),
+            field=models.IntegerField(
+                blank=True,
+                help_text='Custom duration in days',
+                null=True),
         ),
     ]

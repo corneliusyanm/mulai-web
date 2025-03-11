@@ -1,5 +1,6 @@
 import qrcode
 
+
 def generate_qr(url, filename):
     qr = qrcode.QRCode(
         version=1,
@@ -12,6 +13,7 @@ def generate_qr(url, filename):
 
     img = qr.make_image(fill_color="black", back_color="white")
     img.save(filename)
+
 
 # Generate Check-in QR
 generate_qr('http://localhost:8000/check-in/', 'check_in_qr.png')

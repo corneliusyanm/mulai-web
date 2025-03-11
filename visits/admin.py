@@ -1,10 +1,11 @@
-from django.contrib import admin
-from django.utils import timezone
-from django.urls import path, reverse
-from django.shortcuts import render, redirect
+from django.contrib import admin, messages
 from django.contrib.admin import DateFieldListFilter
-from django.contrib import messages
+from django.shortcuts import redirect, render
+from django.urls import path, reverse
+from django.utils import timezone
+
 from .models import Visit
+
 
 class CustomAdminSite(admin.AdminSite):
     def get_app_list(self, request, app_label=None):
@@ -13,10 +14,11 @@ class CustomAdminSite(admin.AdminSite):
         registered in this site.
         """
         app_list = super().get_app_list(request)
-        
+
         # Add Quick Access section only on the main admin page
         if app_label is None:
-            visit_app = next((app for app in app_list if app['app_label'] == 'visits'), None)
+            visit_app = next(
+                (app for app in app_list if app['app_label'] == 'visits'), None)
             if visit_app:
                 visit_app['models'].extend([
                     {
@@ -34,15 +36,21 @@ class CustomAdminSite(admin.AdminSite):
                         'perms': {'view': True}
                     }
                 ])
-        
+
         return app_list
+
 
 # Create an instance of the custom admin site
 admin_site = CustomAdminSite(name='custom_admin')
 
+
 @admin.register(Visit)
 class VisitAdmin(admin.ModelAdmin):
-    list_display = ('member', 'formatted_check_in', 'formatted_check_out', 'visit_status')
+    list_display = (
+        'member',
+        'formatted_check_in',
+        'formatted_check_out',
+        'visit_status')
     list_filter = (
         ('check_in_time', DateFieldListFilter),
         ('check_out_time', DateFieldListFilter),
@@ -53,9 +61,18 @@ class VisitAdmin(admin.ModelAdmin):
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
-            path('current/', self.current_visits_view, name='current-visits'),
-            path('history/', self.visit_history_view, name='visit-history'),
-            path('checkout/<int:visit_id>/', self.checkout_visit, name='checkout-visit'),
+            path(
+                'current/',
+                self.current_visits_view,
+                name='current-visits'),
+            path(
+                'history/',
+                self.visit_history_view,
+                name='visit-history'),
+            path(
+                'checkout/<int:visit_id>/',
+                self.checkout_visit,
+                name='checkout-visit'),
         ]
         return custom_urls + urls
 
@@ -69,7 +86,8 @@ class VisitAdmin(admin.ModelAdmin):
 
     def formatted_check_out(self, obj):
         if obj.check_out_time:
-            return timezone.localtime(obj.check_out_time).strftime("%d %b %Y %H:%M")
+            return timezone.localtime(
+                obj.check_out_time).strftime("%d %b %Y %H:%M")
         return '-'
     formatted_check_out.short_description = 'Check Out Time'
 
@@ -85,7 +103,8 @@ class VisitAdmin(admin.ModelAdmin):
             if not visit.check_out_time:
                 visit.check_out_time = timezone.now()
                 visit.save()
-                messages.success(request, f'Successfully checked out {visit.member.name}')
+                messages.success(
+                    request, f'Successfully checked out {visit.member.name}')
             else:
                 messages.warning(request, 'Visit already checked out')
         except Visit.DoesNotExist:
@@ -105,7 +124,10 @@ class VisitAdmin(admin.ModelAdmin):
             'current_view': 'current',
             'has_change_permission': self.has_change_permission(request),
         }
-        return render(request, 'admin/visits/visit/current_visits.html', context)
+        return render(
+            request,
+            'admin/visits/visit/current_visits.html',
+            context)
 
     def visit_history_view(self, request):
         # Get completed visits (has check-out time)
@@ -120,7 +142,11 @@ class VisitAdmin(admin.ModelAdmin):
             'opts': self.model._meta,
             'current_view': 'history',
         }
-        return render(request, 'admin/visits/visit/visit_history.html', context)
+        return render(
+            request,
+            'admin/visits/visit/visit_history.html',
+            context)
+
 
 # Register the model with the custom admin site
 admin_site.register(Visit, VisitAdmin)
