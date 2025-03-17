@@ -18,7 +18,10 @@
         <div class="col-md-6">
             <div class="card mb-4">
                 <div class="card-header">
-                    <h3 class="card-title mb-0">Personal Information</h3>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3 class="card-title mb-0">Personal Information</h3>
+                        <a href="{% url 'member_edit' %}" class="btn btn-sm btn-primary">Edit</a>
+                    </div>
                 </div>
                 <div class="card-body">
                     <p><strong>Name:</strong> {{ member.name }}</p>

@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% load form_extras %}
+
+{% block title %}Edit Profile - Mulai Gym{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-12 mb-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1>Edit Profile</h1>
+                <a href="{% url 'member_details' %}" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title mb-0">Personal Information</h3>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        <div class="alert alert-success">
+                            {% for message in messages %}
+                                {{ message }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.name.id_for_label }}" class="form-label">Name</label>
+                            {{ form.name|add_class:"form-control" }}
+                            {% if form.name.errors %}
+                                <div class="text-danger">{{ form.name.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.phone_number.id_for_label }}" class="form-label">Phone Number</label>
+                            {{ form.phone_number|add_class:"form-control" }}
+                            {% if form.phone_number.errors %}
+                                <div class="text-danger">{{ form.phone_number.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.gender.id_for_label }}" class="form-label">Gender</label>
+                            {{ form.gender|add_class:"form-select" }}
+                            {% if form.gender.errors %}
+                                <div class="text-danger">{{ form.gender.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.age.id_for_label }}" class="form-label">Age</label>
+                            {{ form.age|add_class:"form-control" }}
+                            {% if form.age.errors %}
+                                <div class="text-danger">{{ form.age.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.height.id_for_label }}" class="form-label">Height (cm)</label>
+                            {{ form.height|add_class:"form-control" }}
+                            {% if form.height.errors %}
+                                <div class="text-danger">{{ form.height.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.weight.id_for_label }}" class="form-label">Weight (kg)</label>
+                            {{ form.weight|add_class:"form-control" }}
+                            {% if form.weight.errors %}
+                                <div class="text-danger">{{ form.weight.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.years_of_working_out.id_for_label }}" class="form-label">Years of Working Out</label>
+                            {{ form.years_of_working_out|add_class:"form-control" }}
+                            {% if form.years_of_working_out.errors %}
+                                <div class="text-danger">{{ form.years_of_working_out.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.goals.id_for_label }}" class="form-label">Goals</label>
+                            {{ form.goals|add_class:"form-control" }}
+                            {% if form.goals.errors %}
+                                <div class="text-danger">{{ form.goals.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

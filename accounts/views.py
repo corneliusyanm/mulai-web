@@ -4,12 +4,12 @@ from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 from django.views.generic import DetailView
-from django.views.generic.edit import CreateView
+from django.views.generic.edit import CreateView, UpdateView
 
 from payments.models import Payment
 from visits.models import Visit
 
-from .forms import MemberLoginForm, MemberSignUpForm
+from .forms import MemberEditForm, MemberLoginForm, MemberSignUpForm
 from .models import Member
 
 # Create your views here.
@@ -18,66 +18,84 @@ from .models import Member
 class MemberSignUpView(CreateView):
     model = Member
     form_class = MemberSignUpForm
-    template_name = 'accounts/signup.html'
-    success_url = reverse_lazy('signup_success')
+    template_name = "accounts/signup.html"
+    success_url = reverse_lazy("signup_success")
 
     def form_valid(self, form):
         member = form.save()
         # Log the member in after signup
-        self.request.session['member_id'] = member.id
+        self.request.session["member_id"] = member.id
         return super().form_valid(form)
 
 
 def signup_success(request):
-    return render(request, 'accounts/signup_success.html')
+    return render(request, "accounts/signup_success.html")
 
 
 def member_login(request):
-    if request.method == 'POST':
+    if request.method == "POST":
         form = MemberLoginForm(request.POST)
         if form.is_valid():
-            email = form.cleaned_data['email']
+            email = form.cleaned_data["email"]
             try:
                 member = Member.objects.get(email=email)
-                request.session['member_id'] = member.id
-                return redirect('member_details')
+                request.session["member_id"] = member.id
+                return redirect("member_details")
             except Member.DoesNotExist:
-                messages.error(request, 'Member not found')
+                messages.error(request, "Member not found")
     else:
         form = MemberLoginForm()
-    return render(request, 'accounts/login.html', {'form': form})
+    return render(request, "accounts/login.html", {"form": form})
 
 
 def member_logout(request):
-    request.session.pop('member_id', None)
-    return redirect('member_login')
+    request.session.pop("member_id", None)
+    return redirect("member_login")
 
 
 class MemberRequiredMixin:
     def dispatch(self, request, *args, **kwargs):
-        member_id = request.session.get('member_id')
+        member_id = request.session.get("member_id")
         if not member_id:
-            return redirect('member_login')
+            return redirect("member_login")
         return super().dispatch(request, *args, **kwargs)
 
 
 class MemberDetailView(MemberRequiredMixin, DetailView):
     model = Member
-    template_name = 'accounts/member_details.html'
-    context_object_name = 'member'
+    template_name = "accounts/member_details.html"
+    context_object_name = "member"
 
     def get_object(self):
-        return Member.objects.get(id=self.request.session['member_id'])
+        return Member.objects.get(id=self.request.session["member_id"])
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         member = self.get_object()
-        context['recent_visits'] = Visit.objects.filter(
-            member=member).order_by('-check_in_time')[:5]
-        context['recent_payments'] = Payment.objects.filter(
-            member=member).order_by('-payment_date')[:5]
+        context["recent_visits"] = Visit.objects.filter(member=member).order_by(
+            "-check_in_time"
+        )[:5]
+        context["recent_payments"] = Payment.objects.filter(member=member).order_by(
+            "-payment_date"
+        )[:5]
         return context
 
 
+class MemberEditView(MemberRequiredMixin, UpdateView):
+    model = Member
+    form_class = MemberEditForm
+    template_name = "accounts/member_edit.html"
+    success_url = reverse_lazy("member_details")
+
+    def get_object(self):
+        return Member.objects.get(id=self.request.session["member_id"])
+
+    def form_valid(self, form):
+        messages.success(
+            self.request, "Your information has been updated successfully."
+        )
+        return super().form_valid(form)
+
+
 def home(request):
-    return render(request, 'home.html')
+    return render(request, "home.html")
