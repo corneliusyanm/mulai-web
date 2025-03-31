@@ -24,7 +24,11 @@ def check_in_page(request):
 
             # Store email in session for future quick check-ins
             request.session["member_email"] = email
-            return redirect("check_in_success")
+            return render(
+                request,
+                "visits/quick_check_in.html",
+                {"member": member, "success": True},
+            )
         except Member.DoesNotExist:
             messages.error(request, "Member not found. Please check your email.")
             return redirect("check_in_page")
@@ -44,10 +48,6 @@ def check_in_page(request):
             request.session.pop("member_email", None)
 
     return render(request, "visits/check_in.html")
-
-
-def check_in_success(request):
-    return render(request, "visits/check_in_success.html")
 
 
 def check_out_page(request):
@@ -71,7 +71,11 @@ def check_out_page(request):
                 messages.success(
                     request, f"Goodbye, {member.name}! Check-out successful."
                 )
-                return redirect("check_out_success")
+                return render(
+                    request,
+                    "visits/quick_check_out.html",
+                    {"member": member, "success": True},
+                )
             except Visit.DoesNotExist:
                 return render(
                     request, "visits/check_out_failed.html", {"member": member}
@@ -96,10 +100,6 @@ def check_out_page(request):
         return render(request, "visits/check_out_failed.html", {"member": None})
 
     return render(request, "visits/check_out.html")
-
-
-def check_out_success(request):
-    return render(request, "visits/check_out_success.html")
 
 
 def forget_member(request):

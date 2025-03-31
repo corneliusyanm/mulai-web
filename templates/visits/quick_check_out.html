@@ -13,11 +13,18 @@
                 <div class="card-body text-center">
                     <h3 class="mb-4">Goodbye, {{ member.name }}!</h3>
                     
-                    <form method="post">
-                        {% csrf_token %}
-                        <input type="hidden" name="email" value="{{ member.email }}">
-                        <button type="submit" class="btn btn-primary btn-lg mb-3">Check Out Now</button>
-                    </form>
+                    {% if success %}
+                        <div class="alert alert-success mb-4">
+                            <h4 class="alert-heading">Check Out Successful!</h4>
+                            <p>See you next time!</p>
+                        </div>
+                    {% else %}
+                        <form method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="email" value="{{ member.email }}">
+                            <button type="submit" class="btn btn-primary btn-lg mb-3">Check Out Now</button>
+                        </form>
+                    {% endif %}
                     
                     <p class="mb-0">
                         Not {{ member.name }}? 
