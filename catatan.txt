@@ -71,3 +71,9 @@ sudo nginx -t && sudo systemctl reload nginx
 
 sudo crontab -e
 0 3 * * * certbot renew --quiet --post-hook "docker restart mulai_web"
+
+# Create superuser
+docker exec -e DJANGO_SUPERUSER_USERNAME=admin \
+           -e DJANGO_SUPERUSER_EMAIL=admin@example.com \
+           -e DJANGO_SUPERUSER_PASSWORD=your_secure_password \
+           mulai_web python manage.py createsuperuser --noinput
