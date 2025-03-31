@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+
+{% block title %}Check In Failed - Mulai Gym{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h2 class="mb-0">Check In Failed</h2>
+                </div>
+                <div class="card-body text-center">
+                    <div class="alert alert-danger mb-4">
+                        <h4 class="alert-heading">Membership Expired</h4>
+                        <p>Your membership has expired. Please renew your membership to continue using the gym.</p>
+                        <hr>
+                        <p class="mb-0">
+                            <strong>Active Until:</strong> {{ member.active_until|date:"d M Y" }}
+                        </p>
+                    </div>
+                    <p>Please contact the gym staff to renew your membership.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
