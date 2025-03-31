@@ -39,7 +39,7 @@ def member_login(request):
             email = form.cleaned_data["email"]
             try:
                 member = Member.objects.get(email=email)
-                request.session["member_id"] = member.id
+                request.session["member_email"] = email
                 return redirect("member_details")
             except Member.DoesNotExist:
                 messages.error(request, "Member not found")
@@ -49,14 +49,14 @@ def member_login(request):
 
 
 def member_logout(request):
-    request.session.pop("member_id", None)
+    request.session.pop("member_email", None)
     return redirect("member_login")
 
 
 class MemberRequiredMixin:
     def dispatch(self, request, *args, **kwargs):
-        member_id = request.session.get("member_id")
-        if not member_id:
+        member_email = request.session.get("member_email")
+        if not member_email:
             return redirect("member_login")
         return super().dispatch(request, *args, **kwargs)
 
@@ -67,7 +67,7 @@ class MemberDetailView(MemberRequiredMixin, DetailView):
     context_object_name = "member"
 
     def get_object(self):
-        return Member.objects.get(id=self.request.session["member_id"])
+        return Member.objects.get(email=self.request.session["member_email"])
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -88,7 +88,7 @@ class MemberEditView(MemberRequiredMixin, UpdateView):
     success_url = reverse_lazy("member_details")
 
     def get_object(self):
-        return Member.objects.get(id=self.request.session["member_id"])
+        return Member.objects.get(email=self.request.session["member_email"])
 
     def form_valid(self, form):
         messages.success(

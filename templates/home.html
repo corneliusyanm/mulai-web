@@ -9,7 +9,7 @@
             <h1 class="display-4 mb-4">Welcome to Mulai Gym</h1>
             <p class="lead mb-4">Start your fitness journey with us today. Join our community of dedicated fitness enthusiasts and achieve your health goals.</p>
             
-            {% if not request.session.member_id %}
+            {% if not request.session.member_email %}
             <div class="d-grid gap-3 d-md-block">
                 <a href="{% url 'signup' %}" class="btn btn-primary btn-lg me-md-2">Sign Up Now</a>
                 <a href="{% url 'member_login' %}" class="btn btn-outline-primary btn-lg">Member Login</a>

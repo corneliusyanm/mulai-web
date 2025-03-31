@@ -159,3 +159,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Add at the end of the file
 AUTH_USER_MODEL = "accounts.User"
+
+# Session settings
+SESSION_COOKIE_AGE = 365 * 24 * 60 * 60  # 1 year in seconds
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False

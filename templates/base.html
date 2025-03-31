@@ -14,7 +14,7 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
-                    {% if request.session.member_id %}
+                    {% if request.session.member_email %}
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'member_details' %}">My Account</a>
                         </li>
