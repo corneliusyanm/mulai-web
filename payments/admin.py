@@ -14,11 +14,13 @@ class PaymentAdminForm(forms.ModelForm):
             "duration_choice",
             "duration_days",
             "payment_date",
+            "payment_method",
             "notes",
         )
         widgets = {
             "payment_date": forms.DateInput(attrs={"type": "date"}),
             "duration_choice": forms.RadioSelect(),
+            "payment_method": forms.Select(attrs={"class": "form-control"}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -51,8 +53,9 @@ class PaymentAdmin(admin.ModelAdmin):
         "formatted_payment_date",
         "formatted_membership_end",
         "membership_status",
+        "payment_method",
     )
-    list_filter = ("payment_date",)
+    list_filter = ("payment_date", "payment_method")
     search_fields = ("member__email", "member__name", "member__phone_number")
     fields = (
         "member",
@@ -60,6 +63,7 @@ class PaymentAdmin(admin.ModelAdmin):
         "duration_choice",
         "duration_days",
         "payment_date",
+        "payment_method",
         "notes",
     )
 

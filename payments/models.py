@@ -18,6 +18,12 @@ class Payment(models.Model):
         (0, "Custom"),  # For custom duration input
     ]
 
+    PAYMENT_METHOD_CHOICES = [
+        ("TRANSFER", "Transfer"),
+        ("QRIS", "QRIS"),
+        ("CASH", "Cash"),
+    ]
+
     member = models.ForeignKey(Member, on_delete=models.CASCADE)
     amount = models.DecimalField(max_digits=12, decimal_places=0)  # Changed for Rupiah
     payment_date = models.DateTimeField(default=timezone.now)
@@ -29,6 +35,12 @@ class Payment(models.Model):
         editable=False
     )  # Make it not editable in forms
     notes = models.TextField(blank=True)
+    payment_method = models.CharField(
+        max_length=10,
+        choices=PAYMENT_METHOD_CHOICES,
+        default="TRANSFER",
+        blank=True,
+    )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

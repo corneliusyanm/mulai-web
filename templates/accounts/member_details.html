@@ -99,7 +99,8 @@
                                 {% else %}
                                     {{ payment.get_duration_choice_display }}
                                 {% endif %}<br>
-                                <strong>Valid until:</strong> {{ payment.membership_end_date|date:"d M Y" }}
+                                <strong>Valid until:</strong> {{ payment.membership_end_date|date:"d M Y" }}<br>
+                                <strong>Payment Method:</strong> {{ payment.get_payment_method_display }}
                             </li>
                         {% endfor %}
                         </ul>
