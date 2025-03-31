@@ -12,14 +12,23 @@
                 </div>
                 <div class="card-body text-center">
                     <div class="alert alert-danger mb-4">
-                        <h4 class="alert-heading">Membership Expired</h4>
-                        <p>Your membership has expired. Please renew your membership to continue using the gym.</p>
-                        <hr>
-                        <p class="mb-0">
-                            <strong>Active Until:</strong> {{ member.active_until|date:"d M Y" }}
-                        </p>
+                        {% if has_active_visit %}
+                            <h4 class="alert-heading">Already Checked In</h4>
+                            <p>You already have an active check-in. Please check out first before checking in again.</p>
+                        {% else %}
+                            <h4 class="alert-heading">Membership Expired</h4>
+                            <p>Your membership has expired. Please renew your membership to continue using the gym.</p>
+                            <hr>
+                            <p class="mb-0">
+                                <strong>Active Until:</strong> {{ member.active_until|date:"d M Y" }}
+                            </p>
+                        {% endif %}
                     </div>
-                    <p>Please contact the gym staff to renew your membership.</p>
+                    {% if has_active_visit %}
+                        <p>Please <a href="{% url 'check_out_page' %}">check out</a> first.</p>
+                    {% else %}
+                        <p>Please contact the gym staff to renew your membership.</p>
+                    {% endif %}
                 </div>
             </div>
         </div>

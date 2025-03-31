@@ -19,16 +19,32 @@ def check_in_page(request):
                     request, "visits/check_in_failed.html", {"member": member}
                 )
 
-            visit = Visit.objects.create(member=member, check_in_time=timezone.now())
-            messages.success(request, f"Welcome, {member.name}! Check-in successful.")
+            # Check if member already has an active visit
+            try:
+                active_visit = Visit.objects.filter(
+                    member=member, check_out_time__isnull=True
+                ).latest("check_in_time")
+                return render(
+                    request,
+                    "visits/check_in_failed.html",
+                    {"member": member, "has_active_visit": True},
+                )
+            except Visit.DoesNotExist:
+                # No active visit, proceed with check-in
+                visit = Visit.objects.create(
+                    member=member, check_in_time=timezone.now()
+                )
+                messages.success(
+                    request, f"Welcome, {member.name}! Check-in successful."
+                )
 
-            # Store email in session for future quick check-ins
-            request.session["member_email"] = email
-            return render(
-                request,
-                "visits/quick_check_in.html",
-                {"member": member, "success": True},
-            )
+                # Store email in session for future quick check-ins
+                request.session["member_email"] = email
+                return render(
+                    request,
+                    "visits/quick_check_in.html",
+                    {"member": member, "success": True},
+                )
         except Member.DoesNotExist:
             messages.error(request, "Member not found. Please check your email.")
             return redirect("check_in_page")
@@ -43,7 +59,18 @@ def check_in_page(request):
                 return render(
                     request, "visits/check_in_failed.html", {"member": member}
                 )
-            return render(request, "visits/quick_check_in.html", {"member": member})
+            # Check if member already has an active visit
+            try:
+                active_visit = Visit.objects.filter(
+                    member=member, check_out_time__isnull=True
+                ).latest("check_in_time")
+                return render(
+                    request,
+                    "visits/check_in_failed.html",
+                    {"member": member, "has_active_visit": True},
+                )
+            except Visit.DoesNotExist:
+                return render(request, "visits/quick_check_in.html", {"member": member})
         except Member.DoesNotExist:
             request.session.pop("member_email", None)
 
