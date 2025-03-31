@@ -51,10 +51,14 @@ def check_in_success(request):
 
 
 def check_out_page(request):
+    # Check if user is logged in first
+    member_email = request.session.get("member_email")
+    if not member_email:
+        return render(request, "visits/check_out_failed.html", {"member": None})
+
     if request.method == "POST":
-        email = request.POST.get("email")
         try:
-            member = Member.objects.get(email=email)
+            member = Member.objects.get(email=member_email)
             # Find the latest unchecked-out visit
             try:
                 visit = Visit.objects.filter(
@@ -76,25 +80,20 @@ def check_out_page(request):
             messages.error(request, "Member not found. Please check your email.")
             return redirect("check_out_page")
 
-    # If member email is in session, show quick check-out page
-    member_email = request.session.get("member_email")
-    if member_email:
+    # Show quick check-out page since we already have the member
+    try:
+        member = Member.objects.get(email=member_email)
+        # Check if member has an active visit before showing quick check-out
         try:
-            member = Member.objects.get(email=member_email)
-            # Check if member has an active visit before showing quick check-out
-            try:
-                Visit.objects.filter(member=member, check_out_time__isnull=True).latest(
-                    "check_in_time"
-                )
-                return render(
-                    request, "visits/quick_check_out.html", {"member": member}
-                )
-            except Visit.DoesNotExist:
-                return render(
-                    request, "visits/check_out_failed.html", {"member": member}
-                )
-        except Member.DoesNotExist:
-            request.session.pop("member_email", None)
+            Visit.objects.filter(member=member, check_out_time__isnull=True).latest(
+                "check_in_time"
+            )
+            return render(request, "visits/quick_check_out.html", {"member": member})
+        except Visit.DoesNotExist:
+            return render(request, "visits/check_out_failed.html", {"member": member})
+    except Member.DoesNotExist:
+        request.session.pop("member_email", None)
+        return render(request, "visits/check_out_failed.html", {"member": None})
 
     return render(request, "visits/check_out.html")
 
