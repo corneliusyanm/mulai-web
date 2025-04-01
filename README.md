@@ -4,7 +4,7 @@
 
 ### Session
 - 1-year duration
-- Key: `member_email`
+- Key: `member_email` (Used even when logging in/checking in via phone number)
 - Persists across check-in/out
 
 ### Models
@@ -13,6 +13,7 @@
   - `check_in_time`: DateTimeField
   - `check_out_time`: DateTimeField (nullable)
 - **`Member` (`accounts/models.py`)**
+  - `phone_number`: CharField (Unique, stores digits only, e.g., 628123...)
   - `active_until`: DateTimeField (nullable)
   - `is_active_member` property: Checks if `active_until >= today`.
 
@@ -31,8 +32,17 @@
      - Tries auto check-in (validates active member, no active visit).
      - Renders success/failure template.
   3. If not logged in or auto-check-in fails:
-     - Shows email form (`check_in.html`).
-     - On POST: validates member, activity, active visits -> creates `Visit`, sets session, renders success/failure.
+     - Shows email OR phone number form (`check_in.html`).
+     - On POST:
+       - If email provided, finds `Member` by email.
+       - If phone provided, formats phone (handles country code, strips leading zeros) and finds `Member` by `phone_number`.
+       - If neither provided, shows error.
+       - If `Member` found:
+         - **Logs user in:** Stores `member.email` in session (`member_email`) immediately.
+         - Validates active member status -> renders failure if inactive.
+         - Validates no active visit -> renders failure if already checked in.
+         - Creates `Visit`, renders success (`quick_check_in.html`).
+       - If `Member` not found, shows error.
 - **`check_out_page`**
   1. Checks session for `member_email` (renders fail if not logged in).
   2. Tries auto check-out:
@@ -47,16 +57,23 @@
 graph TD
     A[Visit Check-in Page] --> B{Logged In?}
     B -->|Yes| C{Has Active Visit?}
-    B -->|No| D[Show Email Form]
+    B -->|No| D[Show Email/Phone Form]
     C -->|Yes| E[Show Failure: Already Checked In]
     C -->|No| F{Member Active?}
     F -->|Yes| G[Auto Check-in]
     F -->|No| H[Show Failure: Inactive Member]
-    D --> I[Submit Email]
-    I --> J{Member Exists & Active?}
-    J -->|Yes| K[Create Visit]
-    J -->|No| L[Show Failure Message]
-    K --> M[Store Email in Session]
+    D --> I[Submit Email or Phone]
+    I --> I1{Email or Phone Provided?}
+    I1 -->|No| I2[Show Error Message]
+    I1 -->|Yes| J{Find Member}
+    J -->|Found| J1[Store Email in Session<br>User Now Logged In]
+    J -->|Not Found| J2[Show Error: Member Not Found]
+    J1 --> J3{Member Active?}
+    J3 -->|No| H
+    J3 -->|Yes| J4{Has Active Visit?}
+    J4 -->|Yes| E
+    J4 -->|No| K[Create Visit]
+    K --> M[Show Success Message]
 
     N[Visit Check-out Page] --> O{Logged In?}
     O -->|Yes| P{Has Active Visit?}
@@ -67,13 +84,35 @@ graph TD
 
 ### Validations & Messages
 - Check-in:
-  - Must be active member
-  - No duplicate active visits
-  - Messages: "Already Checked In", "Membership Expired"
+  - Must provide Email or Phone Number.
+  - Member must exist.
+  - Must be active member (logged in even if check-in fails here).
+  - No duplicate active visits (logged in even if check-in fails here).
+  - Messages: "Already Checked In", "Membership Expired", "Member not found", "Please provide email or phone".
 - Check-out:
   - Must be logged in
   - Must have active visit
   - Messages: "Not Logged In", "No Active Visit Found"
+
+## Accounts
+
+### Forms (`accounts/forms.py`)
+- **`MemberSignUpForm`, `MemberEditForm`**: Include `country_code` (default +62) and `phone_number_display` fields. The `clean` method standardizes the phone number (e.g., removes +, strips leading 0) and stores it in the `phone_number` model field (digits only). Performs uniqueness validation.
+- **`MemberLoginForm`**: Includes `email` (optional), `country_code` (optional), and `phone_number_display` (optional). Requires either email or phone to be provided. Formats phone number if provided.
+
+### Views (`accounts/views.py`)
+- **`member_login`**: Accepts POST data from `MemberLoginForm`. 
+  - Validates that either email or phone was provided.
+  - If email provided, finds `Member` by email.
+  - If phone provided (and no email), finds `Member` by formatted `phone_number`.
+  - On success, stores `member.email` in session (`member_email`) and redirects to details.
+  - On failure (not found, invalid form), shows error message.
+- **`MemberSignUpView`**: After successful signup, stores `member.email` in session (`member_email`) for auto-login.
+
+### Templates
+- `login.html`: Updated to include email and phone number fields (with country code).
+- `check_in.html`: Updated to include email and phone number fields (with country code).
+- `signup.html`, `member_edit.html`: Include country code and phone number fields.
 
 ## Payments
 
