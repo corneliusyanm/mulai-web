@@ -47,9 +47,43 @@ def check_in_page(request):
 
     # If not logged in or auto check-in failed, show normal check-in flow
     if request.method == "POST":
-        email = request.POST.get("email")
+        email = request.POST.get("email", "").strip()
+        phone = request.POST.get("phone", "").strip()
+        country_code = request.POST.get("country_code", "+62").strip()
+
+        # Skip this check-in attempt if neither email nor phone is provided
+        if not email and not phone:
+            messages.error(request, "Please provide either an email or a phone number.")
+            return redirect("check_in_page")
+
         try:
-            member = Member.objects.get(email=email)
+            # If email is provided, try to find member by email
+            if email:
+                member = Member.objects.get(email=email)
+            # If no email or not found, try by phone number
+            elif phone:
+                # Format the phone number correctly
+                if not country_code.startswith("+"):
+                    country_code = "+" + country_code
+
+                # Remove any '+' sign from the phone number part
+                if phone.startswith("+"):
+                    phone = phone[1:]
+
+                # Remove leading zeros if any
+                phone = phone.lstrip("0")
+
+                # Create the standardized phone number, removing the '+' from country code
+                formatted_phone = country_code.replace("+", "") + phone
+
+                # Find the member by phone number
+                member = Member.objects.get(phone_number=formatted_phone)
+            else:
+                raise Member.DoesNotExist
+
+            # Store email in session for future - do this immediately after finding the member
+            # This way they will be logged in regardless of whether check-in succeeds
+            request.session["member_email"] = member.email
 
             # Check if member is active
             if not member.is_active_member:
@@ -75,16 +109,15 @@ def check_in_page(request):
                 messages.success(
                     request, f"Welcome, {member.name}! Check-in successful."
                 )
-
-                # Store email in session for future quick check-ins
-                request.session["member_email"] = email
                 return render(
                     request,
                     "visits/quick_check_in.html",
                     {"member": member, "success": True},
                 )
         except Member.DoesNotExist:
-            messages.error(request, "Member not found. Please check your email.")
+            messages.error(
+                request, "Member not found. Please check your email or phone number."
+            )
             return redirect("check_in_page")
 
     return render(request, "visits/check_in.html")

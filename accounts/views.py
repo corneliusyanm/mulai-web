@@ -37,12 +37,30 @@ def member_login(request):
         form = MemberLoginForm(request.POST)
         if form.is_valid():
             email = form.cleaned_data["email"]
+            formatted_phone = form.cleaned_data.get("formatted_phone")
+
             try:
-                member = Member.objects.get(email=email)
-                request.session["member_email"] = email
+                # First try to find by email if provided
+                if email:
+                    member = Member.objects.get(email=email)
+                # If no email or member not found by email, try by phone
+                elif formatted_phone:
+                    member = Member.objects.get(phone_number=formatted_phone)
+                else:
+                    raise Member.DoesNotExist
+
+                # If we get here, we found a member
+                request.session["member_email"] = member.email
                 return redirect("member_details")
+
             except Member.DoesNotExist:
-                messages.error(request, "Member not found")
+                messages.error(
+                    request,
+                    "Member not found. Please check your email or phone number.",
+                )
+        else:
+            for error in form.non_field_errors():
+                messages.error(request, error)
     else:
         form = MemberLoginForm()
     return render(request, "accounts/login.html", {"form": form})

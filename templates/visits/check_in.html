@@ -14,7 +14,9 @@
                 <div class="card-body">
                     {% if messages %}
                         {% for message in messages %}
-                            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                            <div class="alert alert-danger">
+                                <strong><em>{{ message }}</em></strong>
+                            </div>
                         {% endfor %}
                     {% endif %}
                     
@@ -22,8 +24,20 @@
                         {% csrf_token %}
                         <div class="mb-3">
                             <label for="email" class="form-label">Email</label>
-                            <input type="email" class="form-control" id="email" name="email" required>
+                            <input type="email" class="form-control" id="email" name="email">
+                            <small class="text-muted">You can check in with either your email or phone number</small>
                         </div>
+                        
+                        <p class="text-center my-3">OR</p>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Phone Number</label>
+                            <div class="d-flex">
+                                <input type="text" class="form-control" id="country_code" name="country_code" value="+62" style="width: 80px;">
+                                <input type="text" class="form-control" id="phone" name="phone" style="width: calc(100% - 95px); margin-left: 5px;">
+                            </div>
+                        </div>
+                        
                         <button type="submit" class="btn btn-primary">Check In</button>
                     </form>
                     

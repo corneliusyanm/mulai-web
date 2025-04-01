@@ -142,7 +142,61 @@ class MemberSignUpForm(forms.ModelForm):
 
 
 class MemberLoginForm(forms.Form):
-    email = forms.EmailField(label="Email")
+    email = forms.EmailField(label="Email", required=False)
+    country_code = forms.CharField(
+        max_length=5,
+        initial="+62",
+        label="Country Code",
+        required=False,
+        widget=forms.TextInput(attrs={"style": "width: 80px; display: inline-block;"}),
+    )
+    phone_number_display = forms.CharField(
+        max_length=15,
+        label="Phone Number",
+        required=False,
+        widget=forms.TextInput(
+            attrs={
+                "style": "width: calc(100% - 95px); display: inline-block; margin-left: 5px;"
+            }
+        ),
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        email = cleaned_data.get("email")
+        country_code = cleaned_data.get("country_code", "").strip()
+        phone_number = cleaned_data.get("phone_number_display", "").strip()
+
+        # Check if at least one of email or phone number is provided
+        if not email and not phone_number:
+            raise ValidationError("Please provide either an email or a phone number")
+
+        # If phone number is provided, format it properly
+        if phone_number:
+            # Validate country code format
+            if not country_code:
+                country_code = "+62"  # Default
+            elif not country_code.startswith("+"):
+                country_code = "+" + country_code
+
+            # Remove any '+' sign from the phone number part
+            if phone_number.startswith("+"):
+                phone_number = phone_number[1:]
+
+            # Remove country code from phone number if it's there
+            if country_code.startswith("+") and phone_number.startswith(
+                country_code[1:]
+            ):
+                phone_number = phone_number[len(country_code) - 1 :]
+
+            # Remove leading zeros if any
+            phone_number = phone_number.lstrip("0")
+
+            # Create the standardized phone number, removing the '+' from country code
+            final_phone = country_code.replace("+", "") + phone_number
+            cleaned_data["formatted_phone"] = final_phone
+
+        return cleaned_data
 
 
 class MemberEditForm(forms.ModelForm):
