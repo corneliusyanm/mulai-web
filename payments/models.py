@@ -50,69 +50,55 @@ class Payment(models.Model):
     )
 
     def save(self, *args, **kwargs):
-        # Calculate membership end date based on duration
-        if not self.pk or not self.membership_end_date:
-            # Determine start date
-            # If member has existing active membership, extend from that date
-            try:
-                last_payment = Payment.objects.filter(
-                    member=self.member,
-                    membership_end_date__gte=timezone.now().replace(
-                        hour=0, minute=0, second=0, microsecond=0
-                    ),
-                ).latest("membership_end_date")
-                start_date = last_payment.membership_end_date.date()
-            except Payment.DoesNotExist:
-                # Use payment_date or current date if payment_date is not set
-                if self.payment_date:
-                    start_date = self.payment_date.date()
-                else:
-                    start_date = timezone.now().date()
+        # Only calculate membership end date for new payments or if explicitly needed
+        calculate_end_date = not self.pk or not self.membership_end_date
 
-            # Calculate end date based on duration choice
+        if calculate_end_date:
+            today = timezone.now().date()
+            start_date = None
+
+            # Determine start date based on member's current status
+            if self.member.active_until and self.member.active_until.date() >= today:
+                # Member is active, start new period after current one ends
+                start_date = self.member.active_until.date() + timedelta(days=1)
+            else:
+                # Member is inactive or has no active_until, start from payment date
+                start_date = self.payment_date.date() if self.payment_date else today
+
+            # Calculate end date based on duration choice and start_date
+            end_date = start_date
+            end_time = datetime.max.time()  # Default to end of day
+
             if self.duration_choice == 1:  # 1 Day
-                # End of current day (23:59:59)
+                # Ends on the same day it starts
                 end_date = start_date
-                end_time = datetime.max.time()  # 23:59:59.999999
             elif self.duration_choice == 30:  # 1 Month
-                # Same day next month (or last day if that day doesn't exist)
                 end_date = start_date + relativedelta(months=1) - timedelta(days=1)
-                end_time = datetime.max.time()
             elif self.duration_choice == 90:  # 3 Months
                 end_date = start_date + relativedelta(months=3) - timedelta(days=1)
-                end_time = datetime.max.time()
             elif self.duration_choice == 180:  # 6 Months
                 end_date = start_date + relativedelta(months=6) - timedelta(days=1)
-                end_time = datetime.max.time()
             elif self.duration_choice == 365:  # 12 Months
                 end_date = start_date + relativedelta(months=12) - timedelta(days=1)
-                end_time = datetime.max.time()
             elif self.duration_choice == 0 and self.duration_days:  # Custom
                 # Inclusive of end date
                 end_date = start_date + timedelta(days=self.duration_days - 1)
-                end_time = datetime.max.time()
             else:
-                # Default fallback
+                # Default fallback (e.g., if duration choice invalid)
                 end_date = start_date
-                end_time = datetime.max.time()
 
             # Set the membership end date with the end of the day time
             self.membership_end_date = timezone.make_aware(
                 datetime.combine(end_date, end_time)
             )
 
-        # Update member's active_until field
-        if self.member and self.membership_end_date:
-            # Only update if the new end date is later than the current
-            # active_until
-            if (
-                not self.member.active_until
-                or self.membership_end_date > self.member.active_until
-            ):
-                self.member.active_until = self.membership_end_date
-                self.member.save(update_fields=["active_until"])
-
+        # Call the original save method first to ensure the payment has an ID if new
         super().save(*args, **kwargs)
+
+        # Always update member's active_until field to the new payment's end date
+        if self.member and self.membership_end_date:
+            self.member.active_until = self.membership_end_date
+            self.member.save(update_fields=["active_until"])
 
     def __str__(self):
         return f"{self.member.name} - Rp {self.amount:,.0f} - {self.payment_date.strftime('%d %b %Y')}"
