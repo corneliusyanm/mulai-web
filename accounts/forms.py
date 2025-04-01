@@ -26,6 +26,21 @@ class MemberSignUpForm(forms.ModelForm):
         fields = [
             "name",
             "email",
+            # Phone number fields are handled separately
+            "gender",
+            "age",
+            "height",
+            "weight",
+            "years_of_working_out",
+            "goals",
+            "know_mulai_gym_from",
+        ]
+        # Define the field order for rendering in the template
+        field_order = [
+            "name",
+            "email",
+            "country_code",  # These won't actually be used by the model directly
+            "phone_number_display",  # but are included for proper ordering
             "gender",
             "age",
             "height",

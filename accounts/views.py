@@ -23,8 +23,8 @@ class MemberSignUpView(CreateView):
 
     def form_valid(self, form):
         member = form.save()
-        # Log the member in after signup
-        self.request.session["member_id"] = member.id
+        # Log the member in after signup by storing their email
+        self.request.session["member_email"] = member.email
         return super().form_valid(form)
 
 

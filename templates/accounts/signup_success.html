@@ -9,8 +9,11 @@
             <div class="card-body text-center">
                 <h2 class="text-success mb-4">Sign Up Successful!</h2>
                 <p>Thank you for signing up with Mulai Gym.</p>
-                <p>Our staff will contact you shortly.</p>
-                <a href="/" class="btn btn-primary">Back to Home</a>
+                <p>You are now logged in and can access your account or check in to the gym.</p>
+                <div class="d-flex justify-content-center gap-2 mt-4">
+                    <a href="{% url 'member_details' %}" class="btn btn-primary">My Account</a>
+                    <a href="/" class="btn btn-outline-secondary">Home</a>
+                </div>
             </div>
         </div>
     </div>

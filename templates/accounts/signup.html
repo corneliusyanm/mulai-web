@@ -14,25 +14,59 @@
                 <form method="post">
                     {% csrf_token %}
                     
-                    {% for field in form %}
+                    {# Display name field #}
                     <div class="mb-3">
-                        {% if field.name != 'country_code' and field.name != 'phone_number_display' %}
-                            <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-                            {{ field.errors }}
-                            {{ field|add_class:"form-control" }}
-                            {% if field.help_text %}
-                            <div class="form-text">{{ field.help_text }}</div>
-                            {% endif %}
-                        {% elif field.name == 'country_code' %}
-                            <label class="form-label">Phone Number</label>
-                            <div style="display: flex; align-items: center;">
-                                {{ field|add_class:"form-control" }}
-                                {{ form.phone_number_display|add_class:"form-control" }}
-                            </div>
-                            {{ field.errors }}
-                            {{ form.phone_number_display.errors }}
+                        <label for="{{ form.name.id_for_label }}" class="form-label">{{ form.name.label }}</label>
+                        {{ form.name|add_class:"form-control" }}
+                        {% if form.name.errors %}
+                            <div class="text-danger fw-bold fst-italic">{{ form.name.errors }}</div>
+                        {% endif %}
+                        {% if form.name.help_text %}
+                            <div class="form-text">{{ form.name.help_text }}</div>
                         {% endif %}
                     </div>
+                    
+                    {# Display email field #}
+                    <div class="mb-3">
+                        <label for="{{ form.email.id_for_label }}" class="form-label">{{ form.email.label }}</label>
+                        {{ form.email|add_class:"form-control" }}
+                        {% if form.email.errors %}
+                            <div class="text-danger fw-bold fst-italic">{{ form.email.errors }}</div>
+                        {% endif %}
+                        {% if form.email.help_text %}
+                            <div class="form-text">{{ form.email.help_text }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    {# Display phone number fields #}
+                    <div class="mb-3">
+                        <label class="form-label">Phone Number</label>
+                        <div style="display: flex; align-items: center;">
+                            {{ form.country_code|add_class:"form-control" }}
+                            {{ form.phone_number_display|add_class:"form-control" }}
+                        </div>
+                        {% if form.country_code.errors %}
+                            <div class="text-danger fw-bold fst-italic">{{ form.country_code.errors }}</div>
+                        {% endif %}
+                        {% if form.phone_number_display.errors %}
+                            <div class="text-danger fw-bold fst-italic">{{ form.phone_number_display.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    {# Display the remaining fields #}
+                    {% for field in form %}
+                        {% if field.name != 'name' and field.name != 'email' and field.name != 'country_code' and field.name != 'phone_number_display' %}
+                            <div class="mb-3">
+                                <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                                {{ field|add_class:"form-control" }}
+                                {% if field.errors %}
+                                    <div class="text-danger fw-bold fst-italic">{{ field.errors }}</div>
+                                {% endif %}
+                                {% if field.help_text %}
+                                    <div class="form-text">{{ field.help_text }}</div>
+                                {% endif %}
+                            </div>
+                        {% endif %}
                     {% endfor %}
                     
                     <button type="submit" class="btn btn-primary">Sign Up</button>
