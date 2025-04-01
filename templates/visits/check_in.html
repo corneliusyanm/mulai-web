@@ -22,10 +22,10 @@
                     
                     <form method="post">
                         {% csrf_token %}
+                        <p class="text-center text-muted mb-3"><em>Check In with Email or Phone Number</em></p>
                         <div class="mb-3">
                             <label for="email" class="form-label">Email</label>
                             <input type="email" class="form-control" id="email" name="email">
-                            <small class="text-muted">You can check in with either your email or phone number</small>
                         </div>
                         
                         <p class="text-center my-3">OR</p>
