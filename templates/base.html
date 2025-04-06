@@ -37,12 +37,12 @@
         
         <div class="col-md-7 content-wrapper">
             <!-- Navigation -->
-            <nav class="navbar navbar-expand-lg">
+            <nav class="navbar navbar-expand-lg" style="background: linear-gradient(90deg, #5555ef, #ffffff);">
                 <div class="container">
                     <a class="navbar-brand" href="/">
                         <img src="{% static 'images/logo_top.png' %}" alt="Mulai Gym" height="40" onerror="this.src='https://placehold.co/120x40/4B4BEC/FFFFFF?text=MULAI+GYM'">
                     </a>
-                    <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#navbarOffcanvas" aria-controls="navbarOffcanvas">
+                    <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#navbarOffcanvas" aria-controls="navbarOffcanvas" style="color: var(--primary);">
                         <i class="fas fa-bars"></i>
                     </button>
                     
@@ -79,7 +79,7 @@
             </nav>
             
             <!-- Main content -->
-            <div class="container">
+            <div class="container" style="background-color: var(--primary);">
                 {% block content %}
                 {% endblock %}
             </div>
