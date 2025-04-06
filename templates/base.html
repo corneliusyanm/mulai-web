@@ -16,18 +16,36 @@
             max-width: 576px;
             margin: 0 auto;
             background-color: #4B4BEC;
+            min-height: 100vh;
+            position: relative;
+        }
+        .navbar {
+            background: linear-gradient(90deg, #5555ef, #ffffff) !important;
+            text-align: center;
+        }
+        .navbar .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .navbar-brand {
+            margin: 0 auto;
+        }
+        .navbar-toggler {
+            position: absolute;
+            right: 20px;
         }
     </style>
 </head>
 <body>
     <div class="mobile-container">
         <!-- Navigation -->
-        <nav class="navbar navbar-expand-lg" style="background: linear-gradient(90deg, #5555ef, #ffffff);">
+        <nav class="navbar navbar-expand-lg">
             <div class="container">
-                <a class="navbar-brand" href="/">
+                <a class="navbar-brand" href="/" style="margin: 0; left: 20px;">
                     <img src="{% static 'images/logo_top.png' %}" alt="Mulai Gym" height="40" onerror="this.src='https://placehold.co/120x40/4B4BEC/FFFFFF?text=MULAI+GYM'">
                 </a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#navbarOffcanvas" aria-controls="navbarOffcanvas" style="color: var(--primary);">
+                <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#navbarOffcanvas" aria-controls="navbarOffcanvas" style="color: var(--primary); right: 20px;">
                     <i class="fas fa-bars"></i>
                 </button>
             </div>

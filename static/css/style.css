@@ -24,23 +24,31 @@ body {
 
 /* Navbar styling */
 .navbar {
-  background-color: var(--primary) !important;
+  background: linear-gradient(90deg, #4B4BEC, #6464ef) !important;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   position: fixed;
   top: 0;
   width: 100%;
   z-index: 1000;
+  text-align: center;
 }
 
 .navbar-brand {
   color: var(--light) !important;
   font-weight: 700;
   font-size: 1.5rem;
+  margin: 0 auto;
 }
 
 .navbar-toggler {
   border: none;
   color: var(--light);
+  position: absolute;
+  right: 20px;
+}
+
+.navbar-toggler i {
+  font-size: 1.5rem;
 }
 
 /* Buttons */
@@ -107,7 +115,7 @@ body {
 .hero-title {
   font-weight: 700;
   color: var(--secondary);
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
   font-size: 2.5rem;
   text-transform: uppercase;
 }
@@ -239,13 +247,14 @@ footer {
   background-color: #3a3ad1 !important;
 }
 
-/* Media query for optimal mobile display on larger screens */
-@media (min-width: 576px) {
-  .mobile-container {
-    max-width: 576px;
-    margin: 0 auto;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-  }
+/* Mobile container for consistent mobile view */
+.mobile-container {
+  max-width: 576px;
+  margin: 0 auto;
+  background-color: var(--primary);
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
 }
 
 /* Promo box */
@@ -253,7 +262,7 @@ footer {
   background: linear-gradient(90deg, #bef006, #ffffff);
   color: var(--primary);
   border-radius: 15px;
-  padding: 10px 20px;
+  padding: 15px 30px;
   display: inline-block;
   font-weight: bold;
   font-style: italic;
