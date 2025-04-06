@@ -1,55 +1,245 @@
 {% extends 'base.html' %}
 
-{% block title %}Welcome to Mulai Gym{% endblock %}
+{% block title %}Mulai Gym - Fitness Center{% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="row align-items-center min-vh-75">
-        <div class="col-md-6">
-            <h1 class="display-4 mb-4">Welcome to Mulai Gym</h1>
-            <p class="lead mb-4">Start your fitness journey with us today. Join our community of dedicated fitness enthusiasts and achieve your health goals.</p>
+<!-- Mobile Hero Section (visible only on mobile) -->
+<section class="hero-section d-md-none">
+    <div class="row align-items-center">
+        <div class="col-12 mb-4">
+            <h1 class="hero-title text-secondary">KARENA HIDUP SEHATMU</h1>
+            <div class="mt-3 mb-4">
+                <h2 class="hero-subtitle text-white display-2 fw-bold">Mulai</h2>
+                <h2 class="hero-subtitle text-white display-2 fw-bold">DARI SINI</h2>
+            </div>
             
             {% if not request.session.member_email %}
-            <div class="d-grid gap-3 d-md-block">
-                <a href="{% url 'signup' %}" class="btn btn-primary btn-lg me-md-2">Sign Up Now</a>
-                <a href="{% url 'member_login' %}" class="btn btn-outline-primary btn-lg">Member Login</a>
+            <div class="d-flex gap-2">
+                <a href="{% url 'signup' %}" class="btn btn-secondary text-dark flex-grow-1">DAFTAR</a>
+                <a href="{% url 'member_login' %}" class="btn btn-outline-secondary text-white flex-grow-1">MASUK</a>
+            </div>
+            <div class="mt-4">
+                <div class="promo-box">
+                    <p class="mb-0">PROMO PRE-SALE</p>
+                    <p class="mb-0">mulai dari</p>
+                    <h3 class="mb-0">Rp 150,000 <span class="fs-6">/bulan</span></h3>
+                </div>
             </div>
             {% else %}
-            <div class="d-grid gap-3 d-md-block">
-                <a href="{% url 'member_details' %}" class="btn btn-primary btn-lg">Go to My Account</a>
+            <div class="d-grid gap-2">
+                <a href="{% url 'member_details' %}" class="btn btn-secondary text-dark">Akun Saya</a>
             </div>
             {% endif %}
         </div>
-        <div class="col-md-6 text-center">
-            <img src="https://placehold.co/600x400" alt="Gym" class="img-fluid rounded shadow-lg">
-        </div>
     </div>
+</section>
 
-    <div class="row mt-5 py-5">
-        <div class="col-md-4">
-            <div class="card h-100">
-                <div class="card-body text-center">
-                    <h3 class="card-title">Modern Equipment</h3>
-                    <p class="card-text">State-of-the-art fitness equipment for all your workout needs.</p>
+<!-- Kenapa Mulai Gym Section -->
+<section id="kenapa-mulai" class="section">
+    <div class="container">
+        <h2 class="section-title text-primary">Kenapa Mulai Gym?</h2>
+        <div class="row">
+            <div class="col-md-4">
+                <div class="feature-card">
+                    <img src="https://placehold.co/64/4B4BEC/FFFFFF?text=Icon" alt="Pelatih Profesional">
+                    <h3>Pelatih Profesional</h3>
+                    <p>Dibimbing oleh pelatih berpengalaman untuk hasil maksimal</p>
                 </div>
             </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card h-100">
-                <div class="card-body text-center">
-                    <h3 class="card-title">Expert Trainers</h3>
-                    <p class="card-text">Professional trainers to guide you on your fitness journey.</p>
+            <div class="col-md-4">
+                <div class="feature-card">
+                    <img src="https://placehold.co/64/4B4BEC/FFFFFF?text=Icon" alt="Alat Lengkap">
+                    <h3>Alat Lengkap</h3>
+                    <p>Dilengkapi dengan alat-alat fitness berkualitas tinggi</p>
                 </div>
             </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card h-100">
-                <div class="card-body text-center">
-                    <h3 class="card-title">Flexible Hours</h3>
-                    <p class="card-text">Open daily with extended hours to fit your schedule.</p>
+            <div class="col-md-4">
+                <div class="feature-card">
+                    <img src="https://placehold.co/64/4B4BEC/FFFFFF?text=Icon" alt="Lokasi Strategis">
+                    <h3>Lokasi Strategis</h3>
+                    <p>Lokasi mudah dijangkau dan nyaman untuk berolahraga</p>
                 </div>
             </div>
         </div>
     </div>
-</div>
+</section>
+
+<!-- Mari Mulai Section -->
+<section id="mari-mulai" class="section">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-6 mb-4 mb-md-0">
+                <img src="https://placehold.co/800x600/4B4BEC/FFFFFF?text=Fitness+Class" alt="Fitness Class" class="img-fluid rounded">
+            </div>
+            <div class="col-md-6">
+                <h2 class="text-primary">Mari Mulai Hidup Sehat!</h2>
+                <p class="mb-4">Bergabunglah dengan kami dan mulai perjalanan kebugaran Anda hari ini. Kami menyediakan lingkungan yang mendukung dan motivasi untuk mencapai tujuan kebugaran Anda.</p>
+                <a href="{% url 'member_login' %}" class="btn btn-secondary text-dark">Mulai Sekarang</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Membership Section -->
+<section id="membership" class="section">
+    <div class="container">
+        <h2 class="section-title text-primary">Pilihan Membership</h2>
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 border-0 shadow">
+                    <div class="card-body text-center p-4">
+                        <h3 class="card-title mb-3">Harian</h3>
+                        <div class="display-6 text-primary mb-3">Rp 25.000</div>
+                        <p class="card-text">Akses ke semua fasilitas gym selama 1 hari</p>
+                        <ul class="list-unstyled mb-4">
+                            <li class="mb-2"><i class="fas fa-check text-primary me-2"></i>Akses penuh ke gym</li>
+                            <li class="mb-2"><i class="fas fa-check text-primary me-2"></i>Loker</li>
+                            <li class="mb-2"><i class="fas fa-check text-primary me-2"></i>Kamar mandi</li>
+                        </ul>
+                        <a href="{% url 'member_login' %}" class="btn btn-outline-primary w-100">Pilih Paket</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 border-0 shadow" style="background-color: var(--primary);">
+                    <div class="card-body text-center p-4 text-white">
+                        <h3 class="card-title mb-3">Bulanan</h3>
+                        <div class="display-6 mb-3">Rp 299.000</div>
+                        <p class="card-text">Akses ke semua fasilitas gym selama 1 bulan</p>
+                        <ul class="list-unstyled mb-4">
+                            <li class="mb-2"><i class="fas fa-check me-2"></i>Akses penuh ke gym</li>
+                            <li class="mb-2"><i class="fas fa-check me-2"></i>Loker eksklusif</li>
+                            <li class="mb-2"><i class="fas fa-check me-2"></i>Kamar mandi</li>
+                            <li class="mb-2"><i class="fas fa-check me-2"></i>Konsultasi pelatih (1x)</li>
+                        </ul>
+                        <a href="{% url 'member_login' %}" class="btn btn-secondary text-dark w-100">Pilih Paket</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 border-0 shadow">
+                    <div class="card-body text-center p-4">
+                        <h3 class="card-title mb-3">Tahunan</h3>
+                        <div class="display-6 text-primary mb-3">Rp 2.499.000</div>
+                        <p class="card-text">Akses ke semua fasilitas gym selama 1 tahun</p>
+                        <ul class="list-unstyled mb-4">
+                            <li class="mb-2"><i class="fas fa-check text-primary me-2"></i>Akses penuh ke gym</li>
+                            <li class="mb-2"><i class="fas fa-check text-primary me-2"></i>Loker eksklusif</li>
+                            <li class="mb-2"><i class="fas fa-check text-primary me-2"></i>Kamar mandi</li>
+                            <li class="mb-2"><i class="fas fa-check text-primary me-2"></i>Konsultasi pelatih (12x)</li>
+                            <li class="mb-2"><i class="fas fa-check text-primary me-2"></i>Program latihan khusus</li>
+                        </ul>
+                        <a href="{% url 'member_login' %}" class="btn btn-outline-primary w-100">Pilih Paket</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Fasilitas Section -->
+<section id="fasilitas" class="section">
+    <div class="container">
+        <h2 class="section-title text-primary">Fasilitas Kami</h2>
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="card border-0 shadow-sm overflow-hidden">
+                    <img src="https://placehold.co/600x400/4B4BEC/FFFFFF?text=Cardio+Area" class="card-img-top" alt="Cardio Area">
+                    <div class="card-body">
+                        <h5 class="card-title">Area Kardio</h5>
+                        <p class="card-text">Dilengkapi dengan treadmill, elliptical, dan sepeda statis modern</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card border-0 shadow-sm overflow-hidden">
+                    <img src="https://placehold.co/600x400/4B4BEC/FFFFFF?text=Weights+Area" class="card-img-top" alt="Weights Area">
+                    <div class="card-body">
+                        <h5 class="card-title">Area Beban</h5>
+                        <p class="card-text">Berbagai alat beban bebas dan mesin untuk latihan kekuatan</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card border-0 shadow-sm overflow-hidden">
+                    <img src="https://placehold.co/600x400/4B4BEC/FFFFFF?text=Locker+Room" class="card-img-top" alt="Locker Room">
+                    <div class="card-body">
+                        <h5 class="card-title">Ruang Ganti</h5>
+                        <p class="card-text">Ruang ganti nyaman dengan loker aman dan kamar mandi bersih</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Kelas Section -->
+<section id="kelas" class="section">
+    <div class="container">
+        <h2 class="section-title text-primary">Kelas</h2>
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="card border-0 shadow-sm overflow-hidden">
+                    <img src="https://placehold.co/600x400/4B4BEC/FFFFFF?text=Yoga" class="card-img-top" alt="Yoga">
+                    <div class="card-body">
+                        <h5 class="card-title">Yoga</h5>
+                        <p class="card-text">Kelas yoga untuk semua level dengan instruktur berpengalaman</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card border-0 shadow-sm overflow-hidden">
+                    <img src="https://placehold.co/600x400/4B4BEC/FFFFFF?text=Zumba" class="card-img-top" alt="Zumba">
+                    <div class="card-body">
+                        <h5 class="card-title">Zumba</h5>
+                        <p class="card-text">Berolahraga dengan gerakan dansa yang menyenangkan dan intens</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card border-0 shadow-sm overflow-hidden">
+                    <img src="https://placehold.co/600x400/4B4BEC/FFFFFF?text=HIIT" class="card-img-top" alt="HIIT">
+                    <div class="card-body">
+                        <h5 class="card-title">HIIT</h5>
+                        <p class="card-text">Latihan intensitas tinggi untuk membakar kalori dan membangun otot</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer class="bg-primary text-white py-4">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-6 mb-4 mb-md-0">
+                <h4 class="mb-3">Mulai Gym</h4>
+                <p class="mb-2"><i class="fas fa-map-marker-alt me-2"></i> Jl. Jend. Sudirman No.643, Wr. Muncang, Kec. Bandung Kulon, Kota Bandung, Jawa Barat 40211</p>
+                <p class="mb-2"><i class="fab fa-instagram me-2"></i> <a href="https://instagram.com/mulaigym.id" class="text-white">instagram.com/mulaigym.id</a></p>
+                <p><i class="fab fa-whatsapp me-2"></i> 082221674989</p>
+            </div>
+            <div class="col-md-3 mb-4 mb-md-0">
+                <h5 class="mb-3">Links</h5>
+                <ul class="list-unstyled">
+                    <li class="mb-2"><a href="/" class="text-white">Home</a></li>
+                    <li class="mb-2"><a href="#kenapa-mulai" class="text-white scroll-link">Kenapa Mulai?</a></li>
+                    <li class="mb-2"><a href="#mari-mulai" class="text-white scroll-link">Mari Mulai</a></li>
+                    <li class="mb-2"><a href="#membership" class="text-white scroll-link">Membership</a></li>
+                    <li class="mb-2"><a href="#fasilitas" class="text-white scroll-link">Fasilitas</a></li>
+                    <li class="mb-2"><a href="#kelas" class="text-white scroll-link">Kelas</a></li>
+                </ul>
+            </div>
+            <div class="col-md-3">
+                <h5 class="mb-3">Jam Operasional</h5>
+                <p class="mb-1">Senin - Jumat: 06.00 - 22.00</p>
+                <p class="mb-1">Sabtu: 06.00 - 20.00</p>
+                <p>Minggu: 08.00 - 18.00</p>
+            </div>
+        </div>
+        <div class="border-top border-secondary pt-3 mt-3 text-center">
+            <p class="mb-0">&copy; 2023 Mulai Gym. All rights reserved.</p>
+        </div>
+    </div>
+</footer>
 {% endblock %} 

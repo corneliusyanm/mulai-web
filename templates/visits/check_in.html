@@ -6,12 +6,11 @@
 {% block content %}
 <div class="container">
     <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="mb-0">Check In</h2>
-                </div>
-                <div class="card-body">
+        <div class="col-md-6 col-lg-5">
+            <div class="card border-0 shadow-sm rounded-3 my-5">
+                <div class="card-body p-4 p-md-5">
+                    <h2 class="text-center mb-4">Check In</h2>
+                    
                     {% if messages %}
                         {% for message in messages %}
                             <div class="alert alert-danger">
@@ -22,27 +21,30 @@
                     
                     <form method="post">
                         {% csrf_token %}
-                        <p class="text-center text-muted mb-3"><em>Check In with Email or Phone Number</em></p>
-                        <div class="mb-3">
+                        <p class="text-center text-muted mb-4">Check In dengan Email atau Nomor Telepon</p>
+                        
+                        <div class="mb-4">
                             <label for="email" class="form-label">Email</label>
-                            <input type="email" class="form-control" id="email" name="email">
+                            <input type="email" class="form-control form-control-lg" id="email" name="email">
                         </div>
                         
-                        <p class="text-center my-3">OR</p>
+                        <p class="text-center my-4">ATAU</p>
                         
-                        <div class="mb-3">
-                            <label class="form-label">Phone Number</label>
+                        <div class="mb-4">
+                            <label class="form-label">Nomor Telepon</label>
                             <div class="d-flex">
-                                <input type="text" class="form-control" id="country_code" name="country_code" value="+62" style="width: 80px;">
-                                <input type="text" class="form-control" id="phone" name="phone" style="width: calc(100% - 95px); margin-left: 5px;">
+                                <input type="text" class="form-control form-control-lg" id="country_code" name="country_code" value="+62" style="width: 100px;">
+                                <input type="text" class="form-control form-control-lg" id="phone" name="phone" style="flex: 1; margin-left: 8px;">
                             </div>
                         </div>
                         
-                        <button type="submit" class="btn btn-primary">Check In</button>
+                        <div class="d-grid mt-5">
+                            <button type="submit" class="btn btn-primary btn-lg">Check In</button>
+                        </div>
                     </form>
                     
-                    <div class="mt-3">
-                        <p>Don't have an account? <a href="{% url 'signup' %}">Sign up here</a></p>
+                    <div class="mt-4 text-center">
+                        <p>Belum punya akun? <a href="{% url 'signup' %}" class="text-primary fw-bold">Daftar sekarang</a></p>
                     </div>
                 </div>
             </div>

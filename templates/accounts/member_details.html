@@ -1,111 +1,153 @@
 {% extends 'base.html' %}
 {% load visit_extras %}
 
-{% block title %}My Account - Mulai Gym{% endblock %}
+{% block title %}Akun Saya - Mulai Gym{% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="row">
-        <div class="col-md-12 mb-4">
-            <div class="d-flex justify-content-between align-items-center">
-                <h1>My Account</h1>
-                <a href="{% url 'member_logout' %}" class="btn btn-outline-danger">Logout</a>
-            </div>
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="section-title text-center">Akun Saya</h1>
         </div>
     </div>
 
     <div class="row">
-        <div class="col-md-6">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h3 class="card-title mb-0">Personal Information</h3>
-                        <a href="{% url 'member_edit' %}" class="btn btn-sm btn-primary">Edit</a>
+        <div class="col-lg-4 mb-4">
+            <div class="card border-0 shadow-sm rounded-3 overflow-hidden mb-4">
+                <div class="bg-primary text-white p-4 text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-user-circle fa-4x"></i>
                     </div>
+                    <h2 class="mb-0">{{ member.name }}</h2>
+                    <p class="mb-0">{{ member.email }}</p>
+                    <p>{{ member.phone_number|format_phone }}</p>
+                    {% if member.is_active_member %}
+                        <span class="badge bg-success px-3 py-2">Aktif</span>
+                    {% else %}
+                        <span class="badge bg-danger px-3 py-2">Expired</span>
+                    {% endif %}
                 </div>
-                <div class="card-body">
-                    <p><strong>Name:</strong> {{ member.name }}</p>
-                    <p><strong>Email:</strong> {{ member.email }}</p>
-                    <p><strong>Phone:</strong> {{ member.phone_number|format_phone }}</p>
-                    <p><strong>Gender:</strong> {{ member.get_gender_display }}</p>
-                    <p><strong>Age:</strong> {{ member.age }}</p>
-                    <p><strong>Height:</strong> {{ member.height }} cm</p>
-                    <p><strong>Weight:</strong> {{ member.weight }} kg</p>
-                    <p><strong>Years of Working Out:</strong> {{ member.years_of_working_out }}</p>
-                    <p><strong>Goals:</strong> {{ member.goals }}</p>
-                </div>
-            </div>
-            
-            <div class="card mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h3 class="card-title mb-0">Membership Status</h3>
-                </div>
-                <div class="card-body">
-                    <p><strong>Status:</strong> 
-                        {% if member.is_active_member %}
-                            <span class="badge bg-success">Active</span>
-                        {% else %}
-                            <span class="badge bg-danger">Expired</span>
-                        {% endif %}
-                    </p>
-                    <p><strong>Active Until:</strong> 
-                        {% if member.active_until %}
-                            {{ member.active_until|date:"d M Y" }}
-                        {% else %}
-                            Not active
-                        {% endif %}
-                    </p>
+                <div class="card-body p-4">
+                    {% if member.is_active_member and member.active_until %}
+                        <p class="text-center mb-4">
+                            <strong>Aktif Hingga:</strong><br>
+                            <span class="text-primary fs-5">{{ member.active_until|date:"d M Y" }}</span>
+                        </p>
+                    {% endif %}
+                    <div class="d-grid mb-2">
+                        <a href="{% url 'member_edit' %}" class="btn btn-outline-primary btn-lg">Edit Profil</a>
+                    </div>
+                    <div class="d-grid">
+                        <a href="{% url 'member_logout' %}" class="btn btn-outline-danger btn-lg">Keluar</a>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-6">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h3 class="card-title mb-0">Recent Visits</h3>
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-3 mb-4">
+                <div class="card-header bg-white border-0 p-4">
+                    <h3 class="mb-0">Informasi Pribadi</h3>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-4">
+                    <div class="row">
+                        <div class="col-sm-6 mb-3">
+                            <p class="text-muted mb-1">Jenis Kelamin</p>
+                            <p class="fw-bold">{{ member.get_gender_display }}</p>
+                        </div>
+                        <div class="col-sm-6 mb-3">
+                            <p class="text-muted mb-1">Usia</p>
+                            <p class="fw-bold">{{ member.age }} tahun</p>
+                        </div>
+                        <div class="col-sm-6 mb-3">
+                            <p class="text-muted mb-1">Tinggi</p>
+                            <p class="fw-bold">{{ member.height }} cm</p>
+                        </div>
+                        <div class="col-sm-6 mb-3">
+                            <p class="text-muted mb-1">Berat</p>
+                            <p class="fw-bold">{{ member.weight }} kg</p>
+                        </div>
+                        <div class="col-sm-6 mb-3">
+                            <p class="text-muted mb-1">Pengalaman Workout</p>
+                            <p class="fw-bold">{{ member.years_of_working_out }} tahun</p>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <p class="text-muted mb-1">Tujuan Fitness</p>
+                            <p class="fw-bold">{{ member.goals }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm rounded-3 mb-4">
+                <div class="card-header bg-white border-0 p-4">
+                    <h3 class="mb-0">Riwayat Kunjungan</h3>
+                </div>
+                <div class="card-body p-4">
                     {% if recent_visits %}
-                        <ul class="list-group">
+                        <div class="list-group list-group-flush">
                         {% for visit in recent_visits %}
-                            <li class="list-group-item">
-                                <strong>Check-in:</strong> {{ visit.check_in_time|jakarta_time }}
-                                {% if visit.check_out_time %}
-                                    <br><strong>Check-out:</strong> {{ visit.check_out_time|jakarta_time }}
-                                {% endif %}
-                            </li>
+                            <div class="list-group-item px-0">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="fas fa-calendar-check text-primary me-2"></i>
+                                        <span>{{ visit.check_in_time|date:"d M Y" }}</span>
+                                    </div>
+                                    <div>
+                                        <span class="badge bg-primary px-3 py-2">
+                                            {% if visit.check_out_time %}
+                                                {{ visit.check_in_time|time:"H:i" }} - {{ visit.check_out_time|time:"H:i" }}
+                                            {% else %}
+                                                {{ visit.check_in_time|time:"H:i" }} - Belum checkout
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
                         {% endfor %}
-                        </ul>
+                        </div>
                     {% else %}
-                        <p>No recent visits</p>
+                        <p class="text-center py-3">Belum ada riwayat kunjungan</p>
                     {% endif %}
                 </div>
             </div>
 
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title mb-0">Recent Payments</h3>
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-header bg-white border-0 p-4">
+                    <h3 class="mb-0">Riwayat Pembayaran</h3>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-4">
                     {% if recent_payments %}
-                        <ul class="list-group">
+                        <div class="list-group list-group-flush">
                         {% for payment in recent_payments %}
-                            <li class="list-group-item">
-                                <strong>Amount:</strong> Rp {{ payment.amount|floatformat:0 }}<br>
-                                <strong>Date:</strong> {{ payment.payment_date|date:"d M Y" }}<br>
-                                <strong>Duration:</strong> 
-                                {% if payment.duration_choice == 0 %}
-                                    {{ payment.duration_days }} days (Custom)
-                                {% else %}
-                                    {{ payment.get_duration_choice_display }}
-                                {% endif %}<br>
-                                <strong>Valid until:</strong> {{ payment.membership_end_date|date:"d M Y" }}<br>
-                                <strong>Payment Method:</strong> {{ payment.get_payment_method_display }}
-                            </li>
+                            <div class="list-group-item px-0">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div>
+                                        <span class="fw-bold">Rp {{ payment.amount|floatformat:0 }}</span>
+                                    </div>
+                                    <div>
+                                        <span class="badge bg-secondary px-3 py-2">{{ payment.get_payment_method_display }}</span>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <div class="text-muted">
+                                        <small>{{ payment.payment_date|date:"d M Y" }}</small>
+                                    </div>
+                                    <div class="text-muted">
+                                        <small>
+                                            {% if payment.duration_choice == 0 %}
+                                                {{ payment.duration_days }} hari (Custom)
+                                            {% else %}
+                                                {{ payment.get_duration_choice_display }}
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
                         {% endfor %}
-                        </ul>
+                        </div>
                     {% else %}
-                        <p>No recent payments</p>
+                        <p class="text-center py-3">Belum ada riwayat pembayaran</p>
                     {% endif %}
                 </div>
             </div>

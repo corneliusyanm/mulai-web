@@ -1,35 +1,57 @@
 {% extends 'base.html' %}
 
-{% block title %}Quick Check In - Mulai Gym{% endblock %}
+{% block title %}Check In - Mulai Gym{% endblock %}
 
 {% block content %}
 <div class="container">
     <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="mb-0">Quick Check In</h2>
-                </div>
-                <div class="card-body text-center">
-                    <h3 class="mb-4">Welcome back, {{ member.name }}!</h3>
-                    
+        <div class="col-md-6 col-lg-5">
+            <div class="card border-0 shadow-sm rounded-3 my-5">
+                <div class="card-body p-4 p-md-5 text-center">
                     {% if success %}
-                        <div class="alert alert-success mb-4">
-                            <h4 class="alert-heading">Check In Successful!</h4>
-                            <p>Have a great workout!</p>
+                        <div class="mb-4">
+                            <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-4" style="width: 100px; height: 100px;">
+                                <i class="fas fa-check-circle fa-4x"></i>
+                            </div>
+                            <h2 class="mb-2">Check In Berhasil!</h2>
+                            <p class="text-muted mb-4">Selamat berolahraga, {{ member.name }}!</p>
+                            
+                            <div class="card bg-light rounded-3 p-4 mb-4">
+                                <div class="row">
+                                    <div class="col-6 text-start border-end">
+                                        <p class="text-muted mb-1 small">Tanggal</p>
+                                        <p class="fw-bold mb-0">{{ visit.check_in_time|date:"d M Y" }}</p>
+                                    </div>
+                                    <div class="col-6 text-start">
+                                        <p class="text-muted mb-1 small">Waktu</p>
+                                        <p class="fw-bold mb-0">{{ visit.check_in_time|time:"H:i" }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'member_details' %}" class="btn btn-primary btn-lg">Lihat Akun Saya</a>
+                                <a href="/" class="btn btn-outline-primary btn-lg">Kembali ke Beranda</a>
+                            </div>
                         </div>
                     {% else %}
+                        <h2 class="mb-4">Selamat Datang, {{ member.name }}!</h2>
+                        
+                        <p class="mb-4">Apakah Anda ingin check in sekarang?</p>
+                        
                         <form method="post">
                             {% csrf_token %}
                             <input type="hidden" name="email" value="{{ member.email }}">
-                            <button type="submit" class="btn btn-primary btn-lg mb-3">Check In Now</button>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary btn-lg mb-4">Check In Sekarang</button>
+                            </div>
                         </form>
+                        
+                        <p class="mb-0">
+                            Bukan {{ member.name }}? 
+                            <a href="{% url 'forget_member' %}" class="text-primary fw-bold">Klik di sini</a>
+                        </p>
                     {% endif %}
-                    
-                    <p class="mb-0">
-                        Not {{ member.name }}? 
-                        <a href="{% url 'forget_member' %}">Click here</a>
-                    </p>
                 </div>
             </div>
         </div>
