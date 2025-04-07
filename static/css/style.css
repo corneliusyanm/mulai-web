@@ -222,14 +222,14 @@ body {
   width: 50% !important;
   max-width: 50%;
   top: var(--navbar-height); /* Use variable */
-  height: calc(100vh - var(--navbar-height)); /* Remaining height using variable */
+  height: calc(100vh - var(--navbar-height) - 10vh); /* Use viewport height percentage instead of fixed pixels */
   margin-top: 0;
   box-sizing: border-box;
   z-index: 1040; /* Below navbar but above backdrop */
   border-top-left-radius: 16px; /* Round the top left corner */
   border-top: none; /* Remove the transparent border */
-  bottom: 0; /* Ensure it extends to the bottom */
   position: fixed; /* Fix positioning */
+  overflow-y: auto; /* Add scrolling for content that may be cut off */
 }
 
 /* Keep navbar above offcanvas backdrop */
