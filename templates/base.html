@@ -29,6 +29,13 @@
             position: absolute;
             right: 20px;
         }
+        /* Prevent darkening of navbar when offcanvas opens */
+        .offcanvas-backdrop {
+            z-index: 999; /* Lower than navbar z-index */
+        }
+        .navbar {
+            z-index: 1050 !important; /* Higher than backdrop */
+        }
     </style>
 </head>
 <body>

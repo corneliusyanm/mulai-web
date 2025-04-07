@@ -222,6 +222,12 @@ body {
   margin-top: 0;
   border-top: 65px solid transparent; /* Creates space for the navbar */
   box-sizing: border-box;
+  z-index: 1040; /* Below navbar but above backdrop */
+}
+
+/* Keep navbar above offcanvas backdrop */
+.offcanvas-backdrop {
+  z-index: 999;
 }
 
 .offcanvas-header {
