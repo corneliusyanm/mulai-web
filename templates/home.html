@@ -10,29 +10,29 @@
         <img src="/static/images/karena_hidup_sehatmu.png" alt="KARENA HIDUP SEHATMU" style="max-width: 80%; height: auto; margin-bottom: 0rem; margin-top: 2rem;">
         
         <div style="margin: 1rem 0;">
-            <img src="/static/images/mulai_dari_sini.png" alt="Mulai DARI SINI" style="max-width: 80%; height: auto; margin-bottom: 0.5rem;">
+            <img src="/static/images/mulai_dari_sini.png" alt="Mulai DARI SINI" style="max-width: 80%; height: auto; margin-bottom: 1.75rem;">
         </div>
         
         <div class="row justify-content-center">
             {% if request.session.member_email %}
             <div class="col-5">
-                <a href="{% url 'member_details' %}" class="btn w-100" style="background-color: #BEF006; color: #4B4BEC; font-weight: bold; border-radius: 30px; padding: 8px;">Akun Saya</a>
+                <a href="{% url 'member_details' %}" class="btn w-100" style="background-color: #BEF006; color: #4B4BEC; font-weight: bold; border-radius: 30vh; padding: 1.2vh;">Akun Saya</a>
             </div>
             {% else %}
             <div class="col-5">
-                <a href="{% url 'signup' %}" class="btn w-100" style="background-color: #BEF006; color: #4B4BEC; font-weight: bold; border-radius: 30px; padding: 8px;">DAFTAR</a>
+                <a href="{% url 'signup' %}" class="btn w-100" style="background-color: #BEF006; color: #4B4BEC; font-weight: bold; border-radius: 30vh; padding: 1.2vh;">DAFTAR</a>
             </div>
             <div class="col-5">
-                <a href="{% url 'member_login' %}" class="btn w-100" style="background-color: #4B4BEC; color: #BEF006; font-weight: bold; border: 2px solid #BEF006; border-radius: 30px; padding: 8px;">MASUK</a>
+                <a href="{% url 'member_login' %}" class="btn w-100" style="background-color: #4B4BEC; color: #BEF006; font-weight: bold; border: 0.3vh solid #BEF006; border-radius: 30vh; padding: 1.2vh;">MASUK</a>
             </div>
             {% endif %}
         </div>
         
-        <div style="margin-top: 3rem;">
-            <div class="promo-box" style="background: linear-gradient(90deg, #bef006, #ffffff); color: #4B4BEC; border-radius: 15px; padding: 10px 20px; display: inline-block; font-weight: bold; font-style: italic;">
+        <div style="margin-top: 5vh;">
+            <div class="promo-box" style="background: linear-gradient(90deg, #bef006, #ffffff); color: #4B4BEC; border-radius: 2vh; padding: 1.5vh 3vh; display: inline-block; font-weight: bold; font-style: italic;">
                 <div style="font-style: italic; text-align: left;">PROMO PRE-SALE</div>
-                <div style="font-size: 0.8rem; text-align: left; font-style: italic; color: #a6a6a6;">mulai dari</div>
-                <div style="font-size: 2rem; font-weight: bold; text-align: left; font-style: italic;">Rp 183,000 <span style="font-size: 1rem; font-style: italic;">/bulan</span></div>
+                <div style="font-size: 2vh; text-align: left; font-style: italic; color: #a6a6a6;">mulai dari</div>
+                <div style="font-size: 4vh; font-weight: bold; text-align: left; font-style: italic;">Rp 183,000 <span style="font-size: 2vh; font-style: italic;">/bulan</span></div>
             </div>
         </div>
     </div>

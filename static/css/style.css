@@ -12,6 +12,7 @@
   --background: #F5F5F5;
   --gray: #757575;
   --outline-button-border-width: 3px;
+  --navbar-height: 7.5vh; /* Variable for navbar height */
 }
 
 /* Bootstrap Overrides */
@@ -33,7 +34,7 @@ body {
   background-color: var(--primary);
   color: var(--light);
   margin: 0;
-  padding-top: 65px; /* Add padding to account for fixed navbar height */
+  padding-top: var(--navbar-height); /* Use variable */
   overflow-x: hidden;
 }
 
@@ -46,6 +47,9 @@ body {
   width: 100%;
   z-index: 1000;
   text-align: center;
+  height: var(--navbar-height); /* Use variable */
+  display: flex;
+  align-items: center;
 }
 
 .navbar-brand {
@@ -217,12 +221,15 @@ body {
   background-color: var(--primary);
   width: 50% !important;
   max-width: 50%;
-  top: 0;
-  height: 100%;
+  top: var(--navbar-height); /* Use variable */
+  height: calc(100vh - var(--navbar-height)); /* Remaining height using variable */
   margin-top: 0;
-  border-top: 65px solid transparent; /* Creates space for the navbar */
   box-sizing: border-box;
   z-index: 1040; /* Below navbar but above backdrop */
+  border-top-left-radius: 16px; /* Round the top left corner */
+  border-top: none; /* Remove the transparent border */
+  bottom: 0; /* Ensure it extends to the bottom */
+  position: fixed; /* Fix positioning */
 }
 
 /* Keep navbar above offcanvas backdrop */

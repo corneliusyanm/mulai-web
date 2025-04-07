@@ -16,18 +16,37 @@
         .navbar {
             background: linear-gradient(90deg, #5555ef, #ffffff) !important;
             text-align: center;
+            height: 7.5vh; /* 7.5% of viewport height */
         }
         .navbar .container {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            height: 100%;
+            padding: 0 15px;
         }
         .navbar-brand {
             margin: 0 auto;
+            display: flex;
+            align-items: center;
+            height: 100%;
+        }
+        .navbar-brand img {
+            max-height: 75%; /* Increased from 65% to take more vertical space */
+            object-fit: contain;
         }
         .navbar-toggler {
             position: absolute;
             right: 20px;
+            height: 75%; /* Match the logo height */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            border: none;
+        }
+        .navbar-toggler i {
+            font-size: 1.8rem; /* Larger icon */
         }
         /* Prevent darkening of navbar when offcanvas opens */
         .offcanvas-backdrop {
@@ -36,6 +55,13 @@
         .navbar {
             z-index: 1050 !important; /* Higher than backdrop */
         }
+        
+        /* Ensure the offcanvas is properly positioned */
+        .offcanvas {
+            top: 7.5vh !important;
+            bottom: 0 !important;
+            position: fixed !important;
+        }
     </style>
 </head>
 <body>
@@ -43,7 +69,7 @@
     <nav class="navbar navbar-expand-lg">
         <div class="container">
             <a class="navbar-brand" href="/" style="margin: 0; left: 20px;">
-                <img src="{% static 'images/logo_navbar.png' %}" alt="Mulai Gym" height="40" onerror="this.src='https://placehold.co/120x40/4B4BEC/FFFFFF?text=MULAI+GYM'">
+                <img src="{% static 'images/logo_navbar.png' %}" alt="Mulai Gym" style="max-height: 100%; object-fit: contain; padding: 2px 0;" onerror="this.src='https://placehold.co/120x40/4B4BEC/FFFFFF?text=MULAI+GYM'">
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#navbarOffcanvas" aria-controls="navbarOffcanvas" style="color: var(--primary); right: 20px;">
                 <i class="fas fa-bars"></i>
