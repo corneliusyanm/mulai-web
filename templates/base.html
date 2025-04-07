@@ -51,46 +51,48 @@
     </div>
     
     <!-- Mobile Offcanvas Menu -->
-    <div class="offcanvas offcanvas-end" tabindex="-1" id="navbarOffcanvas" aria-labelledby="navbarOffcanvasLabel">
-        <div class="offcanvas-body">
-            <ul class="navbar-nav">
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="navbarOffcanvas" aria-labelledby="navbarOffcanvasLabel" style="max-width: 50%;">
+        <div class="offcanvas-body d-flex flex-column">
+            <ul class="navbar-nav flex-grow-1">
                 <li class="nav-item">
                     <a class="nav-link"></a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ request.scheme }}://{{ request.get_host }}/#home">Home</a>
+                    <a class="nav-link fw-bold" href="{{ request.scheme }}://{{ request.get_host }}/#home">• Home</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ request.scheme }}://{{ request.get_host }}/#kenapa-mulai">Kenapa Mulai?</a>
+                    <a class="nav-link fw-bold" href="{{ request.scheme }}://{{ request.get_host }}/#kenapa-mulai">• Kenapa Mulai?</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ request.scheme }}://{{ request.get_host }}/#mari-mulai">Mari Mulai</a>
+                    <a class="nav-link fw-bold" href="{{ request.scheme }}://{{ request.get_host }}/#mari-mulai">• Mari Mulai!</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ request.scheme }}://{{ request.get_host }}/#membership">Membership</a>
+                    <a class="nav-link fw-bold" href="{{ request.scheme }}://{{ request.get_host }}/#membership">• Membership</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ request.scheme }}://{{ request.get_host }}/#fasilitas">Fasilitas</a>
+                    <a class="nav-link fw-bold" href="{{ request.scheme }}://{{ request.get_host }}/#fasilitas">• Fasilitas</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ request.scheme }}://{{ request.get_host }}/#kelas">Kelas</a>
+                    <a class="nav-link fw-bold" href="{{ request.scheme }}://{{ request.get_host }}/#kelas">• Kelas</a>
                 </li>
-                {% if request.session.member_email %}
-                    <li class="nav-item mt-4">
-                        <a class="btn btn-secondary w-100" href="{% url 'member_details' %}">Akun Saya</a>
-                    </li>
-                    <li class="nav-item mt-2">
-                        <a class="btn btn-outline-secondary w-100" href="{% url 'member_logout' %}">Keluar</a>
-                    </li>
-                {% else %}
-                    <li class="nav-item mt-4">
-                        <a class="btn btn-secondary w-100" href="{% url 'signup' %}">Daftar</a>
-                    </li>
-                    <li class="nav-item mt-2">
-                        <a class="btn btn-outline-secondary w-100" href="{% url 'member_login' %}">Masuk</a>
-                    </li>
-                {% endif %}
             </ul>
+            <div class="mt-auto">
+                {% if request.session.member_email %}
+                    <div class="nav-item mb-2">
+                        <a class="btn btn-secondary w-100" href="{% url 'member_details' %}">Akun Saya</a>
+                    </div>
+                    <div class="nav-item mb-3">
+                        <a class="btn btn-outline-secondary w-100" href="{% url 'member_logout' %}">Keluar</a>
+                    </div>
+                {% else %}
+                    <div class="nav-item mb-2">
+                        <a class="btn btn-secondary w-100" href="{% url 'signup' %}">Daftar</a>
+                    </div>
+                    <div class="nav-item mb-3">
+                        <a class="btn btn-outline-secondary w-100" href="{% url 'member_login' %}">Masuk</a>
+                    </div>
+                {% endif %}
+            </div>
         </div>
     </div>
 
