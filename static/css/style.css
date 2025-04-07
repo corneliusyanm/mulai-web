@@ -33,7 +33,7 @@ body {
   background-color: var(--primary);
   color: var(--light);
   margin: 0;
-  padding: 0;
+  padding-top: 65px; /* Add padding to account for fixed navbar height */
   overflow-x: hidden;
 }
 
@@ -217,6 +217,11 @@ body {
   background-color: var(--primary);
   width: 50% !important;
   max-width: 50%;
+  top: 0;
+  height: 100%;
+  margin-top: 0;
+  border-top: 65px solid transparent; /* Creates space for the navbar */
+  box-sizing: border-box;
 }
 
 .offcanvas-header {
@@ -283,6 +288,7 @@ footer {
   min-height: 100vh;
   position: relative;
   overflow: hidden;
+  padding-top: 0; /* Remove any additional top padding as body padding handles it */
 }
 
 /* Promo box */
@@ -306,7 +312,7 @@ footer {
   .hero-section {
     text-align: left;
     padding: 4rem 2rem;
-    margin-top: 76px; /* Adjust for fixed navbar */
+    margin-top: 0; /* Remove this since we have body padding already */
   }
   
   .hero-title {
@@ -334,4 +340,9 @@ footer {
   .section.bg-white {
     background-color: var(--primary) !important;
   }
+}
+
+/* Ensure content containers have proper spacing */
+.container, .mobile-container {
+  padding-top: 0; /* Remove any additional top padding as body padding handles it */
 } 
