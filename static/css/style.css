@@ -11,6 +11,21 @@
   --light: #FFFFFF;
   --background: #F5F5F5;
   --gray: #757575;
+  --outline-button-border-width: 3px;
+}
+
+/* Bootstrap Overrides */
+.text-primary {
+  color: var(--primary) !important;
+}
+
+.text-secondary {
+  color: var(--secondary) !important;
+}
+
+/* Ensure specificity for button outlines if needed */
+.btn-outline-secondary.text-secondary {
+  color: var(--secondary) !important;
 }
 
 body {
@@ -73,14 +88,14 @@ body {
   border-radius: 24px;
   font-weight: 600;
   padding: 10px 24px;
-  color: var(--dark);
+  color: var(--primary) !important;
 }
 
 .btn-secondary:hover,
 .btn-secondary:focus {
   background-color: #a8d700;
   border-color: #a8d700;
-  color: var(--dark);
+  color: var(--primary) !important;
 }
 
 .btn-outline-primary {
@@ -89,12 +104,14 @@ body {
   border-radius: 8px;
   font-weight: 600;
   padding: 10px 20px;
+  border-width: var(--outline-button-border-width);
 }
 
 .btn-outline-primary:hover,
 .btn-outline-primary:focus {
   background-color: var(--primary);
   color: var(--light);
+  border-width: var(--outline-button-border-width);
 }
 
 .btn-outline-secondary {
@@ -103,12 +120,14 @@ body {
   border-radius: 24px;
   font-weight: 600;
   padding: 10px 24px;
+  border-width: var(--outline-button-border-width);
 }
 
 .btn-outline-secondary:hover,
 .btn-outline-secondary:focus {
   background-color: var(--secondary);
   color: var(--dark);
+  border-width: var(--outline-button-border-width);
 }
 
 /* Hero section */

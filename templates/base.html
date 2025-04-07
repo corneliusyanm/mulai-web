@@ -78,14 +78,17 @@
                 </li>
                 {% if request.session.member_email %}
                     <li class="nav-item mt-4">
-                        <a class="btn btn-secondary w-100 text-dark" href="{% url 'member_details' %}">Akun Saya</a>
+                        <a class="btn btn-secondary w-100" href="{% url 'member_details' %}">Akun Saya</a>
                     </li>
                     <li class="nav-item mt-2">
-                        <a class="btn btn-outline-primary w-100" href="{% url 'member_logout' %}">Keluar</a>
+                        <a class="btn btn-outline-secondary w-100" href="{% url 'member_logout' %}">Keluar</a>
                     </li>
                 {% else %}
                     <li class="nav-item mt-4">
-                        <a class="btn btn-secondary w-100 text-dark" href="{% url 'member_login' %}">Masuk/Daftar</a>
+                        <a class="btn btn-secondary w-100" href="{% url 'signup' %}">Daftar</a>
+                    </li>
+                    <li class="nav-item mt-2">
+                        <a class="btn btn-outline-secondary w-100" href="{% url 'member_login' %}">Masuk</a>
                     </li>
                 {% endif %}
             </ul>
