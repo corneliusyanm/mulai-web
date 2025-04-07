@@ -13,13 +13,6 @@
         body {
             background-color: #4B4BEC;
         }
-        .mobile-container {
-            max-width: 576px;
-            margin: 0 auto;
-            background-color: #4B4BEC;
-            min-height: 100vh;
-            position: relative;
-        }
         .navbar {
             background: linear-gradient(90deg, #5555ef, #ffffff) !important;
             text-align: center;
@@ -39,24 +32,22 @@
     </style>
 </head>
 <body>
-    <div class="mobile-container">
-        <!-- Navigation -->
-        <nav class="navbar navbar-expand-lg">
-            <div class="container">
-                <a class="navbar-brand" href="/" style="margin: 0; left: 20px;">
-                    <img src="{% static 'images/logo_navbar.png' %}" alt="Mulai Gym" height="40" onerror="this.src='https://placehold.co/120x40/4B4BEC/FFFFFF?text=MULAI+GYM'">
-                </a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#navbarOffcanvas" aria-controls="navbarOffcanvas" style="color: var(--primary); right: 20px;">
-                    <i class="fas fa-bars"></i>
-                </button>
-            </div>
-        </nav>
-        
-        <!-- Main content -->
-        <div class="container" style="background-color: #4B4BEC;">
-            {% block content %}
-            {% endblock %}
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand" href="/" style="margin: 0; left: 20px;">
+                <img src="{% static 'images/logo_navbar.png' %}" alt="Mulai Gym" height="40" onerror="this.src='https://placehold.co/120x40/4B4BEC/FFFFFF?text=MULAI+GYM'">
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#navbarOffcanvas" aria-controls="navbarOffcanvas" style="color: var(--primary); right: 20px;">
+                <i class="fas fa-bars"></i>
+            </button>
         </div>
+    </nav>
+    
+    <!-- Main content -->
+    <div class="container" style="background-color: #4B4BEC;">
+        {% block content %}
+        {% endblock %}
     </div>
     
     <!-- Mobile Offcanvas Menu -->
@@ -68,22 +59,22 @@
         <div class="offcanvas-body">
             <ul class="navbar-nav">
                 <li class="nav-item">
-                    <a class="nav-link" href="/" data-bs-dismiss="offcanvas">Home</a>
+                    <a class="nav-link" href="{{ request.scheme }}://{{ request.get_host }}/#home">Home</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link scroll-link" href="#kenapa-mulai" data-bs-dismiss="offcanvas">Kenapa Mulai?</a>
+                    <a class="nav-link" href="{{ request.scheme }}://{{ request.get_host }}/#kenapa-mulai">Kenapa Mulai?</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link scroll-link" href="#mari-mulai" data-bs-dismiss="offcanvas">Mari Mulai</a>
+                    <a class="nav-link" href="{{ request.scheme }}://{{ request.get_host }}/#mari-mulai">Mari Mulai</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link scroll-link" href="#membership" data-bs-dismiss="offcanvas">Membership</a>
+                    <a class="nav-link" href="{{ request.scheme }}://{{ request.get_host }}/#membership">Membership</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link scroll-link" href="#fasilitas" data-bs-dismiss="offcanvas">Fasilitas</a>
+                    <a class="nav-link" href="{{ request.scheme }}://{{ request.get_host }}/#fasilitas">Fasilitas</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link scroll-link" href="#kelas" data-bs-dismiss="offcanvas">Kelas</a>
+                    <a class="nav-link" href="{{ request.scheme }}://{{ request.get_host }}/#kelas">Kelas</a>
                 </li>
                 {% if request.session.member_email %}
                     <li class="nav-item mt-4">
@@ -104,30 +95,53 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Handle smooth scrolling for anchor links
-        document.querySelectorAll('.scroll-link').forEach(anchor => {
+        const isHomePage = window.location.pathname === '/' || 
+                          window.location.pathname === '/home/';
+        const offcanvasElement = document.getElementById('navbarOffcanvas');
+        let bsOffcanvas = null;
+        if (offcanvasElement) {
+            // Use getOrCreateInstance to ensure we have a valid Bootstrap object
+            bsOffcanvas = bootstrap.Offcanvas.getOrCreateInstance(offcanvasElement);
+        }
+
+        document.querySelectorAll('.offcanvas-body .nav-link').forEach(anchor => {
             anchor.addEventListener('click', function(e) {
-                e.preventDefault();
-                const targetId = this.getAttribute('href');
-                const targetElement = document.querySelector(targetId);
-                
-                if (targetElement) {
-                    // Apply offset for fixed navbar
-                    const offset = 80;
-                    const targetPosition = targetElement.getBoundingClientRect().top + window.pageYOffset - offset;
+                // Determine if we should smooth scroll
+                const shouldSmoothScroll = isHomePage && 
+                                           this.hostname === window.location.hostname && 
+                                           this.pathname === window.location.pathname && 
+                                           this.hash;
+
+                if (shouldSmoothScroll) {
+                    e.preventDefault(); // Prevent default navigation
                     
-                    window.scrollTo({
-                        top: targetPosition,
-                        behavior: 'smooth'
-                    });
-                    
-                    // Close mobile menu if open
-                    const offcanvas = document.getElementById('navbarOffcanvas');
-                    if (offcanvas) {
-                        const bsOffcanvas = bootstrap.Offcanvas.getInstance(offcanvas);
-                        if (bsOffcanvas) {
-                            bsOffcanvas.hide();
-                        }
+                    // Hide the offcanvas first
+                    if (bsOffcanvas) {
+                        bsOffcanvas.hide();
+                    }
+
+                    // Perform smooth scroll
+                    const targetId = this.hash;
+                    const targetElement = document.querySelector(targetId);
+                    if (targetElement) {
+                        const offset = 80; 
+                        const targetPosition = targetElement.getBoundingClientRect().top + window.pageYOffset - offset;
+                        
+                        // Scroll after a short delay to allow hide animation to start
+                        setTimeout(() => {
+                             window.scrollTo({
+                                top: targetPosition,
+                                behavior: 'smooth'
+                            });
+                        }, 50); // Shorter delay
+                    }
+                } else {
+                    // If not smooth scrolling (i.e., navigating away or no hash),
+                    // ensure the offcanvas closes.
+                    // The browser navigation will happen automatically since we didn't preventDefault.
+                    if (bsOffcanvas) {
+                         // Optionally add a short delay if needed, but hide() should be okay here.
+                        bsOffcanvas.hide(); 
                     }
                 }
             });
