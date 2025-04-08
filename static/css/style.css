@@ -358,4 +358,25 @@ footer {
 /* Ensure content containers have proper spacing */
 .container, .mobile-container {
   padding-top: 0; /* Remove any additional top padding as body padding handles it */
+}
+
+/* Full width container overrides */
+.container-fluid {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.container-fluid.px-4 {
+  padding-left: 1rem !important;
+  padding-right: 1rem !important;
+}
+
+section {
+  width: 100% !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
 } 
