@@ -16,11 +16,11 @@
 
     <div class="row">
         <div class="col-md-8 mx-auto">
-            <div class="card">
-                <div class="card-header">
+            <div class="card bg-transparent border">
+                <div class="card-header bg-white text-primary">
                     <h3 class="card-title mb-0">Personal Information</h3>
                 </div>
-                <div class="card-body">
+                <div class="card-body bg-transparent text-white">
                     {% if messages %}
                         <div class="alert alert-success">
                             {% for message in messages %}
@@ -33,18 +33,18 @@
                         {% csrf_token %}
                         
                         <div class="mb-3">
-                            <label for="{{ form.name.id_for_label }}" class="form-label">Name</label>
-                            {{ form.name|add_class:"form-control" }}
+                            <label for="{{ form.name.id_for_label }}" class="form-label text-white fw-bold">Name</label>
+                            {{ form.name|add_class:"form-control bg-transparent text-white border-light" }}
                             {% if form.name.errors %}
                                 <div class="text-danger fw-bold fst-italic">{{ form.name.errors }}</div>
                             {% endif %}
                         </div>
                         
                         <div class="mb-3">
-                            <label class="form-label">Phone Number</label>
+                            <label class="form-label text-white fw-bold">Phone Number</label>
                             <div style="display: flex; align-items: center;">
-                                {{ form.country_code|add_class:"form-control" }}
-                                {{ form.phone_number_display|add_class:"form-control" }}
+                                {{ form.country_code|add_class:"form-control bg-transparent text-white border-light" }}
+                                {{ form.phone_number_display|add_class:"form-control bg-transparent text-white border-light" }}
                             </div>
                             {% if form.country_code.errors %}
                                 <div class="text-danger fw-bold fst-italic">{{ form.country_code.errors }}</div>
@@ -55,55 +55,55 @@
                         </div>
                         
                         <div class="mb-3">
-                            <label for="{{ form.gender.id_for_label }}" class="form-label">Gender</label>
-                            {{ form.gender|add_class:"form-select" }}
+                            <label for="{{ form.gender.id_for_label }}" class="form-label text-white fw-bold">Gender</label>
+                            {{ form.gender|add_class:"form-select bg-transparent text-white border-light" }}
                             {% if form.gender.errors %}
                                 <div class="text-danger fw-bold fst-italic">{{ form.gender.errors }}</div>
                             {% endif %}
                         </div>
                         
                         <div class="mb-3">
-                            <label for="{{ form.age.id_for_label }}" class="form-label">Age</label>
-                            {{ form.age|add_class:"form-control" }}
+                            <label for="{{ form.age.id_for_label }}" class="form-label text-white fw-bold">Age</label>
+                            {{ form.age|add_class:"form-control bg-transparent text-white border-light" }}
                             {% if form.age.errors %}
                                 <div class="text-danger fw-bold fst-italic">{{ form.age.errors }}</div>
                             {% endif %}
                         </div>
                         
                         <div class="mb-3">
-                            <label for="{{ form.height.id_for_label }}" class="form-label">Height (cm)</label>
-                            {{ form.height|add_class:"form-control" }}
+                            <label for="{{ form.height.id_for_label }}" class="form-label text-white fw-bold">Height (cm)</label>
+                            {{ form.height|add_class:"form-control bg-transparent text-white border-light" }}
                             {% if form.height.errors %}
                                 <div class="text-danger fw-bold fst-italic">{{ form.height.errors }}</div>
                             {% endif %}
                         </div>
                         
                         <div class="mb-3">
-                            <label for="{{ form.weight.id_for_label }}" class="form-label">Weight (kg)</label>
-                            {{ form.weight|add_class:"form-control" }}
+                            <label for="{{ form.weight.id_for_label }}" class="form-label text-white fw-bold">Weight (kg)</label>
+                            {{ form.weight|add_class:"form-control bg-transparent text-white border-light" }}
                             {% if form.weight.errors %}
                                 <div class="text-danger fw-bold fst-italic">{{ form.weight.errors }}</div>
                             {% endif %}
                         </div>
                         
                         <div class="mb-3">
-                            <label for="{{ form.years_of_working_out.id_for_label }}" class="form-label">Years of Working Out</label>
-                            {{ form.years_of_working_out|add_class:"form-control" }}
+                            <label for="{{ form.years_of_working_out.id_for_label }}" class="form-label text-white fw-bold">Years of Working Out</label>
+                            {{ form.years_of_working_out|add_class:"form-control bg-transparent text-white border-light" }}
                             {% if form.years_of_working_out.errors %}
                                 <div class="text-danger fw-bold fst-italic">{{ form.years_of_working_out.errors }}</div>
                             {% endif %}
                         </div>
                         
                         <div class="mb-3">
-                            <label for="{{ form.goals.id_for_label }}" class="form-label">Goals</label>
-                            {{ form.goals|add_class:"form-control" }}
+                            <label for="{{ form.goals.id_for_label }}" class="form-label text-white fw-bold">Goals</label>
+                            {{ form.goals|add_class:"form-control bg-transparent text-white border-light" }}
                             {% if form.goals.errors %}
                                 <div class="text-danger fw-bold fst-italic">{{ form.goals.errors }}</div>
                             {% endif %}
                         </div>
                         
                         <div class="d-grid">
-                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                            <button type="submit" class="btn btn-secondary">Save Changes</button>
                         </div>
                     </form>
                 </div>
