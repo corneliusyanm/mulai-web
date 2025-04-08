@@ -37,7 +37,8 @@ jobs:
             
             # Update git remote with new token
             git remote set-url origin "https://oauth2:${GH_TOKEN}@github.com/corneliusyanm/mulai-web.git"
-            git pull
+            git fetch origin
+            git reset --hard origin/main
             
             docker build -t mulai_web .
             docker stop mulai_web || true
