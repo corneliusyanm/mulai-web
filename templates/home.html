@@ -5,7 +5,7 @@
 
 {% block content %}
 <!-- Hero Section -->
-<section id="home" style="min-height: 100vh; padding-top: 80px; padding-bottom: 30px; text-align: center; color: white; position: relative; overflow: hidden;">
+<section id="home" style="min-height: 100vh; padding-top: 80px; padding-bottom: 0px; text-align: center; color: white; position: relative; overflow: hidden;">
     <img src="{% static 'images/wave.png' %}" alt="Wave Background" class="full-width-img" style="position: absolute; bottom: 13%; left: 0; height: 20%; width: 100%; z-index: 0;">
     <div class="container-fluid px-4" style="position: relative; z-index: 1;">
         <img src="/static/images/karena_hidup_sehatmu.png" alt="KARENA HIDUP SEHATMU" style="max-width: 80%; height: auto; margin-bottom: 0rem; margin-top: 1rem;">
@@ -40,18 +40,15 @@
 </section>
 
 <!-- Kenapa Mulai Gym Section -->
-<section id="kenapa-mulai" class="feature-section" style="min-height: 100vh; padding-top: 40px; padding-bottom: 30px; text-align: center; color: white; position: relative; overflow: hidden;">
+<section id="kenapa-mulai" class="feature-section" style="min-height: 100vh; padding-top: 10px; padding-bottom: 30px; text-align: center; color: white; position: relative; overflow: hidden;">
     <div class="container-fluid px-4">
-        <img src="{% static 'images/kenapa_mulai_gym.png' %}" alt="Kenapa Mulai Gym?" class="img-fluid mx-auto d-block mb-4" style="max-width: 67%; margin-top: -30px;">
+        <img src="{% static 'images/kenapa_mulai_gym.png' %}" alt="Kenapa Mulai Gym?" class="img-fluid mx-auto d-block mb-4" style="max-width: 67%;">
         
         <div class="text-center mb-5">
             <img src="{% static 'images/visi.png' %}" alt="Visi Mulai Gym" class="img-fluid mx-auto d-block" style="max-width: 95%;">
         </div>
 
-        <div class="position-relative" style="margin: 2rem 0;">
-            <img src="{% static 'images/kenapa_mulai_3.png' %}" alt="Kenapa Mulai Gym 3" style="position: absolute; left: 0; width: 100%; z-index: 0;">
-        </div>
-
+        <img class="full-width-img" src="{% static 'images/kenapa_mulai_3.png' %}" alt="Pemula aman, Trainer terlatih, Peralatan internasional, Mulai dari 180 ribu!" style="position: absolute; left: 0; width: 100%; z-index: 0; margin-top: -20px;">
     </div>
 </section>
 
