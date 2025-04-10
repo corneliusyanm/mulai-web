@@ -1,34 +1,36 @@
 {% extends 'base.html' %}
 
-{% block title %}Check In Failed - Mulai Gym{% endblock %}
+{% block title %}Check In Gagal - Mulai Gym{% endblock %}
 
 {% block content %}
-<div class="container">
+<div class="container py-4">
     <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header bg-danger text-white">
-                    <h2 class="mb-0">Check In Failed</h2>
-                </div>
-                <div class="card-body text-center">
+        <div class="col-md-6 mx-auto" style="margin: 1rem 6rem 7rem 6rem;">
+            <div class="bg-transparent p-4">
+                <h2 class="mb-4 text-white fw-bold text-center">Check In Gagal</h2>
+                <div class="bg-transparent text-white text-center">
                     <div class="alert alert-danger mb-4">
                         {% if has_active_visit %}
-                            <h4 class="alert-heading">Already Checked In</h4>
-                            <p>You already have an active check-in. Please check out first before checking in again.</p>
+                            <h4 class="alert-heading">Sudah Check In</h4>
+                            <p>Kamu sudah melakukan check in. Silakan check out terlebih dahulu sebelum check in lagi.</p>
                         {% else %}
-                            <h4 class="alert-heading">Membership Expired</h4>
-                            <p>Your membership has expired. Please renew your membership to continue using the gym.</p>
+                            <h4 class="alert-heading">Membership Kadaluarsa</h4>
+                            <p>Membership kamu sudah kadaluarsa. Silakan perpanjang membership untuk dapat menggunakan fasilitas gym.</p>
                             <hr>
                             <p class="mb-0">
-                                <strong>Active Until:</strong> {{ member.active_until|date:"d M Y" }}
+                                <strong>Aktif Hingga:</strong> {{ member.active_until|date:"d M Y" }}
                             </p>
                         {% endif %}
                     </div>
                     {% if has_active_visit %}
-                        <p>Please <a href="{% url 'check_out_page' %}">check out</a> first.</p>
+                        <p>Silakan <a href="{% url 'check_out_page' %}" class="text-secondary">check out</a> terlebih dahulu.</p>
                     {% else %}
-                        <p>Please contact the gym staff to renew your membership.</p>
+                        <p>Silakan hubungi staff gym untuk memperpanjang membership.</p>
                     {% endif %}
+                    
+                    <div class="mt-4">
+                        <a href="/" class="btn btn-secondary">Kembali ke Beranda</a>
+                    </div>
                 </div>
             </div>
         </div>
