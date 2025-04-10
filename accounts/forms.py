@@ -53,7 +53,12 @@ class MemberSignUpForm(forms.ModelForm):
         ]
         widgets = {
             "goals": forms.Textarea(attrs={"rows": 2}),
-            "know_mulai_gym_from": forms.Textarea(attrs={"rows": 2}),
+            "know_mulai_gym_from": forms.Textarea(
+                attrs={
+                    "rows": 2,
+                    "placeholder": "billboard, instagram, tiktok, teman, google maps, dll.",
+                }
+            ),
             "height": forms.NumberInput(
                 attrs={"step": "0.1", "placeholder": "tinggi dalam cm"}
             ),
@@ -62,6 +67,9 @@ class MemberSignUpForm(forms.ModelForm):
             ),
             "address": forms.TextInput(
                 attrs={"placeholder": "Sudirman, Kebonjati, Kopo, dll."}
+            ),
+            "years_of_working_out": forms.TextInput(
+                attrs={"placeholder": "belum pernah, 3 bulan, 2 tahun"}
             ),
         }
         labels = {
@@ -72,7 +80,7 @@ class MemberSignUpForm(forms.ModelForm):
             "know_mulai_gym_from": "Kenal Mulai Gym dari mana?",
         }
         help_texts = {
-            "know_mulai_gym_from": "billboard, instagram, tiktok, teman, google maps, dll.",
+            # Remove help text and use placeholder instead
         }
 
     def __init__(self, *args, **kwargs):
@@ -236,13 +244,16 @@ class MemberEditForm(forms.ModelForm):
         widgets = {
             "goals": forms.Textarea(attrs={"rows": 2}),
             "height": forms.NumberInput(
-                attrs={"step": "0.1", "placeholder": "Tinggi dalam cm"}
+                attrs={"step": "0.1", "placeholder": "tinggi dalam cm"}
             ),
             "weight": forms.NumberInput(
-                attrs={"step": "0.1", "placeholder": "Berat dalam kg"}
+                attrs={"step": "0.1", "placeholder": "berat dalam kg"}
             ),
             "address": forms.TextInput(
                 attrs={"placeholder": "Sudirman, Kebonjati, Kopo, dll."}
+            ),
+            "years_of_working_out": forms.TextInput(
+                attrs={"placeholder": "belum pernah, 3 bulan, 2 tahun"}
             ),
         }
         labels = {
@@ -250,6 +261,9 @@ class MemberEditForm(forms.ModelForm):
             "weight": "Berat (kg)",
             "years_of_working_out": "Sudah pernah nge-Gym berapa lama?",
             "goals": "Tujuan kamu nge-Gym supaya apa?",
+        }
+        help_texts = {
+            # Remove help text and use placeholder instead
         }
 
     def __init__(self, *args, **kwargs):
