@@ -1,39 +1,28 @@
 {% extends 'base.html' %}
 {% load form_extras %}
 
-{% block title %}Edit Profile - Mulai Gym{% endblock %}
+{% block title %}Edit Profil - Mulai Gym{% endblock %}
 
 {% block content %}
-<div class="container">
+<div class="container" style="margin-top: 2rem;">
     <div class="row">
-        <div class="col-md-12 mb-4">
+        <div class="col-md-12 mb-2">
             <div class="d-flex justify-content-between align-items-center">
-                <h1>Edit Profile</h1>
-                <a href="{% url 'member_details' %}" class="btn btn-outline-secondary">Cancel</a>
+                <h1 class="text-white fw-bold">Edit Profil</h1>
+                <a href="{% url 'member_details' %}" class="btn btn-outline-secondary">Kembali</a>
             </div>
         </div>
     </div>
 
     <div class="row">
-        <div class="col-md-8 mx-auto">
-            <div class="card bg-transparent border">
-                <div class="card-header bg-white text-primary">
-                    <h3 class="card-title mb-0">Personal Information</h3>
-                </div>
-                <div class="card-body bg-transparent text-white">
-                    {% if messages %}
-                        <div class="alert alert-success">
-                            {% for message in messages %}
-                                {{ message }}
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                    
+        <div class="col-md-6 mx-auto" style="margin: 0rem 6rem 7rem 6rem;">
+            <div class="bg-transparent p-4">
+                <div class="bg-transparent text-white">
                     <form method="post">
                         {% csrf_token %}
                         
                         <div class="mb-3">
-                            <label for="{{ form.name.id_for_label }}" class="form-label text-white fw-bold">Name</label>
+                            <label for="{{ form.name.id_for_label }}" class="form-label text-white fw-bold">Nama</label>
                             {{ form.name|add_class:"form-control bg-transparent text-white border-light" }}
                             {% if form.name.errors %}
                                 <div class="text-danger fw-bold fst-italic">{{ form.name.errors }}</div>
@@ -41,7 +30,7 @@
                         </div>
                         
                         <div class="mb-3">
-                            <label class="form-label text-white fw-bold">Phone Number</label>
+                            <label class="form-label text-white fw-bold">Nomor HP</label>
                             <div style="display: flex; align-items: center;">
                                 {{ form.country_code|add_class:"form-control bg-transparent text-white border-light" }}
                                 {{ form.phone_number_display|add_class:"form-control bg-transparent text-white border-light" }}
@@ -55,7 +44,7 @@
                         </div>
                         
                         <div class="mb-3">
-                            <label for="{{ form.gender.id_for_label }}" class="form-label text-white fw-bold">Gender</label>
+                            <label for="{{ form.gender.id_for_label }}" class="form-label text-white fw-bold">Jenis Kelamin</label>
                             {{ form.gender|add_class:"form-select bg-transparent text-white border-light" }}
                             {% if form.gender.errors %}
                                 <div class="text-danger fw-bold fst-italic">{{ form.gender.errors }}</div>
@@ -63,7 +52,7 @@
                         </div>
                         
                         <div class="mb-3">
-                            <label for="{{ form.age.id_for_label }}" class="form-label text-white fw-bold">Age</label>
+                            <label for="{{ form.age.id_for_label }}" class="form-label text-white fw-bold">Usia</label>
                             {{ form.age|add_class:"form-control bg-transparent text-white border-light" }}
                             {% if form.age.errors %}
                                 <div class="text-danger fw-bold fst-italic">{{ form.age.errors }}</div>
@@ -71,7 +60,7 @@
                         </div>
                         
                         <div class="mb-3">
-                            <label for="{{ form.height.id_for_label }}" class="form-label text-white fw-bold">Height (cm)</label>
+                            <label for="{{ form.height.id_for_label }}" class="form-label text-white fw-bold">Tinggi (cm)</label>
                             {{ form.height|add_class:"form-control bg-transparent text-white border-light" }}
                             {% if form.height.errors %}
                                 <div class="text-danger fw-bold fst-italic">{{ form.height.errors }}</div>
@@ -79,7 +68,7 @@
                         </div>
                         
                         <div class="mb-3">
-                            <label for="{{ form.weight.id_for_label }}" class="form-label text-white fw-bold">Weight (kg)</label>
+                            <label for="{{ form.weight.id_for_label }}" class="form-label text-white fw-bold">Berat Badan (kg)</label>
                             {{ form.weight|add_class:"form-control bg-transparent text-white border-light" }}
                             {% if form.weight.errors %}
                                 <div class="text-danger fw-bold fst-italic">{{ form.weight.errors }}</div>
@@ -87,7 +76,7 @@
                         </div>
                         
                         <div class="mb-3">
-                            <label for="{{ form.years_of_working_out.id_for_label }}" class="form-label text-white fw-bold">Years of Working Out</label>
+                            <label for="{{ form.years_of_working_out.id_for_label }}" class="form-label text-white fw-bold">Sudah pernah nge-Gym berapa tahun?</label>
                             {{ form.years_of_working_out|add_class:"form-control bg-transparent text-white border-light" }}
                             {% if form.years_of_working_out.errors %}
                                 <div class="text-danger fw-bold fst-italic">{{ form.years_of_working_out.errors }}</div>
@@ -95,15 +84,15 @@
                         </div>
                         
                         <div class="mb-3">
-                            <label for="{{ form.goals.id_for_label }}" class="form-label text-white fw-bold">Goals</label>
+                            <label for="{{ form.goals.id_for_label }}" class="form-label text-white fw-bold">Tujuan kamu nge-Gym supaya apa?</label>
                             {{ form.goals|add_class:"form-control bg-transparent text-white border-light" }}
                             {% if form.goals.errors %}
                                 <div class="text-danger fw-bold fst-italic">{{ form.goals.errors }}</div>
                             {% endif %}
                         </div>
                         
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-secondary">Save Changes</button>
+                        <div class="text-center mt-4">
+                            <button type="submit" class="btn btn-secondary">Simpan</button>
                         </div>
                     </form>
                 </div>
