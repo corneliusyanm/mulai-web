@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=28">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=34">
     
     <link rel="icon" type="image/png" href="{% static 'favicons/favicon-96x96.png' %}" sizes="96x96" />
     <link rel="icon" type="image/svg+xml" href="{% static 'favicons/favicon.svg' %}" />
@@ -23,6 +23,7 @@
             margin: 0;
             padding: 0;
             width: 100%;
+            padding-top: 0; /* Remove body padding */
         }
         .navbar {
             background: linear-gradient(90deg, #5555ef, #ffffff) !important;
@@ -30,7 +31,10 @@
             height: 7.5vh;
             width: 100vw;
             max-width: 100%;
-            position: relative;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1050;
             overflow: visible;
         }
         .navbar-brand {
@@ -74,6 +78,17 @@
             overflow-y: auto !important;
         }
         
+        /* Remove margin from #content */
+        #content {
+            margin-top: 0;
+        }
+        
+        /* Add spacing directly to block content */
+        .content-spacer {
+            height: 6.5vh; /* Explicit height for spacing */
+            width: 100%;
+        }
+        
         /* Ensure full-width images */
         .full-width-img {
             width: 100%;
@@ -95,7 +110,8 @@
     </nav>
     
     <!-- Main content -->
-    <div class="container-fluid p-0" style="background-color: #4B4BEC;">
+    <div id="content" class="container-fluid p-0" style="background-color: #4B4BEC;">
+        <div class="content-spacer"></div> <!-- Spacer div -->
         {% block content %}
         {% endblock %}
     </div>
@@ -111,16 +127,19 @@
                     <a class="nav-link fw-bold" href="{{ request.scheme }}://{{ request.get_host }}/#home">• Home</a>
                 </li>
                 <li class="nav-item">
+                  <a class="nav-link fw-bold" href="{{ request.scheme }}://{{ request.get_host }}/#presale">• Promo !</a>
+              </li>
+                <li class="nav-item">
                     <a class="nav-link fw-bold" href="{{ request.scheme }}://{{ request.get_host }}/#kenapa-mulai">• Kenapa <img src="{% static 'images/mulai_white.png' %}" alt="Mulai" style="height: 1em; display: inline-block; vertical-align: middle;"> ?</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link fw-bold" href="{{ request.scheme }}://{{ request.get_host }}/#mari-mulai">• Mari <img src="{% static 'images/mulai_white.png' %}" alt="Mulai" style="height: 1em; display: inline-block; vertical-align: middle;"> !</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link fw-bold" href="{{ request.scheme }}://{{ request.get_host }}/#membership">• Membership</a>
+                    <a class="nav-link fw-bold" href="{{ request.scheme }}://{{ request.get_host }}/#fasilitas">• Fasilitas</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link fw-bold" href="{{ request.scheme }}://{{ request.get_host }}/#fasilitas">• Fasilitas</a>
+                    <a class="nav-link fw-bold" href="{{ request.scheme }}://{{ request.get_host }}/#membership">• Membership</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link fw-bold" href="{{ request.scheme }}://{{ request.get_host }}/#kontak">• Kontak</a>
@@ -163,39 +182,35 @@
                 // Determine if we should smooth scroll
                 const shouldSmoothScroll = isHomePage && 
                                            this.hostname === window.location.hostname && 
-                                           this.pathname === window.location.pathname && 
                                            this.hash;
 
                 if (shouldSmoothScroll) {
                     e.preventDefault(); // Prevent default navigation
                     
-                    // Hide the offcanvas first
+                    // Hide the offcanvas
                     if (bsOffcanvas) {
                         bsOffcanvas.hide();
                     }
 
-                    // Perform smooth scroll
-                    const targetId = this.hash;
-                    const targetElement = document.querySelector(targetId);
-                    if (targetElement) {
-                        const offset = 80; 
-                        const targetPosition = targetElement.getBoundingClientRect().top + window.pageYOffset - offset;
-                        
-                        // Scroll after a short delay to allow hide animation to start
-                        setTimeout(() => {
-                             window.scrollTo({
+                    // Wait for offcanvas to finish hiding before scrolling
+                    setTimeout(() => {
+                        const targetId = this.hash;
+                        const targetElement = document.querySelector(targetId);
+                        if (targetElement) {
+                            const navbar = document.querySelector('.navbar');
+                            const navbarHeight = navbar ? navbar.offsetHeight : 0;
+                            const targetPosition = targetElement.getBoundingClientRect().top + window.pageYOffset - navbarHeight;
+                            
+                            window.scrollTo({
                                 top: targetPosition,
                                 behavior: 'smooth'
                             });
-                        }, 50); // Shorter delay
-                    }
+                        }
+                    }, 300); // Wait for offcanvas hide animation
                 } else {
-                    // If not smooth scrolling (i.e., navigating away or no hash),
-                    // ensure the offcanvas closes.
-                    // The browser navigation will happen automatically since we didn't preventDefault.
+                    // Default navigation behavior
                     if (bsOffcanvas) {
-                         // Optionally add a short delay if needed, but hide() should be okay here.
-                        bsOffcanvas.hide(); 
+                        bsOffcanvas.hide();
                     }
                 }
             });
