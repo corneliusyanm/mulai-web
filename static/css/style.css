@@ -205,6 +205,11 @@ body {
   border: 1px solid #ddd;
 }
 
+.form-control::placeholder {
+  color: #9393ee !important;
+  opacity: 1;
+}
+
 .form-control:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 0.25rem rgba(75, 75, 236, 0.25);

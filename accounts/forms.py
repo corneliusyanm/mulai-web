@@ -53,21 +53,21 @@ class MemberSignUpForm(forms.ModelForm):
             "goals": forms.Textarea(attrs={"rows": 2}),
             "know_mulai_gym_from": forms.Textarea(attrs={"rows": 2}),
             "height": forms.NumberInput(
-                attrs={"step": "0.1", "placeholder": "Height in cm"}
+                attrs={"step": "0.1", "placeholder": "Tinggi dalam cm"}
             ),
             "weight": forms.NumberInput(
-                attrs={"step": "0.1", "placeholder": "Weight in kg"}
+                attrs={"step": "0.1", "placeholder": "Berat dalam kg"}
             ),
         }
         labels = {
-            "height": "Height (cm)",
-            "weight": "Weight (kg)",
-            "years_of_working_out": "Years of Working Out",
-            "goals": "Goals of Working Out",
-            "know_mulai_gym_from": "How did you hear about Mulai Gym?",
+            "height": "Tinggi (cm)",
+            "weight": "Berat (kg)",
+            "years_of_working_out": "Sudah pernah nge-Gym berapa tahun?",
+            "goals": "Tujuan kamu nge-Gym supaya apa?",
+            "know_mulai_gym_from": "Kenal Mulai Gym dari mana?",
         }
         help_texts = {
-            "know_mulai_gym_from": "billboard, friends, instagram, google, etc.",
+            "know_mulai_gym_from": "billboard, instagram, tiktok, teman, google maps, dll.",
         }
 
     def __init__(self, *args, **kwargs):
@@ -230,17 +230,17 @@ class MemberEditForm(forms.ModelForm):
         widgets = {
             "goals": forms.Textarea(attrs={"rows": 2}),
             "height": forms.NumberInput(
-                attrs={"step": "0.1", "placeholder": "Height in cm"}
+                attrs={"step": "0.1", "placeholder": "Tinggi dalam cm"}
             ),
             "weight": forms.NumberInput(
-                attrs={"step": "0.1", "placeholder": "Weight in kg"}
+                attrs={"step": "0.1", "placeholder": "Berat dalam kg"}
             ),
         }
         labels = {
-            "height": "Height (cm)",
-            "weight": "Weight (kg)",
-            "years_of_working_out": "Years of Working Out",
-            "goals": "Goals of Working Out",
+            "height": "Tinggi (cm)",
+            "weight": "Berat (kg)",
+            "years_of_working_out": "Sudah pernah nge-Gym berapa tahun?",
+            "goals": "Tujuan kamu nge-Gym supaya apa?",
         }
 
     def __init__(self, *args, **kwargs):

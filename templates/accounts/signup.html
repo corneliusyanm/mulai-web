@@ -5,18 +5,16 @@
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="card bg-transparent border">
-            <div class="card-header bg-white text-primary">
-                <h2 class="mb-0">Sign Up</h2>
-            </div>
-            <div class="card-body bg-transparent text-white">
+    <div class="col-md-6 mx-auto" style="margin: 1rem 6rem 7rem 6rem;">
+        <div class="bg-transparent p-4">
+            <h2 class="mb-4 text-white fw-bold text-center">Buat Akun</h2>
+            <div class="bg-transparent text-white">
                 <form method="post">
                     {% csrf_token %}
                     
                     {# Display name field #}
                     <div class="mb-3">
-                        <label for="{{ form.name.id_for_label }}" class="form-label text-white fw-bold">{{ form.name.label }}</label>
+                        <label for="{{ form.name.id_for_label }}" class="form-label text-white fw-bold">Nama</label>
                         {{ form.name|add_class:"form-control bg-transparent text-white border-light" }}
                         {% if form.name.errors %}
                             <div class="text-danger fw-bold fst-italic">{{ form.name.errors }}</div>
@@ -28,7 +26,7 @@
                     
                     {# Display email field #}
                     <div class="mb-3">
-                        <label for="{{ form.email.id_for_label }}" class="form-label text-white fw-bold">{{ form.email.label }}</label>
+                        <label for="{{ form.email.id_for_label }}" class="form-label text-white fw-bold">Email</label>
                         {{ form.email|add_class:"form-control bg-transparent text-white border-light" }}
                         {% if form.email.errors %}
                             <div class="text-danger fw-bold fst-italic">{{ form.email.errors }}</div>
@@ -40,7 +38,7 @@
                     
                     {# Display phone number fields #}
                     <div class="mb-3">
-                        <label class="form-label text-white fw-bold">Phone Number</label>
+                        <label class="form-label text-white fw-bold">Nomor HP</label>
                         <div style="display: flex; align-items: center;">
                             {{ form.country_code|add_class:"form-control bg-transparent text-white border-light" }}
                             {{ form.phone_number_display|add_class:"form-control bg-transparent text-white border-light" }}
@@ -57,7 +55,25 @@
                     {% for field in form %}
                         {% if field.name != 'name' and field.name != 'email' and field.name != 'country_code' and field.name != 'phone_number_display' %}
                             <div class="mb-3">
-                                <label for="{{ field.id_for_label }}" class="form-label text-white fw-bold">{{ field.label }}</label>
+                                <label for="{{ field.id_for_label }}" class="form-label text-white fw-bold">
+                                    {% if field.name == 'gender' %}
+                                        Jenis Kelamin
+                                    {% elif field.name == 'age' %}
+                                        Usia
+                                    {% elif field.name == 'height' %}
+                                        Tinggi (cm)
+                                    {% elif field.name == 'weight' %}
+                                        Berat Badan (kg)
+                                    {% elif field.name == 'years_of_working_out' %}
+                                        Sudah pernah nge-Gym berapa tahun?
+                                    {% elif field.name == 'goals' %}
+                                        Tujuan kamu nge-Gym supaya apa?
+                                    {% elif field.name == 'know_mulai_gym_from' %}
+                                        Kenal Mulai Gym dari mana?
+                                    {% else %}
+                                        {{ field.label }}
+                                    {% endif %}
+                                </label>
                                 {{ field|add_class:"form-control bg-transparent text-white border-light" }}
                                 {% if field.errors %}
                                     <div class="text-danger fw-bold fst-italic">{{ field.errors }}</div>
@@ -69,7 +85,9 @@
                         {% endif %}
                     {% endfor %}
                     
-                    <button type="submit" class="btn btn-secondary">Sign Up</button>
+                    <div class="text-center mt-4">
+                        <button type="submit" class="btn btn-secondary">Daftar</button>
+                    </div>
                 </form>
             </div>
         </div>

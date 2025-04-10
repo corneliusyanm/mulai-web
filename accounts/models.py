@@ -43,8 +43,8 @@ class User(AbstractUser):
 
 class Member(models.Model):
     GENDER_CHOICES = (
-        ("M", "Male"),
-        ("F", "Female"),
+        ("F", "Perempuan"),
+        ("M", "Laki-laki"),
     )
 
     name = models.CharField(max_length=255)
