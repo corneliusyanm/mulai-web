@@ -31,6 +31,7 @@ class MemberSignUpForm(forms.ModelForm):
             "age",
             "height",
             "weight",
+            "address",
             "years_of_working_out",
             "goals",
             "know_mulai_gym_from",
@@ -45,6 +46,7 @@ class MemberSignUpForm(forms.ModelForm):
             "age",
             "height",
             "weight",
+            "address",
             "years_of_working_out",
             "goals",
             "know_mulai_gym_from",
@@ -53,16 +55,19 @@ class MemberSignUpForm(forms.ModelForm):
             "goals": forms.Textarea(attrs={"rows": 2}),
             "know_mulai_gym_from": forms.Textarea(attrs={"rows": 2}),
             "height": forms.NumberInput(
-                attrs={"step": "0.1", "placeholder": "Tinggi dalam cm"}
+                attrs={"step": "0.1", "placeholder": "tinggi dalam cm"}
             ),
             "weight": forms.NumberInput(
-                attrs={"step": "0.1", "placeholder": "Berat dalam kg"}
+                attrs={"step": "0.1", "placeholder": "berat dalam kg"}
+            ),
+            "address": forms.TextInput(
+                attrs={"placeholder": "Sudirman, Kebonjati, Kopo, dll."}
             ),
         }
         labels = {
             "height": "Tinggi (cm)",
             "weight": "Berat (kg)",
-            "years_of_working_out": "Sudah pernah nge-Gym berapa tahun?",
+            "years_of_working_out": "Sudah pernah nge-Gym berapa lama?",
             "goals": "Tujuan kamu nge-Gym supaya apa?",
             "know_mulai_gym_from": "Kenal Mulai Gym dari mana?",
         }
@@ -224,6 +229,7 @@ class MemberEditForm(forms.ModelForm):
             "age",
             "height",
             "weight",
+            "address",
             "years_of_working_out",
             "goals",
         ]
@@ -235,11 +241,14 @@ class MemberEditForm(forms.ModelForm):
             "weight": forms.NumberInput(
                 attrs={"step": "0.1", "placeholder": "Berat dalam kg"}
             ),
+            "address": forms.TextInput(
+                attrs={"placeholder": "Sudirman, Kebonjati, Kopo, dll."}
+            ),
         }
         labels = {
             "height": "Tinggi (cm)",
             "weight": "Berat (kg)",
-            "years_of_working_out": "Sudah pernah nge-Gym berapa tahun?",
+            "years_of_working_out": "Sudah pernah nge-Gym berapa lama?",
             "goals": "Tujuan kamu nge-Gym supaya apa?",
         }
 

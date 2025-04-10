@@ -54,7 +54,8 @@ class Member(models.Model):
     age = models.IntegerField()
     height = models.DecimalField(max_digits=5, decimal_places=2)  # in cm
     weight = models.DecimalField(max_digits=5, decimal_places=2)  # in kg
-    years_of_working_out = models.IntegerField()
+    address = models.TextField(blank=True, default="")  # Address field after weight
+    years_of_working_out = models.CharField(max_length=100)  # Changed to CharField
     goals = models.TextField()
     know_mulai_gym_from = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)

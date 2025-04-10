@@ -76,7 +76,15 @@
                         </div>
                         
                         <div class="mb-3">
-                            <label for="{{ form.years_of_working_out.id_for_label }}" class="form-label text-white fw-bold">Sudah pernah nge-Gym berapa tahun?</label>
+                            <label for="{{ form.address.id_for_label }}" class="form-label text-white fw-bold">Tinggal di daerah mana?</label>
+                            {{ form.address|add_class:"form-control bg-transparent text-white border-light" }}
+                            {% if form.address.errors %}
+                                <div class="text-danger fw-bold fst-italic">{{ form.address.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.years_of_working_out.id_for_label }}" class="form-label text-white fw-bold">Sudah pernah nge-Gym berapa lama?</label>
                             {{ form.years_of_working_out|add_class:"form-control bg-transparent text-white border-light" }}
                             {% if form.years_of_working_out.errors %}
                                 <div class="text-danger fw-bold fst-italic">{{ form.years_of_working_out.errors }}</div>

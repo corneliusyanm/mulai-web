@@ -61,18 +61,18 @@
                         </div>
                         <div class="col-sm-6 mb-3">
                             <p class="text-muted mb-1">Tinggi</p>
-                            <p class="fw-bold">{{ member.height }} cm</p>
+                            <p class="fw-bold">{{ member.height|floatformat:1|slice:":-2" }},{{ member.height|floatformat:1|slice:"-1:" }} cm</p>
                         </div>
                         <div class="col-sm-6 mb-3">
                             <p class="text-muted mb-1">Berat</p>
-                            <p class="fw-bold">{{ member.weight }} kg</p>
+                            <p class="fw-bold">{{ member.weight|floatformat:1|slice:":-2" }},{{ member.weight|floatformat:1|slice:"-1:" }} kg</p>
                         </div>
                         <div class="col-sm-6 mb-3">
-                            <p class="text-muted mb-1">Pengalaman Workout</p>
-                            <p class="fw-bold">{{ member.years_of_working_out }} tahun</p>
+                            <p class="text-muted mb-1">Pengalaman nge-Gym</p>
+                            <p class="fw-bold">{{ member.years_of_working_out }}</p>
                         </div>
                         <div class="col-12 mb-3">
-                            <p class="text-muted mb-1">Tujuan Fitness</p>
+                            <p class="text-muted mb-1">Tujuan nge-Gym</p>
                             <p class="fw-bold">{{ member.goals }}</p>
                         </div>
                     </div>
