@@ -58,6 +58,9 @@ class Member(models.Model):
     years_of_working_out = models.CharField(max_length=100)  # Changed to CharField
     goals = models.TextField()
     know_mulai_gym_from = models.CharField(max_length=255)
+    why_choose_mulai = models.TextField(
+        blank=True, default=""
+    )  # New field for why they chose Mulai
     created_at = models.DateTimeField(auto_now_add=True)
     active_until = models.DateTimeField(null=True, blank=True)
 

@@ -35,6 +35,7 @@ class MemberSignUpForm(forms.ModelForm):
             "years_of_working_out",
             "goals",
             "know_mulai_gym_from",
+            "why_choose_mulai",
         ]
         # Define the field order for rendering in the template
         field_order = [
@@ -50,13 +51,25 @@ class MemberSignUpForm(forms.ModelForm):
             "years_of_working_out",
             "goals",
             "know_mulai_gym_from",
+            "why_choose_mulai",
         ]
         widgets = {
-            "goals": forms.Textarea(attrs={"rows": 2}),
+            "goals": forms.Textarea(
+                attrs={
+                    "rows": 2,
+                    "placeholder": "misal: supaya lebih sehat, cakep, turunin berat, ototan, ...",
+                }
+            ),
             "know_mulai_gym_from": forms.Textarea(
                 attrs={
                     "rows": 2,
-                    "placeholder": "billboard, instagram, tiktok, teman, google maps, dll.",
+                    "placeholder": "misal: billboard, instagram, tiktok, teman, google maps, ...",
+                }
+            ),
+            "why_choose_mulai": forms.Textarea(
+                attrs={
+                    "rows": 2,
+                    "placeholder": "misal: nyaman, dekat kantor, murah, ada teman, pelatihnya baik ...",
                 }
             ),
             "height": forms.NumberInput(
@@ -66,7 +79,7 @@ class MemberSignUpForm(forms.ModelForm):
                 attrs={"step": "0.1", "placeholder": "berat dalam kg"}
             ),
             "address": forms.TextInput(
-                attrs={"placeholder": "Sudirman, Kebonjati, Kopo, dll."}
+                attrs={"placeholder": "Sudirman, Kebonjati, Kopo, ..."}
             ),
             "years_of_working_out": forms.TextInput(
                 attrs={"placeholder": "belum pernah, 3 bulan, 2 tahun"}
@@ -78,6 +91,7 @@ class MemberSignUpForm(forms.ModelForm):
             "years_of_working_out": "Sudah pernah nge-Gym berapa lama?",
             "goals": "Tujuan kamu nge-Gym supaya apa?",
             "know_mulai_gym_from": "Kenal Mulai Gym dari mana?",
+            "why_choose_mulai": "Kenapa pilih Mulai Gym?",
         }
         help_texts = {
             # Remove help text and use placeholder instead
@@ -240,9 +254,15 @@ class MemberEditForm(forms.ModelForm):
             "address",
             "years_of_working_out",
             "goals",
+            "why_choose_mulai",
         ]
         widgets = {
-            "goals": forms.Textarea(attrs={"rows": 2}),
+            "goals": forms.Textarea(
+                attrs={
+                    "rows": 2,
+                    "placeholder": "misal: supaya lebih sehat, cakep, turunin berat, ototan, ...",
+                }
+            ),
             "height": forms.NumberInput(
                 attrs={"step": "0.1", "placeholder": "tinggi dalam cm"}
             ),
@@ -250,10 +270,16 @@ class MemberEditForm(forms.ModelForm):
                 attrs={"step": "0.1", "placeholder": "berat dalam kg"}
             ),
             "address": forms.TextInput(
-                attrs={"placeholder": "Sudirman, Kebonjati, Kopo, dll."}
+                attrs={"placeholder": "Sudirman, Kebonjati, Kopo, ..."}
             ),
             "years_of_working_out": forms.TextInput(
                 attrs={"placeholder": "belum pernah, 3 bulan, 2 tahun"}
+            ),
+            "why_choose_mulai": forms.Textarea(
+                attrs={
+                    "rows": 2,
+                    "placeholder": "misal: nyaman, dekat kantor, murah, ada teman, pelatihnya baik ...",
+                }
             ),
         }
         labels = {
@@ -261,6 +287,7 @@ class MemberEditForm(forms.ModelForm):
             "weight": "Berat (kg)",
             "years_of_working_out": "Sudah pernah nge-Gym berapa lama?",
             "goals": "Tujuan kamu nge-Gym supaya apa?",
+            "why_choose_mulai": "Kenapa pilih Mulai Gym?",
         }
         help_texts = {
             # Remove help text and use placeholder instead
