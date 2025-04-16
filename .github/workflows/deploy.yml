@@ -35,19 +35,10 @@ jobs:
             echo "Secret key exists: $([[ ! -z "$DJANGO_SECRET_KEY" ]] && echo 'yes' || echo 'no')"
             echo "DB connection info available: $([[ ! -z "$DB_HOST" ]] && echo 'yes' || echo 'no')"
             
-            # Check disk space before cleanup
-            echo "Disk space before cleanup:"
-            df -h
-            
             # Clean up disk space
             echo "Cleaning up disk space..."
             # Remove unused Docker images, containers, networks, and volumes
             docker system prune -af --volumes
-            # Clean apt cache
-            apt-get clean
-            # Remove unused packages
-            apt-get autoremove -y
-            
             # Check disk space after cleanup
             echo "Disk space after cleanup:"
             df -h
