@@ -53,7 +53,7 @@ def check_in_page(request):
 
         # Skip this check-in attempt if neither email nor phone is provided
         if not email and not phone:
-            messages.error(request, "Please provide either an email or a phone number.")
+            messages.error(request, "Mohon masukkan email atau nomor telepon")
             return redirect("check_in_page")
 
         try:

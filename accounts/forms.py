@@ -196,7 +196,7 @@ class MemberLoginForm(forms.Form):
 
         # Check if at least one of email or phone number is provided
         if not email and not phone_number:
-            raise ValidationError("Please provide either an email or a phone number")
+            raise ValidationError("Mohon masukkan email atau nomor telepon")
 
         # If phone number is provided, format it properly
         if phone_number:
