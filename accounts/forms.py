@@ -129,6 +129,27 @@ class MemberSignUpForm(forms.ModelForm):
         if not country_code.startswith("+"):
             country_code = "+" + country_code
 
+        # Check if phone number contains invalid characters
+        if phone_number:
+            # First check if the phone number has any disallowed characters
+            allowed_chars = set("0123456789- ")
+            if not all(char in allowed_chars for char in phone_number):
+                raise ValidationError(
+                    {"phone_number_display": "Nomor HP hanya boleh berisi angka"}
+                )
+
+            # Clean up the phone number by removing spaces and hyphens
+            cleaned_phone = "".join(char for char in phone_number if char.isdigit())
+
+            # Validate that there's actual digits after cleanup
+            if not cleaned_phone:
+                raise ValidationError(
+                    {"phone_number_display": "Nomor HP harus berisi angka"}
+                )
+
+            # Use the cleaned phone number for further processing
+            phone_number = cleaned_phone
+
         # Remove any '+' sign from the phone number part
         if phone_number.startswith("+"):
             phone_number = phone_number[1:]
@@ -200,6 +221,27 @@ class MemberLoginForm(forms.Form):
 
         # If phone number is provided, format it properly
         if phone_number:
+            # Check if phone number contains invalid characters
+            allowed_chars = set("0123456789- ")
+            if not all(char in allowed_chars for char in phone_number):
+                raise ValidationError(
+                    {
+                        "phone_number_display": "Phone number should only contain numbers, spaces, and hyphens"
+                    }
+                )
+
+            # Clean up the phone number by removing spaces and hyphens
+            cleaned_phone = "".join(char for char in phone_number if char.isdigit())
+
+            # Validate that there's actual digits after cleanup
+            if not cleaned_phone:
+                raise ValidationError(
+                    {"phone_number_display": "Phone number must contain digits"}
+                )
+
+            # Use the cleaned phone number for further processing
+            phone_number = cleaned_phone
+
             # Validate country code format
             if not country_code:
                 country_code = "+62"  # Default
@@ -330,6 +372,29 @@ class MemberEditForm(forms.ModelForm):
         if not country_code.startswith("+"):
             country_code = "+" + country_code
 
+        # Check if phone number contains invalid characters
+        if phone_number:
+            # First check if the phone number has any disallowed characters
+            allowed_chars = set("0123456789- ")
+            if not all(char in allowed_chars for char in phone_number):
+                raise ValidationError(
+                    {
+                        "phone_number_display": "Phone number should only contain numbers, spaces, and hyphens"
+                    }
+                )
+
+            # Clean up the phone number by removing spaces and hyphens
+            cleaned_phone = "".join(char for char in phone_number if char.isdigit())
+
+            # Validate that there's actual digits after cleanup
+            if not cleaned_phone:
+                raise ValidationError(
+                    {"phone_number_display": "Phone number must contain digits"}
+                )
+
+            # Use the cleaned phone number for further processing
+            phone_number = cleaned_phone
+
         # Remove any '+' sign from the phone number part
         if phone_number.startswith("+"):
             phone_number = phone_number[1:]
@@ -344,10 +409,10 @@ class MemberEditForm(forms.ModelForm):
         # Create the standardized phone number, removing the '+' from country code
         final_phone = country_code.replace("+", "") + phone_number
 
-        # Check if this phone number is already in use by another member
+        # Check if this phone number is already in use
         if (
             Member.objects.filter(phone_number=final_phone)
-            .exclude(pk=self.instance.pk)
+            .exclude(pk=self.instance.pk if self.instance.pk else None)
             .exists()
         ):
             raise ValidationError(
