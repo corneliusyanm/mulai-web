@@ -16,10 +16,10 @@ def generate_qr(url, filename):
 
 
 # Generate Check-in QR
-generate_qr('http://localhost:8000/check-in/', 'check_in_qr.png')
+generate_qr("http://mulaigym.id/check-in/", "check_in_qr.png")
 
 # Generate Check-out QR
-generate_qr('http://localhost:8000/check-out/', 'check_out_qr.png')
+generate_qr("http://mulaigym.id/check-out/", "check_out_qr.png")
 
 print("QR codes generated successfully!")
 print("- check_in_qr.png")
