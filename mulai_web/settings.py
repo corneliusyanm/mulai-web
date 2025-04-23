@@ -145,7 +145,12 @@ STATICFILES_DIRS = [
 ]
 
 # WhiteNoise configuration
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+# Use CompressedManifestStaticFilesStorage only in production
+if DEBUG:
+    STATICFILES_STORAGE = "django.contrib.staticfiles.storage.StaticFilesStorage"
+else:
+    STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
 WHITENOISE_MAX_AGE = 31536000  # 1 year
 
 # Media files
@@ -163,3 +168,26 @@ AUTH_USER_MODEL = "accounts.User"
 # Session settings
 SESSION_COOKIE_AGE = 365 * 24 * 60 * 60  # 1 year in seconds
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+
+# Logging configuration to see errors even when DEBUG is False
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+        },
+        "file": {
+            "level": "ERROR",
+            "class": "logging.FileHandler",
+            "filename": BASE_DIR / "django_error.log",
+        },
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console", "file"],
+            "level": "ERROR",
+            "propagate": True,
+        },
+    },
+}
