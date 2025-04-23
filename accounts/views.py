@@ -117,3 +117,7 @@ class MemberEditView(MemberRequiredMixin, UpdateView):
 
 def home(request):
     return render(request, "home.html")
+
+
+def job_openings(request):
+    return render(request, "lowongan-kerja.html")
