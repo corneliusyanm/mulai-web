@@ -454,4 +454,42 @@ section {
   .feature-card .feature-content {
     min-height: 80px;
   }
-} 
+}
+
+@keyframes dancing {
+  0% { transform: translateX(0) rotate(0deg); }
+  25% { transform: translateX(15px) rotate(2deg); }
+  50% { transform: translateX(0) rotate(0deg); }
+  75% { transform: translateX(-15px) rotate(-2deg); }
+  100% { transform: translateX(0) rotate(0deg); }
+}
+
+.dancing-text-top {
+  animation: dancing 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  display: inline-block;
+}
+
+.dancing-text-bot {
+  animation: dancing 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  animation-delay: 0.75s;
+  display: inline-block;
+}
+
+@keyframes shake {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(15px); }
+  50% { transform: translateX(0); }
+  75% { transform: translateX(-15px); }
+  100% { transform: translateX(0); }
+}
+
+.shake-text-top {
+  animation: shake 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  display: inline-block;
+}
+
+.shake-text-bot {
+  animation: shake 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  animation-delay: 1s;
+  display: inline-block;
+}
