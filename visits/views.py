@@ -35,7 +35,7 @@ def check_in_page(request):
                     member=member, check_in_time=timezone.now()
                 )
                 messages.success(
-                    request, f"Welcome, {member.name}! Check-in successful."
+                    request, f"Selamat datang, {member.name}! Check-in berhasil."
                 )
                 return render(
                     request,
@@ -116,7 +116,8 @@ def check_in_page(request):
                 )
         except Member.DoesNotExist:
             messages.error(
-                request, "Member not found. Please check your email or phone number."
+                request,
+                "Member tidak ditemukan. Silakan periksa kembali email atau nomor telepon Anda.",
             )
             return redirect("check_in_page")
 
@@ -141,7 +142,9 @@ def check_out_page(request):
             visit.check_out_time = timezone.now()
             visit.save()
 
-            messages.success(request, f"Goodbye, {member.name}! Check-out successful.")
+            messages.success(
+                request, f"Selamat tinggal, {member.name}! Check-out berhasil."
+            )
             return render(
                 request,
                 "visits/quick_check_out.html",

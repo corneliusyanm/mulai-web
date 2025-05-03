@@ -56,7 +56,7 @@ def member_login(request):
             except Member.DoesNotExist:
                 messages.error(
                     request,
-                    "Member not found. Please check your email or phone number.",
+                    "Member tidak ditemukan. Silakan periksa kembali email atau nomor telepon Anda.",
                 )
         else:
             for error in form.non_field_errors():
@@ -109,9 +109,7 @@ class MemberEditView(MemberRequiredMixin, UpdateView):
         return Member.objects.get(email=self.request.session["member_email"])
 
     def form_valid(self, form):
-        messages.success(
-            self.request, "Your information has been updated successfully."
-        )
+        messages.success(self.request, "Informasi Anda telah berhasil diperbarui.")
         return super().form_valid(form)
 
 

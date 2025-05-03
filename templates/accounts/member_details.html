@@ -61,11 +61,11 @@
                         </div>
                         <div class="col-sm-6 mb-3">
                             <p class="text-muted mb-1">Alamat</p>
-                            <p class="fw-bold">{% if member.address %}{{ member.address }}{% else %}<i>masih kosong, isi donk</i>{% endif %}</p>
+                            <p class="fw-bold">{% if member.address %}{{ member.address }}{% else %}<i>masih kosong, isi donk...</i>{% endif %}</p>
                         </div>
                         <div class="col-sm-6 mb-3">
                             <p class="text-muted mb-1">Pengalaman nge-Gym</p>
-                            <p class="fw-bold">{{ member.years_of_working_out }}</p>
+                            <p class="fw-bold">{{ member.years_of_working_out }} tahun</p>
                         </div>
                         <div class="col-12 mb-3">
                             <p class="text-muted mb-1">Tujuan nge-Gym</p>
@@ -73,7 +73,7 @@
                         </div>
                         <div class="col-12 mb-3">
                             <p class="text-muted mb-1">Kenapa pilih Mulai Gym</p>
-                            <p class="fw-bold">{% if member.why_choose_mulai %}{{ member.why_choose_mulai }}{% else %}<i>masih kosong, isi donk</i>{% endif %}</p>
+                            <p class="fw-bold">{% if member.why_choose_mulai %}{{ member.why_choose_mulai }}{% else %}<i>masih kosong, isi donk...</i>{% endif %}</p>
                         </div>
                     </div>
                 </div>
