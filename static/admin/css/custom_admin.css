@@ -1,0 +1,123 @@
+/* Custom Admin CSS for Mulai Gym */
+
+:root {
+  --primary: #4B4BEC;  /* Mulai Gym primary color */
+  --secondary: #BEF006;
+  --accent: #4B4BEC;
+  --primary-fg: #fff;
+  
+  --body-fg: #333;
+  --body-bg: #fff;
+  --body-quiet-color: #666;
+  --body-loud-color: #000;
+  
+  --header-color: #fff;
+  --header-branding-color: var(--secondary);  /* Changed to secondary color */
+  --header-bg: var(--primary);
+  --header-link-color: var(--primary-fg);
+  
+  --breadcrumbs-fg: #c4dce8;
+  --breadcrumbs-link-fg: var(--body-bg);
+  --breadcrumbs-bg: var(--primary);
+  
+  --link-fg: var(--primary);
+  --link-hover-color: #214090;
+  --link-selected-fg: #5b80b2;
+  
+  --hairline-color: #e8e8e8;
+  --border-color: #ccc;
+  
+  --error-fg: #ba2121;
+  
+  --message-success-bg: #dfd;
+  --message-warning-bg: #ffc;
+  --message-error-bg: #ffefef;
+  
+  --darkened-bg: #f8f8f8;
+  --selected-bg: #e4e4e4;
+  --selected-row: #ffc;
+  
+  --button-fg: #fff;
+  --button-bg: var(--primary);
+  --button-hover-bg: #2e3eff;
+  --default-button-bg: var(--secondary);
+  --default-button-fg: var(--primary);
+  --close-button-bg: #888;
+  --close-button-hover-bg: #747474;
+  --delete-button-bg: #ba2121;
+  --delete-button-hover-bg: #a41515;
+  
+  --object-tools-fg: var(--button-fg);
+  --object-tools-bg: var(--primary);
+  --object-tools-hover-bg: var(--button-hover-bg);
+}
+
+/* Custom button styling */
+.submit-row input, .submit-row a.closelink, .submit-row a.deletelink {
+  border-radius: 4px;
+}
+
+.button, input[type=submit], input[type=button], .submit-row input, a.button {
+  background: var(--button-bg);
+  color: var(--button-fg);
+}
+
+.button:hover, input[type=submit]:hover, input[type=button]:hover, .submit-row input:hover {
+  background: var(--button-hover-bg);
+}
+
+.button.default, input[type=submit].default {
+  background: var(--default-button-bg);
+  color: var(--default-button-fg);
+}
+
+.button.default:hover, input[type=submit].default:hover {
+  background: #a9d600;
+}
+
+/* Module styling */
+.module h2, .module caption, .inline-group h2 {
+  background: var(--primary);
+}
+
+#header {
+  background: var(--header-bg);
+  color: var(--header-color);
+}
+
+#header a:link, #header a:visited {
+  color: var(--header-link-color);
+}
+
+/* Site title styling */
+#site-name a {
+  color: var(--secondary) !important;
+}
+
+/* Make sure the new style is applied */
+div.breadcrumbs {
+  background: var(--breadcrumbs-bg);
+  color: var(--breadcrumbs-fg);
+}
+
+.paginator a:link, .paginator a:visited {
+  background: var(--button-bg);
+  color: var(--button-fg);
+}
+
+.paginator a:hover {
+  background: var(--button-hover-bg);
+}
+
+/* Active items in changelist */
+.changelist-form .results th.sorted a.sortremove {
+  color: var(--primary) !important;
+}
+
+.object-tools a:link, .object-tools a:visited {
+  background: var(--object-tools-bg);
+}
+
+.object-tools a:hover {
+  background: var(--object-tools-hover-bg);
+} 

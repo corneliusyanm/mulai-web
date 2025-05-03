@@ -8,6 +8,10 @@ from .models import Visit
 
 
 class CustomAdminSite(admin.AdminSite):
+    site_header = "Mulai Gym Admin"
+    site_title = "Mulai Gym Admin"
+    index_title = "Home"
+
     def get_app_list(self, request, app_label=None):
         """
         Return a sorted list of all the installed apps that have been
