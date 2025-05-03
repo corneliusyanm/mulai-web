@@ -40,7 +40,7 @@ def check_in_page(request):
                 return render(
                     request,
                     "visits/quick_check_in.html",
-                    {"member": member, "success": True},
+                    {"member": member, "success": True, "visit": visit},
                 )
         except Member.DoesNotExist:
             request.session.pop("member_email", None)
@@ -112,7 +112,7 @@ def check_in_page(request):
                 return render(
                     request,
                     "visits/quick_check_in.html",
-                    {"member": member, "success": True},
+                    {"member": member, "success": True, "visit": visit},
                 )
         except Member.DoesNotExist:
             messages.error(
@@ -148,7 +148,7 @@ def check_out_page(request):
             return render(
                 request,
                 "visits/quick_check_out.html",
-                {"member": member, "success": True},
+                {"member": member, "success": True, "visit": visit},
             )
         except Visit.DoesNotExist:
             return render(request, "visits/check_out_failed.html", {"member": member})
