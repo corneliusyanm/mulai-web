@@ -1,5 +1,4 @@
-# Use Python 3.9 slim image
-FROM python:3.9-slim
+FROM python:3.13-bookworm
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
