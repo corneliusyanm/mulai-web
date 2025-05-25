@@ -1,6 +1,23 @@
-sudo certbot certonly --dns-digitalocean \
-  --dns-digitalocean-credentials /etc/letsencrypt/digitalocean.ini \
-  --dns-digitalocean-propagation-seconds 120 \
+# SSL Certificate Setup (Cloudflare DNS Challenge)
+# Prerequisites: Domain nameservers pointing to Cloudflare
+
+# Install Cloudflare DNS plugin
+sudo apt update
+sudo apt install python3-certbot-dns-cloudflare
+
+# Create Cloudflare credentials file
+sudo nano /etc/letsencrypt/cloudflare.ini
+# Add: dns_cloudflare_api_token = YOUR_CLOUDFLARE_API_TOKEN
+# Get API token from: Cloudflare Dashboard → My Profile → API Tokens
+# Permissions: Zone:DNS:Edit, Zone:Zone:Read for mulaigym.id
+
+# Secure credentials file
+sudo chmod 600 /etc/letsencrypt/cloudflare.ini
+
+# Obtain SSL certificate (supports wildcards)
+sudo certbot certonly --dns-cloudflare \
+  --dns-cloudflare-credentials /etc/letsencrypt/cloudflare.ini \
+  --dns-cloudflare-propagation-seconds 60 \
   -d mulaigym.id \
   -d *.mulaigym.id \
   --register-unsafely-without-email \
@@ -8,7 +25,9 @@ sudo certbot certonly --dns-digitalocean \
   --preferred-chain "ISRG Root X1" \
   --force-renewal
 
+# Nginx Configuration
 sudo nano /etc/nginx/sites-available/mulaigym.conf
+
 # HTTP → HTTPS redirect
 server {
     listen 80;
@@ -65,15 +84,35 @@ server {
     }
 }
 
+# Enable site and restart nginx
 sudo ln -s /etc/nginx/sites-available/mulaigym.conf /etc/nginx/sites-enabled/
 sudo rm /etc/nginx/sites-enabled/default  # Remove default config
 sudo nginx -t && sudo systemctl reload nginx
 
+# Auto-renewal cron job (runs daily at 3 AM)
 sudo crontab -e
-0 3 * * * certbot renew --quiet --post-hook "docker restart mulai_web"
+0 3 * * * certbot renew --quiet --post-hook "systemctl reload nginx && docker restart mulai_web"
 
-# Create superuser
+# Create Django superuser
 docker exec -e DJANGO_SUPERUSER_USERNAME=admin \
            -e DJANGO_SUPERUSER_EMAIL=admin@example.com \
            -e DJANGO_SUPERUSER_PASSWORD=your_secure_password \
            mulai_web python manage.py createsuperuser --noinput
+
+# Useful Commands
+# Check certificate status: sudo certbot certificates
+# Manual renewal: sudo certbot renew --force-renewal
+# Test auto-renewal: sudo certbot renew --dry-run
+# Restart services: sudo systemctl reload nginx && docker restart mulai_web
+# Check Docker logs: docker logs mulai_web
+
+# DNS Configuration (Cloudflare)
+# A record: mulaigym.id → 178.128.116.170 (Proxied)
+# CNAME record: www → mulaigym.id (Proxied)
+# Nameservers: bruce.ns.cloudflare.com, janet.ns.cloudflare.com
+
+# Troubleshooting
+# Error 526: Usually expired certificate or DNS mismatch
+# Check nginx config: sudo nginx -t
+# Check certificate expiry: sudo certbot certificates
+# View renewal logs: sudo tail -50 /var/log/letsencrypt/letsencrypt.log

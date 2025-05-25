@@ -1,5 +1,20 @@
 # Mulai Gym Web App
 
+## Infrastructure & Deployment
+
+### DNS & SSL Setup
+- **Domain**: mulaigym.id (registered with Niagahoster/Hostinger)
+- **DNS**: Cloudflare nameservers (`bruce.ns.cloudflare.com`, `janet.ns.cloudflare.com`)
+- **SSL**: Let's Encrypt certificates via Cloudflare DNS challenge
+- **Server**: DigitalOcean Droplet (178.128.116.170)
+- **Proxy**: Cloudflare (proxied A record)
+
+### SSL Certificate Management
+- **Provider**: Let's Encrypt (90-day certificates)
+- **Method**: Cloudflare DNS challenge (supports wildcards)
+- **Auto-renewal**: Cron job runs daily at 3 AM
+- **Domains**: `mulaigym.id` and `*.mulaigym.id`
+
 ## Visits & Check-in/Out
 
 ### Session
@@ -137,3 +152,16 @@ graph TD
 3.  **Update Member `active_until`**:
     - Always set `member.active_until = self.membership_end_date`.
     - Ensures correct stacking/renewal regardless of current status.
+
+## Troubleshooting
+
+### SSL Certificate Issues
+- **Error 526**: Usually means expired certificate or DNS configuration mismatch
+- **Check certificate status**: `sudo certbot certificates`
+- **Manual renewal**: `sudo certbot renew --force-renewal`
+- **Test auto-renewal**: `sudo certbot renew --dry-run`
+
+### Common Commands
+- **Restart services**: `sudo systemctl reload nginx && docker restart mulai_web`
+- **Check logs**: `docker logs mulai_web`
+- **Nginx test**: `sudo nginx -t`
