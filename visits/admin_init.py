@@ -3,7 +3,7 @@ from django.contrib.auth.admin import UserAdmin
 from django.utils import timezone
 
 from accounts.models import Member, User
-from payments.models import Payment
+from payments.models import Payment, Package
 from visits.admin import VisitAdmin, admin_site
 from visits.models import Visit
 from payments.admin import PaymentAdminForm
@@ -127,3 +127,17 @@ if not admin_site._registry.get(Payment):
     admin_site.register(Payment, CustomPaymentAdmin)
 
 # Visit model is already registered in visits/admin.py
+
+# Register Package model
+if not admin_site._registry.get(Package):  # Check if Package is already registered
+
+    class PackageAdmin(admin.ModelAdmin):
+        list_display = ("code", "default_price", "description")
+        search_fields = ("code", "description")
+        list_editable = (
+            "default_price",
+            "description",
+        )  # Optional: Allow editing these directly in the list view
+        ordering = ("code",)
+
+    admin_site.register(Package, PackageAdmin)
