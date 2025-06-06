@@ -37,6 +37,9 @@ class Payment(models.Model):
     ]
 
     member = models.ForeignKey(Member, on_delete=models.CASCADE)
+    package = models.ForeignKey(
+        Package, on_delete=models.SET_NULL, null=True, blank=True
+    )
     amount = models.DecimalField(max_digits=12, decimal_places=0)  # Changed for Rupiah
     payment_date = models.DateTimeField(default=timezone.now)
     duration_choice = models.IntegerField(choices=DURATION_CHOICES, default=30)

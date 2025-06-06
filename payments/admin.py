@@ -11,6 +11,7 @@ class PaymentAdminForm(forms.ModelForm):
         model = Payment
         fields = (
             "member",
+            "package",
             "amount",
             "duration_choice",
             "duration_days",
@@ -26,6 +27,10 @@ class PaymentAdminForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Customize the display of packages in the dropdown to only show the code
+        if "package" in self.fields:
+            self.fields["package"].label_from_instance = lambda obj: obj.code
+
         # Hide duration_days field initially (will be shown via JavaScript if
         # Custom is selected)
         if "duration_days" in self.fields:

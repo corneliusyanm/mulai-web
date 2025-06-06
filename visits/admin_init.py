@@ -56,6 +56,7 @@ if not admin_site._registry.get(Payment):
         form = PaymentAdminForm
         list_display = (
             "member",
+            "get_package_code",
             "formatted_amount",
             "get_duration_display",
             "formatted_payment_date",
@@ -64,7 +65,7 @@ if not admin_site._registry.get(Payment):
             "payment_method",
             "created_by",
         )
-        list_filter = ("payment_date", "payment_method")
+        list_filter = ("payment_date", "payment_method", "package")
         search_fields = ("member__email", "member__name", "member__phone_number")
 
         fieldsets = (
@@ -73,6 +74,7 @@ if not admin_site._registry.get(Payment):
                 {
                     "fields": (
                         "member",
+                        "package",
                         "amount",
                         "duration_choice",
                         "duration_days",
@@ -83,6 +85,13 @@ if not admin_site._registry.get(Payment):
                 },
             ),
         )
+
+        def get_package_code(self, obj):
+            if obj.package:
+                return obj.package.code
+            return "-"
+
+        get_package_code.short_description = "Package"
 
         def get_duration_display(self, obj):
             if obj.duration_choice == 0:
