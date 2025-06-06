@@ -25,10 +25,38 @@
                     {% endif %}
                 </div>
                 <div class="card-body p-3">
-                    {% if member.is_active_member and member.active_until %}
+                    {% if member.is_active_member %}
                         <p class="text-center mb-2">
-                            <strong>Aktif Hingga:</strong><br>
-                            <span class="text-primary fs-5">{{ member.active_until|date:"d M Y" }}</span>
+                            <strong><u>Masa Aktif</u></strong><br>
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <strong class="ms-3">Gym Reguler:</strong>
+                                <span class="badge bg-success px-2 py-1 me-3">{{ member.active_until|date:"d M Y" }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <strong class="ms-3">Kelas Pemula:</strong>
+                                {% if member.is_pemula_active_member %}
+                                    <span class="badge bg-success px-2 py-1 me-3">{{ member.pemula_active_until|date:"d M Y" }}</span>
+                                {% else %}
+                                    <span class="text-muted me-4"><i>tidak aktif</i></span>
+                                {% endif %}
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <strong class="ms-3">Semi Private:</strong>
+                                {% if member.is_semi_private_active_member %}
+                                    <span class="badge bg-success px-2 py-1 me-3">{{ member.semi_private_active_until|date:"d M Y" }}</span>
+                                {% else %}
+                                    <span class="text-muted me-4"><i>tidak aktif</i></span>
+                                {% endif %}
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-0">
+                                {% if member.is_pt_active_member %}
+                                    <strong class="ms-3">Sesi PT tersisa:</strong>
+                                    <span class="badge bg-success px-2 py-1 me-3">{{ member.pt_session_count }}</span>
+                                {% else %}
+                                    <strong class="ms-3">Private Trainer:</strong>
+                                    <span class="text-muted me-4"><i>tidak aktif</i></span>
+                                {% endif %}
+                            </div>
                         </p>
                     {% endif %}
                 </div>
