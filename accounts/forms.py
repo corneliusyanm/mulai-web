@@ -1,7 +1,32 @@
 from django import forms
 from django.core.exceptions import ValidationError
 
-from .models import Member
+from .models import Member, Tamu
+
+
+class TamuForm(forms.ModelForm):
+    class Meta:
+        model = Tamu
+        fields = [
+            "name",
+            "phone_number",
+            "has_worked_out_before",
+            "social_media_username",
+        ]
+        widgets = {
+            "name": forms.TextInput(),
+            "phone_number": forms.TextInput(),
+            "has_worked_out_before": forms.TextInput(
+                attrs={"placeholder": "misal: belum pernah, 3 bulan, 1 tahun, ..."}
+            ),
+            "social_media_username": forms.TextInput(),
+        }
+        labels = {
+            "name": "Nama",
+            "phone_number": "No. HP",
+            "has_worked_out_before": "Udah pernah rutin nge-Gym atau belum?",
+            "social_media_username": "Username akun Instagram/TikTok/Facebook (Opsional)",
+        }
 
 
 class MemberSignUpForm(forms.ModelForm):

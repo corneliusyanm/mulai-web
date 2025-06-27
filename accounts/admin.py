@@ -2,7 +2,8 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.utils import timezone
 
-from .models import Member, User
+from visits.admin import admin_site
+from .models import Member, User, Tamu
 
 
 class CustomUserAdmin(UserAdmin):
@@ -66,4 +67,20 @@ class MemberAdmin(admin.ModelAdmin):
     membership_status.short_description = "Status"
 
 
-admin.site.register(User, CustomUserAdmin)
+@admin.register(Tamu)
+class TamuAdmin(admin.ModelAdmin):
+    list_display = (
+        "name",
+        "phone_number",
+        "has_worked_out_before",
+        "social_media_username",
+        "created_at",
+    )
+    list_filter = ("has_worked_out_before", "created_at")
+    search_fields = ("name", "phone_number", "social_media_username")
+    readonly_fields = ("created_at",)
+
+
+admin_site.register(User, CustomUserAdmin)
+admin_site.register(Member, MemberAdmin)
+admin_site.register(Tamu, TamuAdmin)

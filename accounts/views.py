@@ -9,8 +9,8 @@ from django.views.generic.edit import CreateView, UpdateView
 from payments.models import Payment
 from visits.models import Visit
 
-from .forms import MemberEditForm, MemberLoginForm, MemberSignUpForm
-from .models import Member
+from .forms import MemberEditForm, MemberLoginForm, MemberSignUpForm, TamuForm
+from .models import Member, Tamu
 
 # Create your views here.
 
@@ -119,3 +119,18 @@ def home(request):
 
 def job_openings(request):
     return render(request, "lowongan-kerja.html")
+
+
+def tamu_signup_view(request):
+    if request.method == "POST":
+        form = TamuForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect("tamu_signup_success")
+    else:
+        form = TamuForm()
+    return render(request, "accounts/tamu_signup.html", {"form": form})
+
+
+def tamu_signup_success_view(request):
+    return render(request, "accounts/tamu_signup_success.html")
