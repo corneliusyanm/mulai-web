@@ -29,13 +29,15 @@ class CustomUserAdmin(UserAdmin):
     )
 
 
-@admin.register(Member)
 class MemberAdmin(admin.ModelAdmin):
     list_display = (
         "name",
         "email",
         "phone_number",
         "formatted_active_until",
+        "formatted_pemula_active_until",
+        "formatted_semi_private_active_until",
+        "pt_session_count",
         "membership_status",
         "created_at",
     )
@@ -48,7 +50,17 @@ class MemberAdmin(admin.ModelAdmin):
             "Physical Information",
             {"fields": ("age", "height", "weight", "years_of_working_out")},
         ),
-        ("Membership Information", {"fields": ("active_until",)}),
+        (
+            "Membership Information",
+            {
+                "fields": (
+                    "active_until",
+                    "pemula_active_until",
+                    "semi_private_active_until",
+                    "pt_session_count",
+                )
+            },
+        ),
         ("Additional Information", {"fields": ("goals", "know_mulai_gym_from")}),
     )
 
@@ -59,6 +71,22 @@ class MemberAdmin(admin.ModelAdmin):
 
     formatted_active_until.short_description = "Active Until"
 
+    def formatted_pemula_active_until(self, obj):
+        if obj.pemula_active_until:
+            return timezone.localtime(obj.pemula_active_until).strftime("%d %b %Y")
+        return "-"
+
+    formatted_pemula_active_until.short_description = "Pemula Active Until"
+
+    def formatted_semi_private_active_until(self, obj):
+        if obj.semi_private_active_until:
+            return timezone.localtime(obj.semi_private_active_until).strftime(
+                "%d %b %Y"
+            )
+        return "-"
+
+    formatted_semi_private_active_until.short_description = "Semi Private Active Until"
+
     def membership_status(self, obj):
         if obj.is_active_member:
             return "Active"
@@ -67,7 +95,6 @@ class MemberAdmin(admin.ModelAdmin):
     membership_status.short_description = "Status"
 
 
-@admin.register(Tamu)
 class TamuAdmin(admin.ModelAdmin):
     list_display = (
         "name",
