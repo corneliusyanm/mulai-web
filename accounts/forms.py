@@ -1,7 +1,25 @@
 from django import forms
 from django.core.exceptions import ValidationError
 
-from .models import Member, Tamu
+from .models import Member, Tamu, Masukkan
+
+
+class MasukkanForm(forms.ModelForm):
+    class Meta:
+        model = Masukkan
+        fields = ["name", "contact", "feedback"]
+        widgets = {
+            "name": forms.TextInput(),
+            "contact": forms.TextInput(),
+            "feedback": forms.Textarea(
+                attrs={"rows": 5, "placeholder": "Kritik, saran, pertanyaan..."}
+            ),
+        }
+        labels = {
+            "name": "Nama",
+            "contact": "Kontak (No. WA / Sosial Media, Opsional)",
+            "feedback": "Masukkan Anda",
+        }
 
 
 class TamuForm(forms.ModelForm):

@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block title %}Terima Kasih - Mulai Gym{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 mx-auto" style="margin: 1rem 6rem 7rem 6rem;">
+        <div class="bg-transparent p-4">
+            <h2 class="mb-5 text-white fw-bold text-center">Terima Kasih!</h2>
+            <div class="bg-transparent text-white text-center">
+                <p class="mb-5" style="font-size: 1.2rem;">
+                    Masukkan kamu sudah kami terima. Terima kasih ya sudah membantu kami menjadi lebih baik!
+                </p>
+                <div class="text-center mt-5">
+                    <a href="{% url 'home' %}" class="btn btn-secondary">Beranda</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

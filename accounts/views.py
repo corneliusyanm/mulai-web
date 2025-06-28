@@ -9,8 +9,14 @@ from django.views.generic.edit import CreateView, UpdateView
 from payments.models import Payment
 from visits.models import Visit
 
-from .forms import MemberEditForm, MemberLoginForm, MemberSignUpForm, TamuForm
-from .models import Member, Tamu
+from .forms import (
+    MemberEditForm,
+    MemberLoginForm,
+    MemberSignUpForm,
+    TamuForm,
+    MasukkanForm,
+)
+from .models import Member, Tamu, Masukkan
 
 # Create your views here.
 
@@ -134,3 +140,18 @@ def tamu_signup_view(request):
 
 def tamu_signup_success_view(request):
     return render(request, "accounts/tamu_signup_success.html")
+
+
+def masukkan_view(request):
+    if request.method == "POST":
+        form = MasukkanForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect("masukkan_success")
+    else:
+        form = MasukkanForm()
+    return render(request, "accounts/masukkan.html", {"form": form})
+
+
+def masukkan_success_view(request):
+    return render(request, "accounts/masukkan_success.html")

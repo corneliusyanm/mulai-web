@@ -122,3 +122,20 @@ class Tamu(models.Model):
         verbose_name = "Tamu"
         verbose_name_plural = "Tamu"
         ordering = ["-created_at"]
+
+
+class Masukkan(models.Model):
+    name = models.CharField(max_length=100, blank=True, verbose_name="Nama")
+    contact = models.CharField(
+        max_length=100, blank=True, verbose_name="Kontak (no WA / sosial media)"
+    )
+    feedback = models.TextField(verbose_name="Masukkan")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Feedback from {self.name or 'Anonymous'} at {self.created_at.strftime('%Y-%m-%d %H:%M')}"
+
+    class Meta:
+        verbose_name = "Masukkan"
+        verbose_name_plural = "Masukkan"
+        ordering = ["-created_at"]
