@@ -112,7 +112,7 @@ class MasukkanAdmin(admin.ModelAdmin):
     list_display = ("get_display_name", "contact", "feedback_snippet", "created_at")
     list_filter = ("created_at",)
     search_fields = ("name", "contact", "feedback")
-    readonly_fields = ("name", "contact", "feedback", "created_at")
+    readonly_fields = ("created_at",)
     list_display_links = ("get_display_name",)
 
     def get_display_name(self, obj):
@@ -125,12 +125,6 @@ class MasukkanAdmin(admin.ModelAdmin):
         return obj.feedback[:50] + "..." if len(obj.feedback) > 50 else obj.feedback
 
     feedback_snippet.short_description = "Feedback"
-
-    def has_add_permission(self, request):
-        return False
-
-    def has_change_permission(self, request, obj=None):
-        return False
 
 
 admin_site.register(User, CustomUserAdmin)
