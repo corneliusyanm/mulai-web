@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     "visits",
     "payments",
     "widget_tweaks",
+    "purchases",
 ]
 
 MIDDLEWARE = [

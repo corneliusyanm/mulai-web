@@ -8,6 +8,10 @@ from visits.admin import VisitAdmin, admin_site
 from visits.models import Visit
 from payments.admin import PaymentAdminForm
 
+# Import the new models and admin configurations from the purchases app
+from purchases.models import Product, Sale
+from purchases.admin import ProductAdmin, SaleAdmin
+
 # Only register if not already registered
 if not admin_site._registry.get(User):
 
@@ -134,6 +138,13 @@ if not admin_site._registry.get(Payment):
             js = ("js/payment_admin.js",)
 
     admin_site.register(Payment, CustomPaymentAdmin)
+
+# Register models from the purchases app
+if not admin_site._registry.get(Product):
+    admin_site.register(Product, ProductAdmin)
+
+if not admin_site._registry.get(Sale):
+    admin_site.register(Sale, SaleAdmin)
 
 # Visit model is already registered in visits/admin.py
 
