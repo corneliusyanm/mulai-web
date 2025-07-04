@@ -25,6 +25,7 @@ class Sale(models.Model):
         ("CASH", "Cash"),
         ("QRIS", "QRIS"),
         ("TRANSFER", "Transfer"),
+        ("DITRAKTIR_ONEL", "Ditraktir Onel"),
     ]
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
@@ -41,7 +42,7 @@ class Sale(models.Model):
         help_text="Optional: Link this sale to a gym member.",
     )
     payment_method = models.CharField(
-        max_length=10,
+        max_length=20,
         choices=PAYMENT_METHOD_CHOICES,
     )
     total_amount = models.DecimalField(
