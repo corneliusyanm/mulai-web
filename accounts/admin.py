@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.utils import timezone
+from django.utils.html import format_html
 
 from visits.admin import admin_site
 from .models import Member, User, Tamu, Masukkan
@@ -29,11 +30,29 @@ class CustomUserAdmin(UserAdmin):
     )
 
 
-class MemberAdmin(admin.ModelAdmin):
+class WhatsAppLinkMixin:
+    def whatsapp_link(self, obj):
+        phone = obj.phone_number
+        if not phone:
+            return "-"
+
+        # Clean the phone number for the URL
+        cleaned_phone = "".join(filter(str.isdigit, phone))
+        if cleaned_phone.startswith("0"):
+            cleaned_phone = "62" + cleaned_phone[1:]
+
+        url = f"https://wa.me/{cleaned_phone}"
+        return format_html('<a href="{}" target="_blank">{}</a>', url, phone)
+
+    whatsapp_link.short_description = "No. HP (WhatsApp)"
+    whatsapp_link.admin_order_field = "phone_number"
+
+
+class MemberAdmin(WhatsAppLinkMixin, admin.ModelAdmin):
     list_display = (
         "name",
         "email",
-        "phone_number",
+        "whatsapp_link",
         "formatted_active_until",
         "formatted_pemula_active_until",
         "formatted_semi_private_active_until",
@@ -95,10 +114,10 @@ class MemberAdmin(admin.ModelAdmin):
     membership_status.short_description = "Status"
 
 
-class TamuAdmin(admin.ModelAdmin):
+class TamuAdmin(WhatsAppLinkMixin, admin.ModelAdmin):
     list_display = (
         "name",
-        "phone_number",
+        "whatsapp_link",
         "has_worked_out_before",
         "social_media_username",
         "created_at",
