@@ -9,6 +9,7 @@ class Equipment(models.Model):
     description = models.TextField(blank=True)
     video_link = models.URLField()
     muscle_group = models.CharField(max_length=50, blank=True)
+    detailed_muscle_group = models.CharField(max_length=100, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

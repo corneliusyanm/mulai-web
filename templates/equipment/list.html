@@ -82,12 +82,23 @@
             font-size: 0.9rem;
         }
     }
+    .muscle-group-title {
+        color: #fff;
+        margin-top: 0rem;
+        margin-bottom: 0rem;
+        padding-left: 0.5rem;
+        border-left: 4px solid #BEF006; /* Mulai Gym yellow */
+        font-size: 1.5rem;
+    }
 </style>
 
 <div class="container my-5">
-    <h1 class="text-center mb-1">Panduan Penggunaan Alat</h1>
+    <h1 class="text-center mb-4">Panduan Penggunaan Alat</h1>
+    
+    {% for muscle_group, equipment_list in grouped_equipments.items %}
+    <h2 class="muscle-group-title">{{ muscle_group }}</h2>
     <div class="equipment-grid">
-        {% for item in equipments %}
+        {% for item in equipment_list %}
         <a href="{% url 'equipment:detail' item.slug %}" class="equipment-card-link">
           <div class="card-content">
             <h3><span>{{ item.name }}</span></h3>
@@ -98,9 +109,10 @@
             {% endif %}
           </div>
         </a>
-        {% empty %}
-        <p class="text-center text-white">Belum ada panduan alat yang tersedia.</p>
         {% endfor %}
     </div>
+    {% empty %}
+    <p class="text-center text-white">Belum ada panduan alat yang tersedia.</p>
+    {% endfor %}
 </div>
 {% endblock %} 
