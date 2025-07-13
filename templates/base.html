@@ -124,28 +124,19 @@
                     <a class="nav-link"></a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link fw-bold" href="{{ request.scheme }}://{{ request.get_host }}/#home">• Home</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link fw-bold" href="{{ request.scheme }}://{{ request.get_host }}/#kenapa-mulai">• Kenapa <img src="{% static 'images/mulai_white.png' %}" alt="Mulai" style="height: 1em; display: inline-block; vertical-align: middle;"> ?</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link fw-bold" href="{{ request.scheme }}://{{ request.get_host }}/#mari-mulai">• Mari <img src="{% static 'images/mulai_white.png' %}" alt="Mulai" style="height: 1em; display: inline-block; vertical-align: middle;"> !</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link fw-bold" href="{{ request.scheme }}://{{ request.get_host }}/#fasilitas">• Fasilitas</a>
+                    <a class="nav-link fw-bold" href="{{ request.scheme }}://{{ request.get_host }}/#home">• Beranda</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link fw-bold" href="{{ request.scheme }}://{{ request.get_host }}/#membership">• Membership (PROMO!)</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link fw-bold" href="{{ request.scheme }}://{{ request.get_host }}/#kontak">• Kontak</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link fw-bold" href="{% url 'equipment:list' %}">• Panduan Alat</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link fw-bold" href="{% url 'masukkan' %}">• Kotak Masukkan</a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link fw-bold" href="{{ request.scheme }}://{{ request.get_host }}/#kontak">• Alamat & Kontak Kami</a>
                 </li>
                 <!-- <li class="nav-item">
                     <a class="nav-link fw-bold" href="{{ request.scheme }}://{{ request.get_host }}/lowongan-kerja">• Lowongan Kerja</a>

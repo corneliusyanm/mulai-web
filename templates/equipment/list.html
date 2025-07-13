@@ -6,25 +6,33 @@
 <style>
     .equipment-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 1.5rem;
-        padding: 1.5rem;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+        padding: 1rem;
     }
-    .equipment-card {
-        background-color: #fff;
-        border-radius: 8px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    .equipment-card-link {
+        display: block;
+        text-decoration: none;
+        color: inherit;
+        background-color: rgba(255,255,255,0.10);
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         overflow: hidden;
-        transition: transform 0.2s;
+        transition: transform 0.18s, box-shadow 0.18s;
+        backdrop-filter: blur(2px);
     }
-    .equipment-card:hover {
-        transform: translateY(-5px);
+    .equipment-card-link:hover, .equipment-card-link:focus {
+        transform: translateY(-4px) scale(1.03);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.13);
+        text-decoration: none;
     }
     .video-container {
         position: relative;
-        padding-bottom: 56.25%; /* 16:9 aspect ratio */
+        padding-bottom: 177.78%; /* 9:16 aspect ratio for portrait */
         height: 0;
         overflow: hidden;
+        border-radius: 7px;
+        margin-bottom: 0.5rem;
     }
     .video-container iframe {
         position: absolute;
@@ -32,43 +40,66 @@
         left: 0;
         width: 100%;
         height: 100%;
+        border-radius: 7px;
+        pointer-events: none; /* Disable interaction to hide controls */
     }
     .card-content {
-        padding: 1rem;
+        padding: 0.75rem;
     }
     .card-content h3 {
         margin-top: 0;
-        margin-bottom: 0.5rem;
-        font-size: 1.25rem;
-    }
-     .card-content h3 a {
+        margin-bottom: 0.3rem;
+        font-size: 1rem;
+        font-weight: 700;
+        color: #fff;
         text-decoration: none;
-        color: #333;
+        line-height: 1.2;
+    }
+    .card-content h3 span {
+        color: #fff;
+        text-decoration: none;
+    }
+    .equipment-card-link:hover .card-content h3 span,
+    .equipment-card-link:focus .card-content h3 span {
+        color: #fff;
+        text-decoration: none;
     }
     .card-content p {
         margin: 0;
-        color: #666;
-        font-size: 0.9rem;
+        color: #e0e0e0;
+        font-size: 0.85rem;
+    }
+    
+    @media (max-width: 576px) {
+        .equipment-grid {
+            gap: 0.5rem;
+            padding: 0.5rem;
+        }
+        .card-content {
+            padding: 0.5rem;
+        }
+        .card-content h3 {
+            font-size: 0.9rem;
+        }
     }
 </style>
 
 <div class="container my-5">
-    <h1 class="text-center mb-4">Panduan Penggunaan Alat</h1>
+    <h1 class="text-center mb-1">Panduan Penggunaan Alat</h1>
     <div class="equipment-grid">
         {% for item in equipments %}
-        <div class="equipment-card">
+        <a href="{% url 'equipment:detail' item.slug %}" class="equipment-card-link">
+          <div class="card-content">
+            <h3><span>{{ item.name }}</span></h3>
             {% if item.get_youtube_embed_url %}
             <div class="video-container">
-                <iframe src="{{ item.get_youtube_embed_url }}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+              <iframe src="{{ item.get_youtube_embed_url }}?modestbranding=1&showinfo=0&controls=0&rel=0&iv_load_policy=3&cc_load_policy=0&disablekb=1&fs=0" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
             </div>
             {% endif %}
-            <div class="card-content">
-                <h3><a href="{% url 'equipment:detail' item.slug %}">{{ item.name }}</a></h3>
-                <p>Otot: {{ item.muscle_group }}</p>
-            </div>
-        </div>
+          </div>
+        </a>
         {% empty %}
-        <p class="text-center">Belum ada panduan alat yang tersedia.</p>
+        <p class="text-center text-white">Belum ada panduan alat yang tersedia.</p>
         {% endfor %}
     </div>
 </div>
