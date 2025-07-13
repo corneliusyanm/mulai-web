@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Panduan Alat - Mulai Gym{% endblock %}
+
+{% block content %}
+<style>
+    .equipment-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+        padding: 1.5rem;
+    }
+    .equipment-card {
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        overflow: hidden;
+        transition: transform 0.2s;
+    }
+    .equipment-card:hover {
+        transform: translateY(-5px);
+    }
+    .video-container {
+        position: relative;
+        padding-bottom: 56.25%; /* 16:9 aspect ratio */
+        height: 0;
+        overflow: hidden;
+    }
+    .video-container iframe {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+    }
+    .card-content {
+        padding: 1rem;
+    }
+    .card-content h3 {
+        margin-top: 0;
+        margin-bottom: 0.5rem;
+        font-size: 1.25rem;
+    }
+     .card-content h3 a {
+        text-decoration: none;
+        color: #333;
+    }
+    .card-content p {
+        margin: 0;
+        color: #666;
+        font-size: 0.9rem;
+    }
+</style>
+
+<div class="container my-5">
+    <h1 class="text-center mb-4">Panduan Penggunaan Alat</h1>
+    <div class="equipment-grid">
+        {% for item in equipments %}
+        <div class="equipment-card">
+            {% if item.get_youtube_embed_url %}
+            <div class="video-container">
+                <iframe src="{{ item.get_youtube_embed_url }}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+            {% endif %}
+            <div class="card-content">
+                <h3><a href="{% url 'equipment:detail' item.slug %}">{{ item.name }}</a></h3>
+                <p>Otot: {{ item.muscle_group }}</p>
+            </div>
+        </div>
+        {% empty %}
+        <p class="text-center">Belum ada panduan alat yang tersedia.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %} 

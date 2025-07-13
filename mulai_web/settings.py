@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     "payments",
     "widget_tweaks",
     "purchases",
+    "equipment",
 ]
 
 MIDDLEWARE = [

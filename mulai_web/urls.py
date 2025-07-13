@@ -24,11 +24,16 @@ from django.views.generic import RedirectView
 import visits.admin_init  # Add this import
 from visits.admin import admin_site  # Import the custom admin site
 
+from accounts.views import home, job_openings as lowongan_kerja
+
 urlpatterns = [
     # Use custom admin site instead of default
     path("admin/", admin_site.urls),
-    path("", include("accounts.urls")),
-    path("", include("visits.urls")),
+    path("", home, name="home"),
+    path("lowongan-kerja/", lowongan_kerja, name="lowongan_kerja"),
+    path("accounts/", include("accounts.urls")),
+    path("visits/", include("visits.urls")),
+    path("alat/", include("equipment.urls", namespace="equipment")),
     # Redirect /kuesioner to Google Form
     path(
         "kuesioner/",

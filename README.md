@@ -1,5 +1,9 @@
 # Mulai Gym Web App
 
+It's a Django project, for Gym Management System. The Gym name is called Mulai Gym. It's in Bandung, Indonesia. It's a gym focused for Newbies.
+https://www.instagram.com/mulaigym.id
+https://mulaigym.id
+
 ## Infrastructure & Deployment
 
 ### DNS & SSL Setup
@@ -152,6 +156,70 @@ graph TD
 3.  **Update Member `active_until`**:
     - Always set `member.active_until = self.membership_end_date`.
     - Ensures correct stacking/renewal regardless of current status.
+
+## Tamu (Guest Book)
+
+### Model (`accounts/models.py`)
+- **`Tamu`**: For guests who are visiting but not working out.
+  - `name`: CharField (Guest's name)
+  - `phone_number`: CharField (Contact number)
+  - `has_worked_out_before`: CharField (Guest's previous gym experience)
+  - `social_media_username`: CharField (Optional social media handle)
+
+### Admin (`accounts/admin.py`)
+- **`TamuAdmin`**:
+  - Displays guest details in the admin panel.
+  - Includes a clickable `whatsapp_link` for easy contact.
+
+### Views (`accounts/views.py`)
+- **`tamu_signup_view`**:
+  - Renders a simple form for guests to fill out.
+  - On submission, saves the data and shows a success page.
+
+---
+
+## Products & Sales
+
+### Models (`payments/models.py`)
+- **`Package` (Product)**: Represents a membership or service package.
+  - `code`: CharField (Unique code for the package, e.g., "M1")
+  - `default_price`: DecimalField (The standard price of the package)
+  - `description`: CharField (A brief description of the package)
+- **`Payment` (Sale)**: Represents a transaction for a package.
+  - `member`: ForeignKey (The member who made the purchase)
+  - `package`: ForeignKey (The package that was purchased)
+  - `amount`: DecimalField (The amount paid)
+  - `payment_date`: DateTimeField (When the payment was made)
+  - `created_by`: ForeignKey (The admin who recorded the payment)
+
+### Admin (`visits/admin_init.py` & `payments/admin.py`)
+- **`PackageAdmin`**:
+  - Allows for managing product packages directly from the admin panel.
+- **`PaymentAdmin`**:
+  - Displays a detailed list of all sales transactions.
+  - Automatically assigns the logged-in admin to the `created_by` field on new entries.
+
+### Membership Logic (`Payment.save()`)
+- When a `Payment` is saved, it intelligently calculates the member's new `active_until` date.
+- If the member is already active, the new membership duration is stacked on top of their existing one.
+- If the member is inactive, the new membership starts from the payment date.
+
+---
+
+## Masukkan (Feedback)
+
+### Model (`accounts/models.py`)
+- **`Masukkan`**: To collect feedback, critiques, and suggestions.
+  - `name`: CharField (Optional)
+  - `contact`: CharField (Optional contact info)
+  - `feedback`: TextField (The feedback content)
+
+### Admin (`accounts/admin.py`)
+- **`MasukkanAdmin`**:
+  - Displays all submitted feedback.
+  - Provides a link to the details, even for anonymous submissions.
+
+---
 
 ## Troubleshooting
 
