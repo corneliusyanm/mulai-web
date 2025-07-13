@@ -6,9 +6,12 @@
 <style>
     .video-wrapper {
         position: relative;
-        padding-bottom: 56.25%; /* 16:9 */
+        padding-bottom: 142.22%; /* 9:16 portrait aspect ratio reduced by 20% */
         height: 0;
-        margin-bottom: 1.5rem;
+        margin-bottom: 0.5rem;
+        max-width: 320px; /* Limit width for portrait videos reduced by 20% */
+        margin-left: auto;
+        margin-right: auto;
     }
     .video-wrapper iframe {
         position: absolute;
@@ -17,12 +20,28 @@
         width: 100%;
         height: 100%;
     }
+    .back-button {
+        color: #BEF006;
+        text-decoration: none;
+        font-size: 1.2rem;
+        margin-bottom: 6rem;
+        display: inline-block;
+    }
+    .back-button:hover {
+        color: #BEF006;
+        text-decoration: none;
+    }
+    .description-section h2 {
+        margin-bottom: 0.25rem;
+    }
 </style>
 
-<div class="container my-5">
+<div class="container my-4">
     <div class="row">
         <div class="col-lg-8 mx-auto">
-            <h1 class="mb-3">{{ equipment.name }}</h1>
+            
+            
+            <h1 class="mb-2">{{ equipment.name }}</h1>
             <p>Target Otot: {{ equipment.muscle_group }}</p>
             
             {% if equipment.get_youtube_embed_url %}
@@ -32,14 +51,16 @@
             {% endif %}
 
             {% if equipment.description %}
-            <div class="mt-4">
+            <div class="mt-2 description-section">
                 <h2>Deskripsi</h2>
                 <p>{{ equipment.description|linebreaks }}</p>
             </div>
             {% endif %}
 
-            <div class="mt-4">
-                <a href="{% url 'equipment:list' %}" class="btn btn-outline-primary">Kembali ke semua alat</a>
+            <div class="mt-1">
+                <a href="{% url 'equipment:list' %}" class="back-button">
+                  <i class="fas fa-arrow-left"></i> Kembali ke semua alat
+              </a>
             </div>
         </div>
     </div>
