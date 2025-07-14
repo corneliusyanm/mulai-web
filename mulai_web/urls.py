@@ -23,12 +23,17 @@ from django.views.generic import RedirectView
 
 import visits.admin_init  # Add this import
 from visits.admin import admin_site  # Import the custom admin site
+from visits import views as visit_views
 
-from accounts.views import home, job_openings as lowongan_kerja
+from accounts.views import home, job_openings as lowongan_kerja, tamu_signup_view
 
 urlpatterns = [
     # Use custom admin site instead of default
     path("admin/", admin_site.urls),
+    path("check-in/", visit_views.check_in_page, name="check_in_page"),
+    path("check-out/", visit_views.check_out_page, name="check_out_page"),
+    path("tamu/", tamu_signup_view, name="tamu_signup"),
+    path("forget-member/", visit_views.forget_member, name="forget_member"),
     path("", home, name="home"),
     path("lowongan-kerja/", lowongan_kerja, name="lowongan_kerja"),
     path("accounts/", include("accounts.urls")),
