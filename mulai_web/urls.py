@@ -30,6 +30,7 @@ from accounts.views import home, job_openings as lowongan_kerja, tamu_signup_vie
 urlpatterns = [
     # Use custom admin site instead of default
     path("admin/", admin_site.urls),
+    path("daftar-grand-opening/", include("grand_opening.urls")),
     path("check-in/", visit_views.check_in_page, name="check_in_page"),
     path("check-out/", visit_views.check_out_page, name="check_out_page"),
     path("tamu/", tamu_signup_view, name="tamu_signup"),

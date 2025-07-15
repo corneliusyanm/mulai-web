@@ -106,7 +106,7 @@ class MemberSignUpForm(forms.ModelForm):
             "know_mulai_gym_from": forms.Textarea(
                 attrs={
                     "rows": 2,
-                    "placeholder": "misal: billboard, instagram, tiktok, teman, google maps, ...",
+                    "placeholder": "misal: ngelewat, instagram, tiktok, teman, google maps, ...",
                 }
             ),
             "why_choose_mulai": forms.Textarea(

@@ -41,6 +41,7 @@ CSRF_COOKIE_SECURE = True
 # Application definition
 
 INSTALLED_APPS = [
+    "core",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -51,8 +52,9 @@ INSTALLED_APPS = [
     "accounts",
     "visits",
     "payments",
-    "widget_tweaks",
     "purchases",
+    "grand_opening",
+    "widget_tweaks",
     "equipment",
 ]
 
