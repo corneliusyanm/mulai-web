@@ -56,6 +56,10 @@ jobs:
             docker run -d \
               --name mulai_web \
               -p 8000:8000 \
+              --health-cmd "curl -f http://localhost:8000/ || exit 1" \
+              --health-interval=5s \
+              --health-retries=5 \
+              --health-timeout=2s \
               -e "DJANGO_SECRET_KEY=$DJANGO_SECRET_KEY" \
               -e "DJANGO_DEBUG=$DJANGO_DEBUG" \
               -e "DB_NAME=$DB_NAME" \
@@ -68,8 +72,28 @@ jobs:
               -v /root/mulai_web/data:/app/data \
               mulai_web
 
-            # Wait for container to be ready
-            sleep 5
+            # Wait for container to become healthy or fail
+            echo "Waiting for container to start..."
+            for i in {1..12}; do
+              STATUS=$(docker inspect --format '{{.State.Health.Status}}' mulai_web)
+              if [ "$STATUS" = "healthy" ]; then
+                echo "Container is healthy!"
+                break
+              fi
+              if [ "$STATUS" = "unhealthy" ]; then
+                echo "Container is unhealthy. Dumping logs and exiting."
+                docker logs mulai_web
+                exit 1
+              fi
+              sleep 5
+            done
+
+            # Final check
+            if [ "$(docker inspect --format '{{.State.Health.Status}}' mulai_web)" != "healthy" ]; then
+              echo "Container failed to start. Dumping logs."
+              docker logs mulai_web
+              exit 1
+            fi
 
             # Run migrations
             echo "Running migrations..."
