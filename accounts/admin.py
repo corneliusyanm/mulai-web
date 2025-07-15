@@ -80,7 +80,10 @@ class MemberAdmin(WhatsAppLinkMixin, admin.ModelAdmin):
                 )
             },
         ),
-        ("Additional Information", {"fields": ("goals", "know_mulai_gym_from")}),
+        (
+            "Additional Information",
+            {"fields": ("address", "goals", "know_mulai_gym_from", "why_choose_mulai")},
+        ),
     )
 
     def formatted_active_until(self, obj):
