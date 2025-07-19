@@ -45,7 +45,7 @@ https://mulaigym.id
   - Filters, search fields defined.
 
 ### Views (`visits/views.py`)
-- **`check_in_page`**
+- **`check_in_page`** (`/check-in`)
   1. Checks session for `member_email`.
   2. If logged in:
      - Tries auto check-in (validates active member, no active visit).
@@ -62,13 +62,13 @@ https://mulaigym.id
          - Validates no active visit -> renders failure if already checked in.
          - Creates `Visit`, renders success (`quick_check_in.html`).
        - If `Member` not found, shows error.
-- **`check_out_page`**
+- **`check_out_page`** (`/check-out`)
   1. Checks session for `member_email` (renders fail if not logged in).
   2. Tries auto check-out:
      - Finds latest active `Visit` for member.
      - Sets `check_out_time`, saves `Visit`.
      - Renders success/failure template.
-- **`forget_member`**
+- **`forget_member`** (`/forget-member`)
   - Clears `member_email` from session.
 
 ### Check-in/Out Flow Diagram
@@ -120,13 +120,14 @@ graph TD
 - **`MemberLoginForm`**: Includes `email` (optional), `country_code` (optional), and `phone_number_display` (optional). Requires either email or phone to be provided. Formats phone number if provided.
 
 ### Views (`accounts/views.py`)
-- **`member_login`**: Accepts POST data from `MemberLoginForm`. 
+- **`member_login`** (`/accounts/masuk/`): Accepts POST data from `MemberLoginForm`. 
   - Validates that either email or phone was provided.
   - If email provided, finds `Member` by email.
   - If phone provided (and no email), finds `Member` by formatted `phone_number`.
   - On success, stores `member.email` in session (`member_email`) and redirects to details.
   - On failure (not found, invalid form), shows error message.
-- **`MemberSignUpView`**: After successful signup, stores `member.email` in session (`member_email`) for auto-login.
+- **`member_logout`** (`/accounts/keluar/`): Logs the member out by clearing the session.
+- **`MemberSignUpView`** (`/accounts/daftar/`): After successful signup, stores `member.email` in session (`member_email`) for auto-login.
 
 ### Templates
 - `login.html`: Updated to include email and phone number fields (with country code).
@@ -172,11 +173,28 @@ graph TD
   - Includes a clickable `whatsapp_link` for easy contact.
 
 ### Views (`accounts/views.py`)
-- **`tamu_signup_view`**:
+- **`tamu_signup_view`** (`/tamu`):
   - Renders a simple form for guests to fill out.
   - On submission, saves the data and shows a success page.
 
 ---
+
+## Equipment Guide (Panduan Alat)
+
+### Model (`equipment/models.py`)
+- **`Equipment`**: Represents a piece of gym equipment.
+  - `name`: CharField (Name of the equipment)
+  - `description`: TextField (How to use the equipment)
+  - `video_link`: URLField (Link to a YouTube tutorial video)
+  - `muscle_group`: CharField (Primary muscle group targeted)
+  - `detailed_muscle_group`: CharField (Specific muscle group targeted)
+
+### Views (`equipment/views.py`)
+- **`equipment_list`** (`/alat/`):
+  - Displays a grid of all available equipment, grouped by muscle group.
+  - Each item links to the detail page.
+- **`equipment_detail`** (`/alat/<slug:slug>/`):
+  - Shows the details for a specific piece of equipment, including an embedded YouTube video guide.
 
 ## Products & Sales
 
@@ -233,3 +251,28 @@ graph TD
 - **Restart services**: `sudo systemctl reload nginx && docker restart mulai_web`
 - **Check logs**: `docker logs mulai_web`
 - **Nginx test**: `sudo nginx -t`
+
+---
+
+## Testing
+
+This project uses Django's built-in `TestCase` for unit testing. The tests are located in the `tests.py` file within each application directory (`accounts`, `visits`, `payments`, `equipment`, and `purchases`).
+
+### Running Tests
+
+To run all tests for the entire project, use the following command:
+
+```bash
+python manage.py test
+```
+
+To run tests for a specific application, append the application name:
+
+```bash
+python manage.py test accounts
+python manage.py test visits
+```
+
+### Continuous Integration
+
+A GitHub Actions workflow is configured in `.github/workflows/deploy.yml` to automatically run all tests on every push to the `main` branch. The deployment to the production server will only proceed if all tests pass, ensuring a more stable and reliable deployment process.
