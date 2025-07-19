@@ -3,8 +3,12 @@ from datetime import timedelta
 from django.test import TestCase
 from django.utils import timezone
 from django.urls import reverse
+from unittest.mock import Mock
 
-from .models import Member, Tamu, Masukkan
+from .models import Member, Tamu, Masukkan, Prospect
+from .admin import ProspectAdmin
+from .models import User
+from visits.admin import admin_site
 
 
 class MemberModelTest(TestCase):
@@ -325,3 +329,64 @@ class GuestAndFeedbackTest(TestCase):
         self.assertTrue(
             Masukkan.objects.filter(feedback="Anonymous feedback.").exists()
         )
+
+
+class ProspectTest(TestCase):
+    def setUp(self):
+        self.admin_user = User.objects.create_superuser(
+            "admin_test", "admin@test.com", "password"
+        )
+
+    def test_prospect_creation(self):
+        """Test that a Prospect can be created successfully."""
+        prospect = Prospect.objects.create(
+            name="Test Prospect",
+            phone_number="628123456789",
+            gym_experience="1 year",
+            social_media_username="@testprospect",
+            notes="Interested in PT.",
+            created_by=self.admin_user,
+        )
+        self.assertEqual(prospect.name, "Test Prospect")
+        self.assertEqual(prospect.created_by.username, "admin_test")
+        self.assertEqual(str(prospect), "Test Prospect")
+
+    def test_prospect_admin_save_model(self):
+        """Test that created_by is set automatically on save in the admin."""
+        prospect = Prospect(name="Admin Saved Prospect")
+
+        # Mock the request and admin site
+        request = Mock()
+        request.user = self.admin_user
+
+        prospect_admin = ProspectAdmin(Prospect, admin_site)
+        prospect_admin.save_model(request, prospect, form=None, change=False)
+
+        # Refresh from db to get the saved object
+        saved_prospect = Prospect.objects.get(name="Admin Saved Prospect")
+
+        self.assertIsNotNone(saved_prospect.created_by)
+        self.assertEqual(saved_prospect.created_by, self.admin_user)
+
+    def test_prospect_admin_readonly_fields_on_change(self):
+        """Test that created_by is not changed on update."""
+        other_user = User.objects.create_user(
+            "other_user", "other@test.com", "password"
+        )
+
+        prospect = Prospect.objects.create(
+            name="Initial Prospect", created_by=self.admin_user
+        )
+
+        # Mock the request and admin site
+        request = Mock()
+        request.user = other_user  # A different user is making the change
+
+        prospect_admin = ProspectAdmin(Prospect, admin_site)
+        prospect_admin.save_model(request, prospect, form=None, change=True)
+
+        # Refresh from db
+        updated_prospect = Prospect.objects.get(id=prospect.id)
+
+        # created_by should remain the original user
+        self.assertEqual(updated_prospect.created_by, self.admin_user)
