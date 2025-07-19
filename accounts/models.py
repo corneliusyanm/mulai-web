@@ -4,6 +4,7 @@ from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
+from django.conf import settings
 
 
 class User(AbstractUser):
@@ -138,4 +139,36 @@ class Masukkan(models.Model):
     class Meta:
         verbose_name = "Masukkan"
         verbose_name_plural = "Masukkan"
+        ordering = ["-created_at"]
+
+
+class Prospect(models.Model):
+    name = models.CharField(max_length=100, verbose_name="Nama")
+    phone_number = models.CharField(max_length=20, blank=True, verbose_name="No. HP")
+    gym_experience = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name="(Opsional) Udah pernah rutin nge-Gym atau belum?",
+    )
+    social_media_username = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name="(Opsional) Username ig/fb/tiktok",
+    )
+    notes = models.TextField(blank=True, verbose_name="Catatan")
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="Disubmit oleh",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = "Prospek"
+        verbose_name_plural = "Prospek"
         ordering = ["-created_at"]

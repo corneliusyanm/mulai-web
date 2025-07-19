@@ -4,7 +4,7 @@ from django.utils import timezone
 from django.utils.html import format_html
 
 from visits.admin import admin_site
-from .models import Member, User, Tamu, Masukkan
+from .models import Member, User, Tamu, Masukkan, Prospect
 
 
 class CustomUserAdmin(UserAdmin):
@@ -149,7 +149,32 @@ class MasukkanAdmin(admin.ModelAdmin):
     feedback_snippet.short_description = "Feedback"
 
 
+class ProspectAdmin(WhatsAppLinkMixin, admin.ModelAdmin):
+    list_display = (
+        "name",
+        "whatsapp_link",
+        "social_media_username",
+        "created_by",
+        "created_at",
+    )
+    search_fields = (
+        "name",
+        "phone_number",
+        "social_media_username",
+        "notes",
+        "created_by__username",
+    )
+    list_filter = ("created_by", "created_at")
+    readonly_fields = ("created_at", "created_by")
+
+    def save_model(self, request, obj, form, change):
+        if not obj.pk:  # Set created_by only on creation
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+
+
 admin_site.register(User, CustomUserAdmin)
 admin_site.register(Member, MemberAdmin)
 admin_site.register(Tamu, TamuAdmin)
 admin_site.register(Masukkan, MasukkanAdmin)
+admin_site.register(Prospect, ProspectAdmin)
