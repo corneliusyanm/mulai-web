@@ -4,8 +4,8 @@ from django.utils import timezone
 
 from accounts.models import Member, User
 from payments.models import Payment, Package
-from visits.admin import VisitAdmin, admin_site
-from visits.models import Visit
+from visits.admin import VisitAdmin, ReminderAdmin, admin_site
+from visits.models import Visit, Reminder
 from payments.admin import PaymentAdminForm
 
 # Import the new models and admin configurations from the purchases app
@@ -162,3 +162,5 @@ if not admin_site._registry.get(Package):  # Check if Package is already registe
         ordering = ("code",)
 
     admin_site.register(Package, PackageAdmin)
+
+# Reminder model is already registered in visits/admin.py
