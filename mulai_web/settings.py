@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     "grand_opening",
     "widget_tweaks",
     "equipment",
+    "reminders",
 ]
 
 MIDDLEWARE = [

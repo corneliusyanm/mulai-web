@@ -6,7 +6,8 @@ from django.db.models import Q
 
 from accounts.models import Member
 from payments.models import Payment
-from visits.models import Visit, Reminder
+from visits.models import Visit
+from reminders.models import Reminder
 
 
 class Command(BaseCommand):
@@ -89,9 +90,12 @@ class Command(BaseCommand):
     def generate_payment_reminders(self, today, dry_run):
         """Generate reminders for installment payments (apakah_nyicil=True)"""
         created_count = 0
+        two_weeks_ago = today - timedelta(days=14)
 
-        # Get all installment payments
-        installment_payments = Payment.objects.filter(apakah_nyicil=True)
+        # Get all installment payments for members who joined at least 14 days ago
+        installment_payments = Payment.objects.filter(
+            apakah_nyicil=True, member__created_at__date__lte=two_weeks_ago
+        ).select_related("member")
 
         for payment in installment_payments:
             payment_date = payment.payment_date.date()
@@ -150,9 +154,7 @@ class Command(BaseCommand):
         two_weeks_ago = today - timedelta(days=14)
 
         # Get all active members
-        active_members = Member.objects.filter(
-            Q(active_until__isnull=True) | Q(active_until__date__gte=today)
-        )
+        active_members = Member.objects.filter(active_until__date__gte=today)
 
         for member in active_members:
             # Get member's last visit
@@ -160,29 +162,15 @@ class Command(BaseCommand):
                 Visit.objects.filter(member=member).order_by("-check_in_time").first()
             )
 
-            # Check if member's last visit was EXACTLY 14 days ago (or never visited)
-            should_create_reminder = False
-            if not last_visit:
-                # Never visited - create reminder once (check if not already exists)
-                should_create_reminder = not Reminder.objects.filter(
-                    member=member, reminder_type="NO_VISIT", is_resolved=False
-                ).exists()
-            elif last_visit.check_in_time.date() == two_weeks_ago:
-                # Last visit was exactly 14 days ago - create reminder
-                should_create_reminder = True
-
-            if should_create_reminder:
-                # For EXACT date reminders, check if reminder already exists for this specific date
+            # Only create a reminder if a last visit exists and it was exactly 14 days ago
+            if last_visit and last_visit.check_in_time.date() == two_weeks_ago:
+                # For EXACT date reminders, check if a reminder already exists for this specific date
                 existing = Reminder.objects.filter(
                     member=member, reminder_type="NO_VISIT", due_date=today
                 ).exists()
 
                 if not existing:
-                    last_visit_str = (
-                        last_visit.check_in_time.strftime("%d %b %Y")
-                        if last_visit
-                        else "Never"
-                    )
+                    last_visit_str = last_visit.check_in_time.strftime("%d %b %Y")
                     if not dry_run:
                         Reminder.objects.create(
                             member=member,
@@ -200,9 +188,12 @@ class Command(BaseCommand):
     def generate_membership_expiry_reminders(self, today, dry_run):
         """Generate reminders for memberships expiring soon"""
         created_count = 0
+        two_weeks_ago = today - timedelta(days=14)
 
-        # Get members with active_until dates
-        members_with_expiry = Member.objects.filter(active_until__isnull=False)
+        # Get members with active_until dates who joined at least 14 days ago
+        members_with_expiry = Member.objects.filter(
+            active_until__isnull=False, created_at__date__lte=two_weeks_ago
+        )
 
         for member in members_with_expiry:
             expiry_date = member.active_until.date()
