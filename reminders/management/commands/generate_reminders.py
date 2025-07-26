@@ -113,12 +113,15 @@ class Command(BaseCommand):
                 reminder_dates = [
                     (
                         next_due - timedelta(days=3),
-                        f"Payment due in 3 days ({next_due.strftime('%d %b %Y')})",
+                        f"Cicilan harus bayar max 3 hari lagi ({next_due.strftime('%d %b %Y')})",
                     ),
-                    (next_due, f"Payment due today ({next_due.strftime('%d %b %Y')})"),
+                    (
+                        next_due,
+                        f"Cicilan harus bayar hari ini ({next_due.strftime('%d %b %Y')})",
+                    ),
                     (
                         next_due + timedelta(days=3),
-                        f"Payment overdue by 3 days (was due {next_due.strftime('%d %b %Y')})",
+                        f"Cicilan belum bayar, sudah lewat 3 hari (seharusnya {next_due.strftime('%d %b %Y')})",
                     ),
                 ]
 
@@ -136,7 +139,7 @@ class Command(BaseCommand):
                                 Reminder.objects.create(
                                     member=payment.member,
                                     reminder_type="PAYMENT_DUE",
-                                    reason=f"Installment payment: {reason}",
+                                    reason=reason,
                                     due_date=next_due,
                                 )
                             created_count += 1
@@ -175,7 +178,7 @@ class Command(BaseCommand):
                         Reminder.objects.create(
                             member=member,
                             reminder_type="NO_VISIT",
-                            reason=f"Member hasn't visited the gym in 14 days. Last visit: {last_visit_str}",
+                            reason=f"Member belum nge-Gym selama 2 minggu. Visit terakhir: {last_visit_str}",
                             due_date=today,
                         )
                     created_count += 1
@@ -202,15 +205,15 @@ class Command(BaseCommand):
             reminder_dates = [
                 (
                     expiry_date - timedelta(days=3),
-                    f"Membership expires in 3 days ({expiry_date.strftime('%d %b %Y')})",
+                    f"Membership habis 3 hari lagi ({expiry_date.strftime('%d %b %Y')})",
                 ),
                 (
                     expiry_date,
-                    f"Membership expires today ({expiry_date.strftime('%d %b %Y')})",
+                    f"Membership habis hari ini ({expiry_date.strftime('%d %b %Y')})",
                 ),
                 (
                     expiry_date + timedelta(days=3),
-                    f"Membership expired 3 days ago (expired {expiry_date.strftime('%d %b %Y')})",
+                    f"Membership habis 3 hari lalu (expired {expiry_date.strftime('%d %b %Y')})",
                 ),
             ]
 
