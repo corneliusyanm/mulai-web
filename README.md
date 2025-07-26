@@ -135,13 +135,15 @@ graph TD
 - `payment_method`: CharField (TRANSFER, QRIS, CASH), default TRANSFER, blank=True.
 - `created_by`: ForeignKey (User), SET_NULL, null=True, blank=True. Automatically set in admin.
 - `membership_end_date`: Calculated in `save()`, not editable in forms.
+- `apakah_nyicil`: BooleanField, default False. Indicates if the payment is part of an installment plan.
 
 ### Admin (`visits/admin_init.py`)
 - **`CustomPaymentAdmin`**
   - Uses `PaymentAdminForm`.
-  - `fieldsets` exclude `created_by`.
+  - `fieldsets` include `apakah_nyicil` but exclude `created_by`.
   - `save_model` sets `created_by = request.user`.
   - `payment_method` shown as dropdown.
+  - `apakah_nyicil` displayed as radio buttons (Ya/Tidak).
 
 ### Membership Duration Logic (`Payment.save()`)
 1.  **Determine Start Date**:
@@ -252,6 +254,12 @@ graph TD
 ## Testing
 
 This project uses Django's built-in `TestCase` for unit testing. The tests are located in the `tests.py` file within each application directory (`accounts`, `visits`, `payments`, `equipment`, and `purchases`).
+
+### Payment Tests
+The `payments` app includes comprehensive tests for:
+- Payment model functionality (membership duration calculations, field defaults)
+- Admin form validation (including `apakah_nyicil` field configuration)
+- Custom duration validation logic
 
 ### Running Tests
 

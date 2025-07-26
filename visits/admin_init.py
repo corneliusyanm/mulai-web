@@ -84,6 +84,7 @@ if not admin_site._registry.get(Payment):
                         "duration_days",
                         "payment_date",
                         "payment_method",
+                        "apakah_nyicil",
                         "notes",
                     ),
                 },

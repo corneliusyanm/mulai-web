@@ -63,6 +63,7 @@ class Payment(models.Model):
         blank=True,
         related_name="created_payments",
     )
+    apakah_nyicil = models.BooleanField(default=False, help_text="Apakah cicilan?")
 
     def save(self, *args, **kwargs):
         # Only calculate membership end date for new payments or if explicitly needed
