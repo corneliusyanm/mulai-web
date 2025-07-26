@@ -64,7 +64,18 @@ class MemberAdmin(WhatsAppLinkMixin, admin.ModelAdmin):
     search_fields = ("name", "email", "phone_number")
     readonly_fields = ("created_at",)
     fieldsets = (
-        ("Basic Information", {"fields": ("name", "email", "phone_number", "gender")}),
+        (
+            "Basic Information",
+            {
+                "fields": (
+                    "name",
+                    "email",
+                    "phone_number",
+                    "gender",
+                    "social_media_username",
+                )
+            },
+        ),
         (
             "Physical Information",
             {"fields": ("age", "height", "weight", "years_of_working_out")},

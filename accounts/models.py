@@ -56,6 +56,9 @@ class Member(models.Model):
     height = models.DecimalField(max_digits=5, decimal_places=2)  # in cm
     weight = models.DecimalField(max_digits=5, decimal_places=2)  # in kg
     address = models.TextField(blank=True, default="")
+    social_media_username = models.CharField(
+        "(Opsional) Akun Instagram/TikTok", max_length=255, blank=True, default=""
+    )
     years_of_working_out = models.CharField(max_length=100)
     goals = models.TextField()
     know_mulai_gym_from = models.CharField(max_length=255)

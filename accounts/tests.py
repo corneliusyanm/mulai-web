@@ -29,6 +29,7 @@ class MemberModelTest(TestCase):
             years_of_working_out="1",
             goals="To be healthy",
             know_mulai_gym_from="friends",
+            social_media_username="@testuser",
         )
         self.assertIs(member.is_active_member, True)
 
@@ -49,6 +50,7 @@ class MemberModelTest(TestCase):
             years_of_working_out="1",
             goals="To be healthy",
             know_mulai_gym_from="friends",
+            social_media_username="@testuser",
         )
         self.assertIs(member.is_active_member, False)
 
@@ -68,6 +70,7 @@ class MemberModelTest(TestCase):
             years_of_working_out="1",
             goals="To be healthy",
             know_mulai_gym_from="friends",
+            social_media_username="@testuser",
         )
         self.assertIs(member.is_active_member, False)
 
@@ -86,6 +89,7 @@ class MemberModelTest(TestCase):
             years_of_working_out="2",
             goals="Get stronger",
             know_mulai_gym_from="Instagram",
+            social_media_username="@johndoe",
         )
         self.assertEqual(member.name, "John Doe")
         self.assertEqual(member.email, "john.doe@example.com")
@@ -107,6 +111,7 @@ class MemberModelTest(TestCase):
             years_of_working_out="0",
             goals="Start",
             know_mulai_gym_from="tiktok",
+            social_media_username="@pemula",
         )
         member.pemula_active_until = timezone.now() + timedelta(days=1)
         member.save()
@@ -130,6 +135,7 @@ class MemberViewsTest(TestCase):
             years_of_working_out="1",
             goals="To be healthy",
             know_mulai_gym_from="friends",
+            social_media_username="@testuser",
         )
 
     def test_member_signup_view(self):
@@ -150,6 +156,7 @@ class MemberViewsTest(TestCase):
                 "years_of_working_out": "0",
                 "goals": "To get started",
                 "know_mulai_gym_from": "internet",
+                "social_media_username": "@newuser",
             },
         )
         self.assertEqual(response.status_code, 302)  # Should redirect on success
@@ -216,6 +223,7 @@ class MemberViewsTest(TestCase):
                 "years_of_working_out": "0",
                 "goals": "To get started",
                 "know_mulai_gym_from": "internet",
+                "social_media_username": "@anotheruser",
             },
         )
         self.assertEqual(response.status_code, 200)  # Should re-render the form

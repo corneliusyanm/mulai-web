@@ -99,11 +99,11 @@ data_dir.mkdir(exist_ok=True)
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("DB_NAME", "mulai_db"),
-        "USER": os.environ.get("DB_USER", "postgres"),
-        "PASSWORD": os.environ.get("DB_PASSWORD", ""),
+        "NAME": os.environ.get("DB_NAME", "mulai"),
+        "USER": os.environ.get("DB_USER", "mulai"),
+        "PASSWORD": os.environ.get("DB_PASSWORD", "mulai"),
         "HOST": os.environ.get("DB_HOST", "localhost"),
-        "PORT": os.environ.get("DB_PORT", "5432"),
+        "PORT": os.environ.get("DB_PORT", "5435"),
     }
 }
 
