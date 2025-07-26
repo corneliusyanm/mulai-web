@@ -8,112 +8,32 @@ from .models import Visit
 
 
 def check_in_page(request):
-    # If member email is in session, try to auto check-in
-    member_email = request.session.get("member_email")
-    if member_email:
-        try:
-            member = Member.objects.get(email=member_email)
-            # Check if member is active
-            if not member.is_active_member:
-                return render(
-                    request, "visits/check_in_failed.html", {"member": member}
-                )
-
-            # Check if member already has an active visit
-            try:
-                active_visit = Visit.objects.filter(
-                    member=member, check_out_time__isnull=True
-                ).latest("check_in_time")
-                return render(
-                    request,
-                    "visits/check_in_failed.html",
-                    {"member": member, "has_active_visit": True},
-                )
-            except Visit.DoesNotExist:
-                # No active visit, proceed with check-in
-                visit = Visit.objects.create(
-                    member=member, check_in_time=timezone.now()
-                )
-                messages.success(
-                    request, f"Selamat datang, {member.name}! Check-in berhasil."
-                )
-                return render(
-                    request,
-                    "visits/quick_check_in.html",
-                    {"member": member, "success": True, "visit": visit},
-                )
-        except Member.DoesNotExist:
-            request.session.pop("member_email", None)
-
-    # If not logged in or auto check-in failed, show normal check-in flow
+    # Handles both manual login (POST) and auto-check-in (GET for logged-in users).
     if request.method == "POST":
         email = request.POST.get("email", "").strip()
         phone = request.POST.get("phone", "").strip()
         country_code = request.POST.get("country_code", "+62").strip()
 
-        # Skip this check-in attempt if neither email nor phone is provided
         if not email and not phone:
             messages.error(request, "Mohon masukkan email atau nomor telepon")
             return redirect("check_in_page")
 
         try:
-            # If email is provided, try to find member by email
             if email:
                 member = Member.objects.get(email=email)
-            # If no email or not found, try by phone number
             elif phone:
-                # Format the phone number correctly
                 if not country_code.startswith("+"):
                     country_code = "+" + country_code
-
-                # Remove any '+' sign from the phone number part
                 if phone.startswith("+"):
                     phone = phone[1:]
-
-                # Remove leading zeros if any
                 phone = phone.lstrip("0")
-
-                # Create the standardized phone number, removing the '+' from country code
                 formatted_phone = country_code.replace("+", "") + phone
-
-                # Find the member by phone number
                 member = Member.objects.get(phone_number=formatted_phone)
             else:
                 raise Member.DoesNotExist
 
-            # Store email in session for future - do this immediately after finding the member
-            # This way they will be logged in regardless of whether check-in succeeds
             request.session["member_email"] = member.email
-
-            # Check if member is active
-            if not member.is_active_member:
-                return render(
-                    request, "visits/check_in_failed.html", {"member": member}
-                )
-
-            # Check if member already has an active visit
-            try:
-                active_visit = Visit.objects.filter(
-                    member=member, check_out_time__isnull=True
-                ).latest("check_in_time")
-                return render(
-                    request,
-                    "visits/check_in_failed.html",
-                    {"member": member, "has_active_visit": True},
-                )
-            except Visit.DoesNotExist:
-                # No active visit, proceed with check-in
-                visit = Visit.objects.create(
-                    member=member, check_in_time=timezone.now()
-                )
-                messages.success(
-                    request, f"Welcome, {member.name}! Check-in successful."
-                )
-                return render(
-                    request,
-                    "visits/quick_check_in.html",
-                    {"member": member, "success": True, "visit": visit},
-                )
+            # Fall through to the GET logic after successful login
         except Member.DoesNotExist:
             messages.error(
                 request,
@@ -121,7 +41,47 @@ def check_in_page(request):
             )
             return redirect("check_in_page")
 
+    member_email = request.session.get("member_email")
+    if member_email:
+        try:
+            member = Member.objects.get(email=member_email)
+            if not member.is_active_member:
+                return render(
+                    request, "visits/check_in_failed.html", {"member": member}
+                )
+
+            # Idempotently create a visit if one isn't active.
+            Visit.objects.get_or_create(
+                member=member,
+                check_out_time__isnull=True,
+                defaults={"check_in_time": timezone.now()},
+            )
+            return redirect("check_in_success")
+
+        except Member.DoesNotExist:
+            request.session.pop("member_email", None)
+
     return render(request, "visits/check_in.html")
+
+
+def check_in_success(request):
+    member_email = request.session.get("member_email")
+    if not member_email:
+        return redirect("check_in_page")
+
+    try:
+        member = Member.objects.get(email=member_email)
+        # Show the most recent visit, active or not.
+        visit = Visit.objects.filter(member=member).latest("check_in_time")
+        # The success page is shown, but its state depends on the visit.
+        return render(
+            request,
+            "visits/quick_check_in.html",
+            {"member": member, "visit": visit, "success": True},
+        )
+    except (Member.DoesNotExist, Visit.DoesNotExist):
+        # Only redirect if member has no session or has never visited.
+        return redirect("check_in_page")
 
 
 def check_out_page(request):

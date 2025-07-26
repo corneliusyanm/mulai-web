@@ -3,6 +3,7 @@ from django.urls import reverse
 from django.utils import timezone
 from datetime import timedelta
 from django.contrib.auth import get_user_model
+from django.template import Template, Context
 
 from accounts.models import Member
 from .models import Visit
@@ -102,14 +103,15 @@ class VisitViewsTest(TestCase):
             know_mulai_gym_from="instagram",
         )
 
-    def test_check_in_not_logged_in(self):
+    def test_check_in_page_not_logged_in_success(self):
         """
-        Test that a member who is not logged in can check in successfully.
+        After a successful POST login, a visit should be created and the user
+        redirected to the success page.
         """
         response = self.client.post(
             reverse("check_in_page"), {"email": self.active_member.email}
         )
-        self.assertEqual(response.status_code, 200)
+        self.assertRedirects(response, reverse("check_in_success"))
         self.assertTrue(
             Visit.objects.filter(
                 member=self.active_member, check_out_time__isnull=True
@@ -119,31 +121,33 @@ class VisitViewsTest(TestCase):
             self.client.session.get("member_email"), self.active_member.email
         )
 
-    def test_check_in_already_logged_in(self):
+    def test_check_in_page_already_logged_in_auto_checks_in(self):
         """
-        Test that a member who is already logged in is automatically checked in.
+        A logged-in member visiting the check-in page is automatically checked in
+        and redirected to the success page.
         """
         session = self.client.session
         session["member_email"] = self.active_member.email
         session.save()
 
         response = self.client.get(reverse("check_in_page"))
-        self.assertEqual(response.status_code, 200)
+        self.assertRedirects(response, reverse("check_in_success"))
         self.assertTrue(
             Visit.objects.filter(
                 member=self.active_member, check_out_time__isnull=True
             ).exists()
         )
 
-    def test_check_in_with_active_visit(self):
+    def test_check_in_is_idempotent_with_active_visit(self):
         """
-        Test that a member cannot check in if they already have an active visit.
+        A member with an active visit is redirected to the success page without
+        creating a new visit.
         """
         Visit.objects.create(member=self.active_member)
         response = self.client.post(
             reverse("check_in_page"), {"email": self.active_member.email}
         )
-        self.assertEqual(response.status_code, 200)
+        self.assertRedirects(response, reverse("check_in_success"))
         # Should only be one active visit
         self.assertEqual(
             Visit.objects.filter(
@@ -152,19 +156,57 @@ class VisitViewsTest(TestCase):
             1,
         )
 
-    def test_check_in_inactive_member(self):
+    def test_check_in_inactive_member_fails(self):
         """
-        Test that an inactive member cannot check in.
+        An inactive member cannot check in and is shown a failure page.
         """
         response = self.client.post(
             reverse("check_in_page"), {"email": self.inactive_member.email}
         )
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "visits/check_in_failed.html")
         self.assertFalse(
             Visit.objects.filter(
                 member=self.inactive_member, check_out_time__isnull=True
             ).exists()
         )
+
+    def test_check_in_success_view_active_visit(self):
+        """
+        The success page shows details for an active visit.
+        """
+        Visit.objects.create(member=self.active_member)
+        session = self.client.session
+        session["member_email"] = self.active_member.email
+        session.save()
+        response = self.client.get(reverse("check_in_success"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "CHECK-IN")
+        self.assertContains(response, "BERHASIL")
+
+    def test_check_in_success_view_checked_out_visit(self):
+        """
+        The success page still shows the last visit even if already checked out.
+        """
+        visit = Visit.objects.create(
+            member=self.active_member, check_out_time=timezone.now()
+        )
+        session = self.client.session
+        session["member_email"] = self.active_member.email
+        session.save()
+        response = self.client.get(reverse("check_in_success"))
+        self.assertEqual(response.status_code, 200)
+        expected_time = Template("{{ visit.check_in_time|time:'H.i' }}").render(
+            Context({"visit": visit})
+        )
+        self.assertContains(response, expected_time)
+
+    def test_check_in_success_view_not_logged_in(self):
+        """
+        A non-logged-in user is redirected from the success page.
+        """
+        response = self.client.get(reverse("check_in_success"))
+        self.assertRedirects(response, reverse("check_in_page"))
 
     def test_check_out_successfully(self):
         """

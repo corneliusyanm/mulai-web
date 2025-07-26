@@ -46,25 +46,18 @@ https://mulaigym.id
 
 ### Views (`visits/views.py`)
 - **`check_in_page`** (`/check-in`)
-  1. Checks session for `member_email`.
-  2. If logged in:
-     - Tries auto check-in (validates active member, no active visit).
-     - Renders success/failure template.
-  3. If not logged in or auto-check-in fails:
-     - Shows email OR phone number form (`check_in.html`).
-     - On POST:
-       - If email provided, finds `Member` by email.
-       - If phone provided, formats phone (handles country code, strips leading zeros) and finds `Member` by `phone_number`.
-       - If neither provided, shows error.
-       - If `Member` found:
-         - **Logs user in:** Stores `member.email` in session (`member_email`) immediately.
-         - Validates active member status -> renders failure if inactive.
-         - Validates no active visit -> renders failure if already checked in.
-         - Creates `Visit`, renders success (`quick_check_in.html`).
-       - If `Member` not found, shows error.
+  - This view handles both manual login via `POST` and automatic check-in for already logged-in users via `GET`.
+  - For a `POST` request (user not logged in), it validates the member's email or phone number, creates a session, and then proceeds to the automatic check-in logic.
+  - For a `GET` request (user is logged in), it idempotently checks the user in using `get_or_create`. This means a new `Visit` is only created if the member does not already have an active (not checked-out) visit.
+  - If the member is inactive, it renders a failure page.
+  - On a successful check-in (or if the member was already checked in), it redirects to `/check-in/success`.
+- **`check_in_success`** (`/check-in/success`)
+  - This view is purely for displaying the result of a check-in.
+  - It fetches the member's most recent visit, regardless of whether they are still checked in or have already checked out.
+  - This prevents redirect loops where a user with a completed visit would be sent away from the success page. It will only redirect to the main check-in page if the user is not logged in or has no visit history at all.
 - **`check_out_page`** (`/check-out`)
   1. Checks session for `member_email` (renders fail if not logged in).
-  2. Tries auto check-out:
+  2. Tries to find an active `Visit` for the member.
      - Finds latest active `Visit` for member.
      - Sets `check_out_time`, saves `Visit`.
      - Renders success/failure template.
@@ -74,36 +67,38 @@ https://mulaigym.id
 ### Check-in/Out Flow Diagram
 ```mermaid
 graph TD
-    A[Visit Check-in Page] --> B{Logged In?}
-    B -->|Yes| C{Has Active Visit?}
-    B -->|No| D[Show Email/Phone Form]
-    C -->|Yes| E[Show Failure: Already Checked In]
-    C -->|No| F{Member Active?}
-    F -->|Yes| G[Auto Check-in]
-    F -->|No| H[Show Failure: Inactive Member]
-    D --> I[Submit Email or Phone]
-    I --> I1{Email or Phone Provided?}
-    I1 -->|No| I2[Show Error Message]
-    I1 -->|Yes| J{Find Member}
-    J -->|Found| J1[Store Email in Session<br>User Now Logged In]
-    J -->|Not Found| J2[Show Error: Member Not Found]
-    J1 --> J3{Member Active?}
-    J3 -->|No| H
-    J3 -->|Yes| J4{Has Active Visit?}
-    J4 -->|Yes| E
-    J4 -->|No| K[Create Visit]
-    K --> M[Show Success Message]
+    subgraph Check-in Process
+        A[Visit /check-in] --> B{Logged In?}
+        B -->|No| C[Show Email/Phone Form]
+        C -->|POST| D{Find Member}
+        D -->|Not Found| E[Show Error]
+        D -->|Found| F[Log In User<br>(Create Session)]
+        F --> G
+        B -->|Yes| G{Member Active?}
+        G -->|No| H[Show Failure: Inactive Member]
+        G -->|Yes| I(Idempotent Check-in<br>get_or_create Visit)
+        I --> J[Redirect to /check-in/success]
+    end
 
-    N[Visit Check-out Page] --> O{Logged In?}
-    O -->|Yes| P{Has Active Visit?}
-    O -->|No| Q[Show Failure: Not Logged In]
-    P -->|Yes| R[Auto Check-out]
-    P -->|No| S[Show Failure: No Active Visit]
+    subgraph Success Page
+        K[Visit /check-in/success] --> L{Logged In?}
+        L -->|No| M[Redirect to /check-in]
+        L -->|Yes| N[Find Latest Visit<br>(Active or Not)]
+        N --> O[Show Success Page<br>quick_check_in.html]
+    end
+
+    subgraph Check-out Process
+        P[Visit /check-out] --> Q{Logged In?}
+        Q -->|No| R[Show Failure: Not Logged In]
+        Q -->|Yes| S{Has Active Visit?}
+        S -->|No| T[Show Failure: No Active Visit]
+        S -->|Yes| U[Auto Check-out]
+    end
 ```
 
 ### Validations & Messages
 - Check-in:
-  - Must provide Email or Phone Number.
+  - Must provide Email or Phone Number on login.
   - Member must exist.
   - Must be active member (logged in even if check-in fails here).
   - No duplicate active visits (logged in even if check-in fails here).

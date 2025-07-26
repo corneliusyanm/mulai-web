@@ -32,6 +32,11 @@ urlpatterns = [
     path("admin/", admin_site.urls),
     path("daftar-grand-opening/", include("grand_opening.urls")),
     path("check-in/", visit_views.check_in_page, name="check_in_page"),
+    path(
+        "check-in/success/",
+        visit_views.check_in_success,
+        name="check_in_success",
+    ),
     path("check-out/", visit_views.check_out_page, name="check_out_page"),
     path("tamu/", tamu_signup_view, name="tamu_signup"),
     path("forget-member/", visit_views.forget_member, name="forget_member"),
