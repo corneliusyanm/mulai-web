@@ -32,10 +32,15 @@
                         <td>
                             {% if has_change_permission %}
                             <a href="{% url 'admin:checkout-visit' visit.id %}" 
-                               class="button" 
-                               onclick="return confirm('Are you sure you want to check out this member?')">
+                               class="button">
                                 Check Out
                             </a>
+                            {% if has_delete_permission %}
+                            <a href="{% url 'admin:delete-visit' visit.id %}"
+                               class="button" style="background-color: #ba2121;">
+                                Delete
+                            </a>
+                            {% endif %}
                             {% endif %}
                         </td>
                     </tr>

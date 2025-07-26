@@ -2,9 +2,73 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 from datetime import timedelta
+from django.contrib.auth import get_user_model
 
 from accounts.models import Member
 from .models import Visit
+
+User = get_user_model()
+
+
+class VisitAdminViewsTest(TestCase):
+    def setUp(self):
+        # Create a superuser
+        self.superuser = User.objects.create_superuser(
+            "admin", "admin@example.com", "password"
+        )
+        self.client.login(username="admin", password="password")
+
+        # Create a user with no permissions
+        self.user = User.objects.create_user("user", "user@example.com", "password")
+
+        # Create a member
+        self.member = Member.objects.create(
+            name="Test Member",
+            email="member@example.com",
+            phone_number="6281234567892",
+            gender="M",
+            age=25,
+            height=170,
+            weight=70,
+            years_of_working_out="1",
+            goals="To be healthy",
+            know_mulai_gym_from="friends",
+            active_until=timezone.now() + timedelta(days=30),
+        )
+
+        # Create a visit
+        self.visit = Visit.objects.create(member=self.member)
+
+    def test_delete_visit_from_current_visits_view(self):
+        """
+        Test that a superuser can delete a visit from the current visits page.
+        """
+        response = self.client.get(reverse("admin:delete-visit", args=[self.visit.id]))
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse("admin:current-visits"))
+        self.assertFalse(Visit.objects.filter(id=self.visit.id).exists())
+
+    def test_delete_visit_from_history_view(self):
+        """
+        Test that a superuser can delete a visit from the history page.
+        """
+        self.visit.check_out_time = timezone.now()
+        self.visit.save()
+        response = self.client.get(
+            reverse("admin:delete-visit", args=[self.visit.id]) + "?from=history"
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse("admin:visit-history"))
+        self.assertFalse(Visit.objects.filter(id=self.visit.id).exists())
+
+    def test_delete_visit_permission_denied(self):
+        """
+        Test that a user without delete permission cannot delete a visit.
+        """
+        self.client.login(username="user", password="password")
+        response = self.client.get(reverse("admin:delete-visit", args=[self.visit.id]))
+        self.assertEqual(response.status_code, 403)  # Permission Denied
+        self.assertTrue(Visit.objects.filter(id=self.visit.id).exists())
 
 
 class VisitViewsTest(TestCase):

@@ -1,5 +1,6 @@
 from django.contrib import admin, messages
 from django.contrib.admin import DateFieldListFilter
+from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect, render
 from django.urls import path, reverse
 from django.utils import timezone
@@ -74,6 +75,7 @@ class VisitAdmin(admin.ModelAdmin):
             path(
                 "checkout/<int:visit_id>/", self.checkout_visit, name="checkout-visit"
             ),
+            path("delete/<int:visit_id>/", self.delete_visit, name="delete-visit"),
         ]
         return custom_urls + urls
 
@@ -115,6 +117,27 @@ class VisitAdmin(admin.ModelAdmin):
             messages.error(request, "Kunjungan tidak ditemukan")
         return redirect("admin:current-visits")
 
+    def delete_visit(self, request, visit_id):
+        if not self.has_delete_permission(request):
+            raise PermissionDenied
+
+        redirect_to = "admin:current-visits"
+        if request.GET.get("from") == "history":
+            redirect_to = "admin:visit-history"
+
+        try:
+            visit = Visit.objects.get(id=visit_id)
+            # Check object-level permission
+            if not self.has_delete_permission(request, visit):
+                raise PermissionDenied
+
+            member_name = visit.member.name
+            visit.delete()
+            messages.success(request, f"Successfully deleted visit for {member_name}")
+        except Visit.DoesNotExist:
+            messages.error(request, "Kunjungan tidak ditemukan")
+        return redirect(redirect_to)
+
     def current_visits_view(self, request):
         visits = Visit.objects.filter(check_out_time__isnull=True).order_by(
             "-check_in_time"
@@ -127,6 +150,7 @@ class VisitAdmin(admin.ModelAdmin):
             "opts": self.model._meta,
             "current_view": "current",
             "has_change_permission": self.has_change_permission(request),
+            "has_delete_permission": self.has_delete_permission(request),
         }
         return render(request, "admin/visits/visit/current_visits.html", context)
 
@@ -142,6 +166,8 @@ class VisitAdmin(admin.ModelAdmin):
             "visits": visits,
             "opts": self.model._meta,
             "current_view": "history",
+            "has_change_permission": self.has_change_permission(request),
+            "has_delete_permission": self.has_delete_permission(request),
         }
         return render(request, "admin/visits/visit/visit_history.html", context)
 

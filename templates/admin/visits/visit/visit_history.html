@@ -13,6 +13,7 @@
                         <th>Check In Time</th>
                         <th>Check Out Time</th>
                         <th>Duration</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -22,10 +23,20 @@
                         <td>{{ visit.check_in_time|date:"d M Y H:i" }}</td>
                         <td>{{ visit.check_out_time|date:"d M Y H:i" }}</td>
                         <td>{{ visit.check_in_time|timesince:visit.check_out_time }}</td>
+                        <td>
+                            {% if has_change_permission %}
+                            {% if has_delete_permission %}
+                            <a href="{% url 'admin:delete-visit' visit.id %}?from=history"
+                               class="button" style="background-color: #ba2121;">
+                                Delete
+                            </a>
+                            {% endif %}
+                            {% endif %}
+                        </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="4">No visit history found</td>
+                        <td colspan="5">No visit history found</td>
                     </tr>
                     {% endfor %}
                 </tbody>
