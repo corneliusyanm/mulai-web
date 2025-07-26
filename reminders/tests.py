@@ -384,7 +384,7 @@ class ReminderAdminTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Current Reminders")
         self.assertContains(response, self.member.name)
-        self.assertContains(response, "Mark Resolved")
+        self.assertContains(response, "Selesai")
 
     def test_reminder_history_view(self):
         """Test the reminder history admin view"""

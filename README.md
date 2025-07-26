@@ -183,7 +183,7 @@ Reminders automatically resolve when conditions change:
 #### **Current Reminders** (`/admin/reminders/reminder/current/`)
 - Shows all unresolved reminders
 - Displays: Member (linked), Phone, Type, Due Date, Reason, Actions
-- **Actions**: "Mark Resolved" button for each reminder
+- **Actions**: "Selesai" button for each reminder
 - Sorted by due date, then creation date
 
 #### **Reminder History** (`/admin/reminders/reminder/history/`)
@@ -231,7 +231,7 @@ Comprehensive test suite covering:
 #### **Daily Operations**
 1. **Morning Review**: Check "Current Reminders" in admin
 2. **Take Action**: Contact members via phone/WhatsApp 
-3. **Mark Resolved**: Click "Mark Resolved" after contacting member
+3. **Selesai**: Click "Selesai" after contacting member
 4. **Auto-Resolution**: System automatically resolves when member takes action
 
 #### **Reminder Scenarios**
