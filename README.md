@@ -129,6 +129,131 @@ graph TD
 - `check_in.html`: Updated to include email and phone number fields (with country code).
 - `signup.html`, `member_edit.html`: Include country code and phone number fields.
 
+## Reminders
+
+The reminder system is designed to help gym staff follow up with members at the right time. It automatically generates reminders based on member behavior and provides an admin interface for tracking and resolving them.
+
+### Model (`reminders/models.py`)
+- **`Reminder`**: Tracks member reminders with auto-resolution capabilities
+  - `member`: ForeignKey (Member)
+  - `reminder_type`: CharField (PAYMENT_DUE, NO_VISIT, MEMBERSHIP_EXPIRING)
+  - `reason`: TextField (Human-readable explanation)
+  - `due_date`: DateField (The date this reminder is for)
+  - `created_date`: DateTimeField (When reminder was created)
+  - `is_resolved`: BooleanField (Whether reminder has been addressed)
+  - `resolved_date`: DateTimeField (When reminder was marked resolved)
+  - `mark_resolved()`: Method to mark reminder as resolved
+
+### Reminder Types & Logic
+
+#### 1. **Payment Due (Cicilan) - `PAYMENT_DUE`**
+- **Trigger**: For payments with `apakah_nyicil=True` (installment payments)
+- **Timing**: 3 days before, on the due date, and 3 days after monthly payment due
+- **Example**: Payment made Jan 15 → Reminders on Feb 12, Feb 15, Feb 18
+- **Auto-Resolution**: When member makes a new installment payment
+
+#### 2. **No Visit - `NO_VISIT`**
+- **Trigger**: Member's last visit was exactly 14 days ago
+- **Timing**: One-time reminder (prevents spam)
+- **Conditions**:
+  - Member must be active (`active_until >= today`)
+  - Member must have visit history (no reminders for never-visited members)
+- **Auto-Resolution**: When member checks in to the gym
+
+#### 3. **Membership Expiring - `MEMBERSHIP_EXPIRING`**
+- **Trigger**: Member's `active_until` date approaching
+- **Timing**: 3 days before, on expiry date, and 3 days after expiry
+- **Auto-Resolution**: When member's `active_until` is extended
+
+### Business Rules
+
+#### **Smart Filtering**
+- **New Member Protection**: Payment and expiry reminders only sent to members who joined ≥14 days ago
+- **Active Member Focus**: NO_VISIT reminders only for members with active memberships
+- **One-Time Logic**: NO_VISIT reminders created once per 14-day gap (prevents daily spam)
+
+#### **Auto-Resolution**
+Reminders automatically resolve when conditions change:
+- **Payment**: New installment payment made
+- **No Visit**: Member visits gym
+- **Expiry**: Membership extended significantly
+
+### Admin Interface (`reminders/admin.py`)
+
+#### **Current Reminders** (`/admin/reminders/reminder/current/`)
+- Shows all unresolved reminders
+- Displays: Member (linked), Phone, Type, Due Date, Reason, Actions
+- **Actions**: "Mark Resolved" button for each reminder
+- Sorted by due date, then creation date
+
+#### **Reminder History** (`/admin/reminders/reminder/history/`)
+- Shows all resolved reminders
+- Displays: Member (linked), Phone, Type, Due Date, Reason, Created, Resolved
+- Provides audit trail of resolved reminders
+
+#### **Quick Access Navigation**
+- Added to admin homepage under "Reminders" app
+- Direct links to Current Reminders and Reminder History
+
+### Management Command (`reminders/management/commands/generate_reminders.py`)
+
+#### **Daily Automation**
+```bash
+python manage.py generate_reminders
+```
+
+#### **Features**
+- **Dry Run Mode**: `--dry-run` flag to preview without creating reminders
+- **Auto-Resolution**: Resolves outdated reminders before creating new ones
+- **Duplicate Prevention**: Won't create duplicate reminders for same member/type/date
+- **Comprehensive Logging**: Shows what was created/resolved
+
+#### **Daily Cron Setup**
+```bash
+# Add to crontab for daily 6 AM execution:
+0 6 * * * /path/to/mulai_web/generate_daily_reminders.sh
+```
+
+### Templates (`templates/admin/reminders/reminder/`)
+- **`current_reminders.html`**: Current reminders admin view with resolve actions
+- **`reminder_history.html`**: Historical reminders for audit trail
+- **Member Links**: Click member names to go to member detail page
+
+### Testing (`reminders/tests.py`)
+Comprehensive test suite covering:
+- **Model Tests**: Reminder creation, resolution, string representation
+- **Command Tests**: All reminder types, business rules, auto-resolution
+- **Admin Tests**: Views, resolve actions, error handling
+- **Edge Cases**: New members, inactive members, duplicate prevention
+
+### Usage Workflow
+
+#### **Daily Operations**
+1. **Morning Review**: Check "Current Reminders" in admin
+2. **Take Action**: Contact members via phone/WhatsApp 
+3. **Mark Resolved**: Click "Mark Resolved" after contacting member
+4. **Auto-Resolution**: System automatically resolves when member takes action
+
+#### **Reminder Scenarios**
+```
+Day 0:  Member makes installment payment
+Day 27: "Payment due in 3 days" reminder created
+Day 30: "Payment due today" reminder created  
+Day 33: "Payment overdue by 3 days" reminder created
+```
+
+```
+Day 0:  Member visits gym
+Day 14: "No visit for 14 days" reminder created
+Day 15+: No new reminders (prevents spam)
+```
+
+```
+Day -3: "Membership expires in 3 days" reminder created
+Day 0:  "Membership expires today" reminder created
+Day +3: "Membership expired 3 days ago" reminder created
+```
+
 ## Payments
 
 ### Model (`Payment`)
@@ -253,7 +378,14 @@ graph TD
 
 ## Testing
 
-This project uses Django's built-in `TestCase` for unit testing. The tests are located in the `tests.py` file within each application directory (`accounts`, `visits`, `payments`, `equipment`, and `purchases`).
+This project uses Django's built-in `TestCase` for unit testing. The tests are located in the `tests.py` file within each application directory (`accounts`, `visits`, `payments`, `equipment`, `purchases`, and `reminders`).
+
+### Reminder Tests
+The `reminders` app includes comprehensive tests for:
+- **Model Tests**: Reminder creation, resolution, string representation, and all reminder type choices
+- **Management Command Tests**: Auto-resolution logic, business rules (14-day member protection), and reminder generation for all three types
+- **Admin Tests**: Current reminders view, reminder history view, resolve actions, and error handling
+- **Edge Case Coverage**: New members, inactive members, duplicate prevention, and member visit patterns
 
 ### Payment Tests
 The `payments` app includes comprehensive tests for:
@@ -274,6 +406,7 @@ To run tests for a specific application, append the application name:
 ```bash
 python manage.py test accounts
 python manage.py test visits
+python manage.py test reminders
 ```
 
 ### Continuous Integration
