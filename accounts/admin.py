@@ -41,8 +41,9 @@ class WhatsAppLinkMixin:
         if cleaned_phone.startswith("0"):
             cleaned_phone = "62" + cleaned_phone[1:]
 
-        url = f"https://wa.me/{cleaned_phone}"
-        return format_html('<a href="{}" target="_blank">{}</a>', url, phone)
+        # url = f"https://wa.me/{cleaned_phone}"
+        # return format_html('<a href="{}" target="_blank">{}</a>', url, phone)
+        return cleaned_phone
 
     whatsapp_link.short_description = "No. HP (WhatsApp)"
     whatsapp_link.admin_order_field = "phone_number"
