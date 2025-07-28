@@ -6,9 +6,9 @@ from accounts.models import Member
 
 class Reminder(models.Model):
     REMINDER_TYPE_CHOICES = [
-        ("PAYMENT_DUE", "Payment Due (Cicilan)"),
-        ("NO_VISIT", "No Visit (2 Weeks)"),
-        ("MEMBERSHIP_EXPIRING", "Membership Expiring"),
+        ("PAYMENT_DUE", "Bayar Cicilan"),
+        ("NO_VISIT", "Lama Tidak Visit"),
+        ("MEMBERSHIP_EXPIRING", "Membership Berakhir"),
     ]
 
     member = models.ForeignKey(Member, on_delete=models.CASCADE)

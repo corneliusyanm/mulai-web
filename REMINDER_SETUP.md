@@ -20,6 +20,7 @@ ssh root@YOUR_DROPLET_IP
 
 ## Step 2: Make the Script Executable
 
+
 ```bash
 cd /root/mulai_web
 chmod +x generate_daily_reminders.sh

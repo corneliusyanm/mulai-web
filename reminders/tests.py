@@ -70,11 +70,11 @@ class ReminderModelTest(TestCase):
             due_date=date.today(),
         )
 
-        expected = f"{self.member.name} - Payment Due (Cicilan) - Active"
+        expected = f"{self.member.name} - Bayar Cicilan - Active"
         self.assertEqual(str(reminder), expected)
 
         reminder.mark_resolved()
-        expected = f"{self.member.name} - Payment Due (Cicilan) - Resolved"
+        expected = f"{self.member.name} - Bayar Cicilan - Resolved"
         self.assertEqual(str(reminder), expected)
 
     def test_reminder_type_choices(self):
