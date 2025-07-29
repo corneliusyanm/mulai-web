@@ -493,3 +493,73 @@ section {
   animation-delay: 1s;
   display: inline-block;
 }
+
+/* Membership Tier Colors */
+/* Bronze/Copper Tier - Gym Reguler */
+.tier-bronze {
+  background: linear-gradient(135deg, #faf0e6 0%, #e6b87d 25%, #cd7f32 50%, #b8722c 75%, #e8c5a0 100%);
+  border: 2px solid #b8722c;
+  box-shadow: 0 6px 15px rgba(205, 127, 50, 0.4), inset 0 1px 4px rgba(255, 255, 255, 0.7), inset 0 -1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.tier-bronze-strong {
+  background: linear-gradient(135deg, #faf0e6 0%, #e6b87d 25%, #cd7f32 50%, #b8722c 75%, #e8c5a0 100%);
+  border: 2px solid #b8722c;
+  box-shadow: 0 12px 35px rgba(205, 127, 50, 0.8), inset 0 2px 8px rgba(255, 255, 255, 0.7), inset 0 -2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Silver Tier - Kelas Pemula */
+.tier-silver {
+  background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 25%, #d5d5d5 50%, #c8c8c8 75%, #e0e0e0 100%);
+  border: 2px solid #b8b8b8;
+  box-shadow: 0 6px 15px rgba(180, 180, 180, 0.4), inset 0 1px 4px rgba(255, 255, 255, 0.7), inset 0 -1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.tier-silver-strong {
+  background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 25%, #d5d5d5 50%, #c8c8c8 75%, #e0e0e0 100%);
+  border: 2px solid #b8b8b8;
+  box-shadow: 0 12px 35px rgba(180, 180, 180, 0.8), inset 0 2px 8px rgba(255, 255, 255, 0.7), inset 0 -2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Gold Tier - Semi Private */
+.tier-gold {
+  background: linear-gradient(135deg, #faf6e8 0%, #f7e98e 25%, #f4d03f 50%, #f1c40f 75%, #f8e596 100%);
+  border: 2px solid #d4ac0d;
+  box-shadow: 0 6px 15px rgba(244, 208, 63, 0.4), inset 0 1px 4px rgba(255, 255, 255, 0.7), inset 0 -1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.tier-gold-strong {
+  background: linear-gradient(135deg, #faf6e8 0%, #f7e98e 25%, #f4d03f 50%, #f1c40f 75%, #f8e596 100%);
+  border: 2px solid #d4ac0d;
+  box-shadow: 0 12px 35px rgba(244, 208, 63, 0.8), inset 0 2px 8px rgba(255, 255, 255, 0.7), inset 0 -2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Diamond/Blue Tier - Private Trainer */
+.tier-diamond {
+  background: linear-gradient(135deg, #f0f8ff 0%, #d6ebff 25%, #b9f2ff 50%, #9de8ff 75%, #d1f0ff 100%);
+  border: 2px solid #5bb3e6;
+  box-shadow: 0 6px 15px rgba(185, 242, 255, 0.4), inset 0 1px 4px rgba(255, 255, 255, 0.7), inset 0 -1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.tier-diamond-strong {
+  background: linear-gradient(135deg, #f0f8ff 0%, #d6ebff 25%, #b9f2ff 50%, #9de8ff 75%, #d1f0ff 100%);
+  border: 2px solid #5bb3e6;
+  box-shadow: 0 12px 35px rgba(185, 242, 255, 0.8), inset 0 2px 8px rgba(255, 255, 255, 0.7), inset 0 -2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Tier indicator dots */
+.tier-bronze .tier-dot {
+  background-color: #cd7f32;
+}
+
+.tier-silver .tier-dot, .tier-silver-strong .tier-dot {
+  background-color: #c0c0c0;
+}
+
+.tier-gold .tier-dot, .tier-gold-strong .tier-dot {
+  background-color: #ffd700;
+}
+
+.tier-diamond .tier-dot, .tier-diamond-strong .tier-dot {
+  background-color: #b9f2ff;
+}

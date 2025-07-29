@@ -39,7 +39,13 @@
             {% endif %}
 
             <!-- Main Card -->
-            <div class="card shadow-lg border-0 mb-4" style="border-radius: 20px; background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+            {% if "Kelas Pemula" in instance.class_schedule.class_obj.name %}
+                <div class="card shadow-lg border-0 mb-4 tier-silver-strong" style="border-radius: 20px;">
+            {% elif "Semi Private" in instance.class_schedule.class_obj.name %}
+                <div class="card shadow-lg border-0 mb-4 tier-gold-strong" style="border-radius: 20px;">
+            {% else %}
+                <div class="card shadow-lg border-0 mb-4" style="border-radius: 20px; background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+            {% endif %}
                 <div class="card-body p-4">
                     <!-- Time and Status Section -->
                     <div class="row align-items-center mb-3">

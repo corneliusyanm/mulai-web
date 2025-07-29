@@ -24,25 +24,25 @@
                 <i class="fas fa-calendar-check me-2"></i>Masa Aktif
             </h6>
             
-            <div class="row g-2">
+            <div class="row g-1">
                 <div class="col-12">
-                    <div class="d-flex justify-content-between align-items-center p-2 rounded-3 bg-light border">
-                        <span class="fw-medium text-dark">
-                            <div class="d-inline-block rounded-circle me-2" style="width: 12px; height: 12px; background-color: #cd7f32;"></div>Gym Reguler
+                    <div class="d-flex justify-content-between align-items-center p-2 rounded-3 shadow-lg mb-1 tier-bronze">
+                        <span class="fw-medium text-dark small">
+                            <div class="d-inline-block rounded-circle me-2 tier-dot" style="width: 8px; height: 8px;"></div>Gym Reguler
                         </span>
-                        <span class="badge bg-success rounded-pill px-3 py-1 shadow-sm">
+                        <span class="badge bg-success rounded-pill px-2 py-1 shadow-sm small">
                             {{ member.active_until|date:"d M Y" }}
                         </span>
                     </div>
                 </div>
                 
                 <div class="col-12">
-                    <div class="d-flex justify-content-between align-items-center p-2 rounded-3 bg-light border">
-                        <span class="fw-medium text-dark">
-                            <div class="d-inline-block rounded-circle me-2" style="width: 12px; height: 12px; background-color: #c0c0c0;"></div>Kelas Pemula
+                    <div class="d-flex justify-content-between align-items-center p-2 rounded-3 shadow-lg mb-1 tier-silver">
+                        <span class="fw-medium text-dark small">
+                            <div class="d-inline-block rounded-circle me-2 tier-dot" style="width: 8px; height: 8px;"></div>Kelas Pemula
                         </span>
                         {% if member.is_pemula_active_member %}
-                            <span class="badge bg-success rounded-pill px-3 py-1 shadow-sm">
+                            <span class="badge bg-success rounded-pill px-2 py-1 shadow-sm small">
                                 {{ member.pemula_active_until|date:"d M Y" }}
                             </span>
                         {% else %}
@@ -52,12 +52,12 @@
                 </div>
                 
                 <div class="col-12">
-                    <div class="d-flex justify-content-between align-items-center p-2 rounded-3 bg-light border">
-                        <span class="fw-medium text-dark">
-                            <div class="d-inline-block rounded-circle me-2" style="width: 12px; height: 12px; background-color: #ffd700;"></div>Semi Private
+                    <div class="d-flex justify-content-between align-items-center p-2 rounded-3 shadow-lg mb-1 tier-gold">
+                        <span class="fw-medium text-dark small">
+                            <div class="d-inline-block rounded-circle me-2 tier-dot" style="width: 8px; height: 8px;"></div>Semi Private
                         </span>
                         {% if member.is_semi_private_active_member %}
-                            <span class="badge bg-success rounded-pill px-3 py-1 shadow-sm">
+                            <span class="badge bg-success rounded-pill px-2 py-1 shadow-sm small">
                                 {{ member.semi_private_active_until|date:"d M Y" }}
                             </span>
                         {% else %}
@@ -67,17 +67,17 @@
                 </div>
                 
                 <div class="col-12">
-                    <div class="d-flex justify-content-between align-items-center p-2 rounded-3 bg-light border">
+                    <div class="d-flex justify-content-between align-items-center p-2 rounded-3 shadow-lg mb-1 tier-diamond">
                         {% if member.is_pt_active_member %}
-                            <span class="fw-medium text-dark">
-                                <div class="d-inline-block rounded-circle me-2" style="width: 12px; height: 12px; background-color: #b9f2ff;"></div>Sesi PT tersisa
+                            <span class="fw-medium text-dark small">
+                                <div class="d-inline-block rounded-circle me-2 tier-dot" style="width: 8px; height: 8px;"></div>Sesi PT tersisa
                             </span>
-                            <span class="badge bg-success rounded-pill px-3 py-1 shadow-sm">
+                            <span class="badge bg-success rounded-pill px-2 py-1 shadow-sm small">
                                 {{ member.pt_session_count }}
                             </span>
                         {% else %}
-                            <span class="fw-medium text-dark">
-                                <div class="d-inline-block rounded-circle me-2" style="width: 12px; height: 12px; background-color: #b9f2ff;"></div>Private Trainer
+                            <span class="fw-medium text-dark small">
+                                <div class="d-inline-block rounded-circle me-2 tier-dot" style="width: 8px; height: 8px;"></div>Private Trainer
                             </span>
                             <span class="text-muted small fst-italic">tidak aktif</span>
                         {% endif %}

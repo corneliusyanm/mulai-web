@@ -26,7 +26,13 @@
                     {% if member.booked_classes.all or member.waitlisted_classes.all %}
                         <div class="list-group list-group-flush">
                             {% for booking in member.booked_classes.all %}
-                                <a href="{% url 'classes:class_detail' booking.id %}" class="list-group-item list-group-item-action border-0 rounded-2 mb-2 shadow-sm hover-lift">
+                                {% if "Kelas Pemula" in booking.class_schedule.class_obj.name %}
+                                    <a href="{% url 'classes:class_detail' booking.id %}" class="list-group-item list-group-item-action border-0 rounded-2 mb-2 shadow-lg hover-lift tier-silver-strong">
+                                {% elif "Semi Private" in booking.class_schedule.class_obj.name %}
+                                    <a href="{% url 'classes:class_detail' booking.id %}" class="list-group-item list-group-item-action border-0 rounded-2 mb-2 shadow-lg hover-lift tier-gold-strong">
+                                {% else %}
+                                    <a href="{% url 'classes:class_detail' booking.id %}" class="list-group-item list-group-item-action border-0 rounded-2 mb-2 shadow-sm hover-lift" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                                {% endif %}
                                     <div class="d-flex justify-content-between align-items-center">
                                         <div class="d-flex align-items-center">
                                             <div class="bg-success rounded-circle p-2 me-3" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;">
@@ -45,7 +51,13 @@
                                 </a>
                             {% endfor %}
                             {% for booking in member.waitlisted_classes.all %}
-                                <a href="{% url 'classes:class_detail' booking.id %}" class="list-group-item list-group-item-action border-0 rounded-2 mb-2 shadow-sm hover-lift">
+                                {% if "Kelas Pemula" in booking.class_schedule.class_obj.name %}
+                                    <a href="{% url 'classes:class_detail' booking.id %}" class="list-group-item list-group-item-action border-0 rounded-2 mb-2 shadow-lg hover-lift tier-silver-strong">
+                                {% elif "Semi Private" in booking.class_schedule.class_obj.name %}
+                                    <a href="{% url 'classes:class_detail' booking.id %}" class="list-group-item list-group-item-action border-0 rounded-2 mb-2 shadow-lg hover-lift tier-gold-strong">
+                                {% else %}
+                                    <a href="{% url 'classes:class_detail' booking.id %}" class="list-group-item list-group-item-action border-0 rounded-2 mb-2 shadow-sm hover-lift" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                                {% endif %}
                                     <div class="d-flex justify-content-between align-items-center">
                                         <div class="d-flex align-items-center">
                                             <div class="bg-warning rounded-circle p-2 me-3" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;">
