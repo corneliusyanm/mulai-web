@@ -12,174 +12,196 @@
     </div>
 
     <div class="row">
-        <div class="col-lg-4 mb-2">
-            <div class="card border-0 shadow-sm rounded-3 overflow-hidden mb-4">
-                <div class="bg-primary text-white p-4 text-center">
-                    <h2 class="mb-0">{{ member.name }}</h2>
-                    <p class="mb-0">{{ member.email }}</p>
-                    <p>{{ member.phone_number|format_phone }}</p>
-                    {% if member.is_active_member %}
-                        <span class="badge bg-success px-3 py-2">Aktif</span>
-                    {% else %}
-                        <span class="badge bg-danger px-3 py-2">Tidak Aktif</span>
-                    {% endif %}
+        <div class="col-lg-4 mb-0 mb-lg-0">
+            {% include "accounts/member_card.html" with member=member %}
+        </div>
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-lg rounded-3 overflow-hidden mb-4" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                <div class="card-header bg-primary text-white p-3">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="fas fa-calendar-check me-2"></i>Kelas yang Akan Datang
+                    </h5>
                 </div>
                 <div class="card-body p-3">
-                    {% if member.is_active_member %}
-                        <p class="text-center mb-2">
-                            <strong><u>Masa Aktif</u></strong><br>
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <strong class="ms-3">Gym Reguler:</strong>
-                                <span class="badge bg-success px-2 py-1 me-3">{{ member.active_until|date:"d M Y" }}</span>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <strong class="ms-3">Kelas Pemula:</strong>
-                                {% if member.is_pemula_active_member %}
-                                    <span class="badge bg-success px-2 py-1 me-3">{{ member.pemula_active_until|date:"d M Y" }}</span>
-                                {% else %}
-                                    <span class="text-muted me-4"><i>tidak aktif</i></span>
-                                {% endif %}
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <strong class="ms-3">Semi Private:</strong>
-                                {% if member.is_semi_private_active_member %}
-                                    <span class="badge bg-success px-2 py-1 me-3">{{ member.semi_private_active_until|date:"d M Y" }}</span>
-                                {% else %}
-                                    <span class="text-muted me-4"><i>tidak aktif</i></span>
-                                {% endif %}
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center mb-0">
-                                {% if member.is_pt_active_member %}
-                                    <strong class="ms-3">Sesi PT tersisa:</strong>
-                                    <span class="badge bg-success px-2 py-1 me-3">{{ member.pt_session_count }}</span>
-                                {% else %}
-                                    <strong class="ms-3">Private Trainer:</strong>
-                                    <span class="text-muted me-4"><i>tidak aktif</i></span>
-                                {% endif %}
-                            </div>
-                        </p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-8">
-            <div class="card border-0 shadow-sm rounded-3 mb-4">
-              <div class="card-header bg-white border-0 p-4">
-                  <h3 class="mb-0">Riwayat Kunjungan</h3>
-              </div>
-              <div class="card-body p-4" style="margin-top: -32px;"> 
-                {% if recent_visits %}
-                    <div class="list-group list-group-flush">
-                    {% for visit in recent_visits %}
-                        <div class="list-group-item px-0">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <i class="fas fa-calendar-check text-primary me-2"></i>
-                                    <span>{{ visit.check_in_time|date:"d M Y" }}</span>
-                                </div>
-                                <div>
-                                    <span class="badge bg-primary px-3 py-2">
-                                        {% if visit.check_out_time %}
-                                            {{ visit.check_in_time|time:"H:i" }} - {{ visit.check_out_time|time:"H:i" }}
-                                        {% else %}
-                                            {{ visit.check_in_time|time:"H:i" }} - Belum checkout
-                                        {% endif %}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    {% endfor %}
-                    </div>
-                {% else %}
-                    <p class="text-center py-3">Belum ada riwayat kunjungan</p>
-                {% endif %}
-              </div>
-        </div>
-
-        <div class="col-lg-8">
-            <div class="card border-0 shadow-sm rounded-3 mb-4">
-                <div class="card-body p-4">
-                    <div class="row">
-                        <div class="col-sm-6 mb-3">
-                            <p class="text-muted mb-1">Jenis Kelamin</p>
-                            <p class="fw-bold">{{ member.get_gender_display }}</p>
-                        </div>
-                        <div class="col-sm-6 mb-3">
-                            <p class="text-muted mb-1">Usia</p>
-                            <p class="fw-bold">{{ member.age }} tahun</p>
-                        </div>
-                        <div class="col-sm-6 mb-3">
-                            <p class="text-muted mb-1">Tinggi</p>
-                            <p class="fw-bold">{{ member.height|floatformat:1|slice:":-2" }},{{ member.height|floatformat:1|slice:"-1:" }} cm</p>
-                        </div>
-                        <div class="col-sm-6 mb-3">
-                            <p class="text-muted mb-1">Berat Badan</p>
-                            <p class="fw-bold">{{ member.weight|floatformat:1|slice:":-2" }},{{ member.weight|floatformat:1|slice:"-1:" }} kg</p>
-                        </div>
-                        <div class="col-sm-6 mb-3">
-                            <p class="text-muted mb-1">Alamat</p>
-                            <p class="fw-bold">{% if member.address %}{{ member.address }}{% else %}<i>masih kosong, isi donk...</i>{% endif %}</p>
-                        </div>
-                        <div class="col-sm-6 mb-3">
-                            <p class="text-muted mb-1">Pengalaman nge-Gym</p>
-                            <p class="fw-bold">{{ member.years_of_working_out }}</p>
-                        </div>
-                        <div class="col-12 mb-3">
-                            <p class="text-muted mb-1">Tujuan nge-Gym</p>
-                            <p class="fw-bold">{{ member.goals }}</p>
-                        </div>
-                        <div class="col-12 mb-3">
-                            <p class="text-muted mb-1">Kenapa pilih Mulai Gym</p>
-                            <p class="fw-bold">{% if member.why_choose_mulai %}{{ member.why_choose_mulai }}{% else %}<i>masih kosong, isi donk...</i>{% endif %}</p>
-                        </div>
-                    </div>
-                    <div class="d-flex justify-content-between">
-                      <a href="{% url 'member_edit' %}" class="btn btn-outline-primary btn-lg flex-grow-1 me-2">Edit Profil</a>
-                      <a href="{% url 'member_logout' %}" class="btn btn-outline-danger btn-lg flex-grow-1">Keluar</a>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card border-0 shadow-sm rounded-3">
-                <div class="card-header bg-white border-0 p-4">
-                    <h3 class="mb-0">Riwayat Pembayaran</h3>
-                </div>
-                <div class="card-body p-4">
-                    {% if recent_payments %}
+                    {% if member.booked_classes.all or member.waitlisted_classes.all %}
                         <div class="list-group list-group-flush">
-                        {% for payment in recent_payments %}
-                            <div class="list-group-item px-0">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <div>
-                                        <span class="fw-bold">Rp {{ payment.amount|floatformat:0 }}</span>
+                            {% for booking in member.booked_classes.all %}
+                                <a href="{% url 'classes:class_detail' booking.id %}" class="list-group-item list-group-item-action border-0 rounded-2 mb-2 shadow-sm hover-lift">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="d-flex align-items-center">
+                                            <div class="bg-success rounded-circle p-2 me-3" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;">
+                                                <i class="fas fa-check text-white small"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-0 fw-bold text-dark">{{ booking.class_schedule.class_obj.name }}</h6>
+                                                <small class="text-muted">
+                                                    <i class="fas fa-calendar-alt me-1"></i>{{ booking.date|date:"d M Y" }}
+                                                    <i class="fas fa-clock ms-2 me-1"></i>{{ booking.start_time|time:"H:i" }}
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <span class="badge bg-success text-white px-2 py-1 rounded-pill">Terdaftar</span>
                                     </div>
-                                    <div>
-                                        <span class="badge bg-secondary px-3 py-2">{{ payment.get_payment_method_display }}</span>
+                                </a>
+                            {% endfor %}
+                            {% for booking in member.waitlisted_classes.all %}
+                                <a href="{% url 'classes:class_detail' booking.id %}" class="list-group-item list-group-item-action border-0 rounded-2 mb-2 shadow-sm hover-lift">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="d-flex align-items-center">
+                                            <div class="bg-warning rounded-circle p-2 me-3" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;">
+                                                <i class="fas fa-clock text-white small"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-0 fw-bold text-dark">{{ booking.class_schedule.class_obj.name }}</h6>
+                                                <small class="text-muted">
+                                                    <i class="fas fa-calendar-alt me-1"></i>{{ booking.date|date:"d M Y" }}
+                                                    <i class="fas fa-clock ms-2 me-1"></i>{{ booking.start_time|time:"H:i" }}
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <span class="badge bg-warning text-white px-2 py-1 rounded-pill">Antrian</span>
                                     </div>
-                                </div>
-                                <div class="d-flex justify-content-between">
-                                    <div class="text-muted">
-                                        <small>{{ payment.payment_date|date:"d M Y" }}</small>
-                                    </div>
-                                    <div class="text-muted">
-                                        <small>
-                                            {% if payment.duration_choice == 0 %}
-                                                {{ payment.duration_days }} hari (Custom)
-                                            {% else %}
-                                                {{ payment.get_duration_choice_display }}
-                                            {% endif %}
-                                        </small>
-                                    </div>
-                                </div>
-                            </div>
-                        {% endfor %}
+                                </a>
+                            {% endfor %}
                         </div>
                     {% else %}
-                        <p class="text-center py-3">Belum ada riwayat pembayaran</p>
+                        <div class="text-center py-4">
+                            <i class="fas fa-calendar-plus text-muted mb-3" style="font-size: 2.5rem;"></i>
+                            <p class="text-muted mb-0">Kamu belum booking kelas apapun</p>
+                            <small class="text-muted">Yuk booking kelas pertama kamu!</small>
+                        </div>
+                    {% endif %}
+                    <a href="{% url 'classes:class_list' %}" class="btn btn-primary mt-3 w-100 rounded-pill fw-bold shadow-sm">
+                        <i class="fas fa-eye me-2"></i>Lihat Jadwal Kelas
+                    </a>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm rounded-3 overflow-hidden mb-4">
+                <div class="card-header bg-white border-0 p-3">
+                    <h5 class="mb-0">Detail Profil</h5>
+                </div>
+                <div class="card-body p-3">
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <p class="text-muted mb-1 small">Jenis Kelamin</p>
+                            <p class="fw-bold mb-2">{{ member.get_gender_display }}</p>
+                        </div>
+                        <div class="col-6">
+                            <p class="text-muted mb-1 small">Usia</p>
+                            <p class="fw-bold mb-2">{{ member.age }} tahun</p>
+                        </div>
+                        <div class="col-6">
+                            <p class="text-muted mb-1 small">Tinggi</p>
+                            <p class="fw-bold mb-2">{{ member.height|floatformat:1|slice:":-2" }},{{ member.height|floatformat:1|slice:"-1:" }} cm</p>
+                        </div>
+                        <div class="col-6">
+                            <p class="text-muted mb-1 small">Berat Badan</p>
+                            <p class="fw-bold mb-2">{{ member.weight|floatformat:1|slice:":-2" }},{{ member.weight|floatformat:1|slice:"-1:" }} kg</p>
+                        </div>
+                        <div class="col-6">
+                            <p class="text-muted mb-1 small">Alamat</p>
+                            <p class="fw-bold mb-2 small">{% if member.address %}{{ member.address }}{% else %}<i>masih kosong</i>{% endif %}</p>
+                        </div>
+                        <div class="col-6">
+                            <p class="text-muted mb-1 small">Pengalaman</p>
+                            <p class="fw-bold mb-2 small">{{ member.years_of_working_out }}</p>
+                        </div>
+                        <div class="col-12">
+                            <p class="text-muted mb-1 small">Tujuan nge-Gym</p>
+                            <p class="fw-bold mb-2 small">{{ member.goals }}</p>
+                        </div>
+                        <div class="col-12">
+                            <p class="text-muted mb-1 small">Kenapa pilih Mulai Gym</p>
+                            <p class="fw-bold mb-3 small">{% if member.why_choose_mulai %}{{ member.why_choose_mulai }}{% else %}<i>masih kosong</i>{% endif %}</p>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'member_edit' %}" class="btn btn-outline-primary flex-grow-1">Edit Profil</a>
+                        <a href="{% url 'member_logout' %}" class="btn btn-outline-danger flex-grow-1">Keluar</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+                <div class="card-header bg-white border-0 p-4">
+                    <h3 class="mb-0">Riwayat Kunjungan</h3>
+                </div>
+                <div class="card-body p-4" style="margin-top: -32px;">
+                    {% if recent_visits %}
+                        <div class="list-group list-group-flush">
+                            {% for visit in recent_visits %}
+                                <div class="list-group-item px-0">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <i class="fas fa-calendar-check text-primary me-2"></i>
+                                            <span>{{ visit.check_in_time|date:"d M Y" }}</span>
+                                        </div>
+                                        <div>
+                                            <span class="badge bg-primary px-3 py-2">
+                                                {% if visit.check_out_time %}
+                                                    {{ visit.check_in_time|time:"H:i" }} - {{ visit.check_out_time|time:"H:i" }}
+                                                {% else %}
+                                                    {{ visit.check_in_time|time:"H:i" }} - Belum checkout
+                                                {% endif %}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-center py-3">Belum ada riwayat kunjungan</p>
                     {% endif %}
                 </div>
             </div>
+
+            <!-- Riwayat Pembayaran -->
+            <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+              <div class="card-header bg-white border-0 p-3">
+                  <h5 class="mb-0">
+                      <i class="fas fa-credit-card me-2 text-success"></i>Riwayat Pembayaran
+                  </h5>
+              </div>
+              <div class="card-body p-0">
+                  {% if recent_payments %}
+                      <div class="list-group list-group-flush">
+                          {% for payment in recent_payments %}
+                              <div class="list-group-item border-0 py-3 px-3">
+                                  <div class="d-flex justify-content-between align-items-center">
+                                      <div class="d-flex align-items-center">
+                                          <div class="bg-success bg-opacity-10 rounded-circle p-2 me-3" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                                              <i class="fas fa-money-bill-wave text-success"></i>
+                                          </div>
+                                          <div>
+                                              <div class="fw-bold text-success">Rp {{ payment.amount|floatformat:0 }}</div>
+                                              <small class="text-muted">{{ payment.payment_date|date:"d M Y" }}</small>
+                                          </div>
+                                      </div>
+                                      <div class="text-end">
+                                          <div class="badge bg-secondary rounded-pill mb-1">{{ payment.get_payment_method_display }}</div>
+                                          <div>
+                                              <small class="text-muted">
+                                                  {% if payment.duration_choice == 0 %}
+                                                      {{ payment.duration_days }} hari
+                                                  {% else %}
+                                                      {{ payment.get_duration_choice_display }}
+                                                  {% endif %}
+                                              </small>
+                                          </div>
+                                      </div>
+                                  </div>
+                              </div>
+                          {% endfor %}
+                      </div>
+                  {% else %}
+                      <div class="text-center py-4">
+                          <i class="fas fa-receipt text-muted mb-2" style="font-size: 2.5rem;"></i>
+                          <p class="text-muted mb-0">Belum ada riwayat pembayaran</p>
+                      </div>
+                  {% endif %}
+              </div>
+          </div>
         </div>
     </div>
 </div>

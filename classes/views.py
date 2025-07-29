@@ -1,0 +1,95 @@
+from django.shortcuts import render, redirect, get_object_or_404
+from django.views.generic import ListView, DetailView
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib import messages
+from django.utils import timezone
+from django.views.decorators.http import require_POST
+from .models import ClassInstance, Member
+
+# Create your views here.
+
+
+class ClassListView(LoginRequiredMixin, ListView):
+    model = ClassInstance
+    template_name = "classes/class_list.html"
+    context_object_name = "class_instances"
+
+    def get_queryset(self):
+        return ClassInstance.objects.filter(status__in=["OPEN", "FULL"]).order_by(
+            "date", "start_time"
+        )
+
+
+class ClassDetailView(LoginRequiredMixin, DetailView):
+    model = ClassInstance
+    template_name = "classes/class_detail.html"
+    context_object_name = "instance"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        member_email = self.request.session.get("member_email")
+        if member_email:
+            try:
+                context["member"] = Member.objects.get(email=member_email)
+            except Member.DoesNotExist:
+                context["member"] = None
+        else:
+            context["member"] = None
+        return context
+
+
+@require_POST
+@login_required
+def book_class(request, instance_id):
+    instance = get_object_or_404(ClassInstance, id=instance_id)
+    member = get_object_or_404(Member, email=request.session.get("member_email"))
+
+    # Check if already registered
+    if (
+        member in instance.booked_members.all()
+        or member in instance.waitlisted_members.all()
+    ):
+        messages.warning(request, "Anda sudah terdaftar di kelas ini.")
+        return redirect("classes:class_detail", pk=instance.id)
+
+    # Check if there are available slots
+    if instance.booked_members.count() < instance.class_schedule.class_obj.max_members:
+        instance.booked_members.add(member)
+        messages.success(
+            request,
+            f"Berhasil booking kelas {instance.class_schedule.class_obj.name}.",
+        )
+    else:
+        instance.waitlisted_members.add(member)
+        messages.info(
+            request,
+            f"Kelas penuh. Anda dimasukkan ke daftar tunggu untuk kelas {instance.class_schedule.class_obj.name}.",
+        )
+
+    instance.update_status()
+    return redirect("classes:class_detail", pk=instance.id)
+
+
+@require_POST
+@login_required
+def cancel_class(request, instance_id):
+    instance = get_object_or_404(ClassInstance, id=instance_id)
+    member = get_object_or_404(Member, email=request.session.get("member_email"))
+
+    if member in instance.booked_members.all():
+        instance.booked_members.remove(member)
+        instance.move_from_waitlist()
+        messages.success(
+            request,
+            f"Booking Anda untuk kelas {instance.class_schedule.class_obj.name} telah dibatalkan.",
+        )
+    elif member in instance.waitlisted_members.all():
+        instance.waitlisted_members.remove(member)
+        messages.success(
+            request,
+            f"Anda telah dihapus dari daftar tunggu untuk kelas {instance.class_schedule.class_obj.name}.",
+        )
+
+    instance.update_status()
+    return redirect("classes:class_detail", pk=instance.id)

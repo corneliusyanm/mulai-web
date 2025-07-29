@@ -254,6 +254,71 @@ Day 0:  "Membership expires today" reminder created
 Day +3: "Membership expired 3 days ago" reminder created
 ```
 
+## Class Booking
+
+The class booking system allows members to book and manage their attendance for various classes offered at the gym.
+
+### Models (`classes/models.py`)
+- **`Class`**: Represents a type of class (e.g., "Yoga").
+- **`ClassSchedule`**: Defines the recurring schedule for a class.
+- **`ClassInstance`**: A specific instance of a class that members can book.
+
+### Features
+- **Members-Only Access**: Class booking is restricted to logged-in members only.
+- **Waitlist**: Members can join a waitlist for full classes.
+- **Automatic Status Updates**: Class instances are automatically marked as "FULL" or "OPEN".
+- **Cancellation**: Members can cancel their bookings with automatic waitlist promotion.
+- **Indonesian Localization**: All user-facing content is in Indonesian.
+
+### Automation (`classes/management/commands/generate_class_instances.py`)
+
+The daily management command creates class instances and manages their lifecycle:
+
+```bash
+# Generate instances for default 3 days (today, tomorrow, day after)
+python manage.py generate_class_instances
+
+# Generate instances for custom number of days
+python manage.py generate_class_instances 5
+
+# Generate instances for 1 week
+python manage.py generate_class_instances 7
+```
+
+#### Command Features
+- **Configurable Days**: Accepts a parameter for number of days to generate (default: 3)
+- **Past Instance Cleanup**: Automatically marks past instances as "COMPLETED"
+- **Duplicate Prevention**: Won't create duplicate instances for the same schedule/date
+- **Comprehensive Logging**: Shows creation and completion statistics
+
+#### Daily Cron Setup
+```bash
+# Standard 3-day generation at 6:00 AM
+0 6 * * * /root/mulai_web/generate_daily_class_instances.sh 3
+
+# Extended 7-day generation for special events
+0 6 * * * /root/mulai_web/generate_daily_class_instances.sh 7
+```
+
+### User Interface
+- **Class List**: Shows all available classes (`/kelas/`) - members only
+- **Class Detail**: Individual class pages with booking functionality (`/kelas/<id>/`)
+- **My Account Integration**: Upcoming classes displayed on member account page
+- **Mobile-Friendly**: "Lihat Detail" buttons for clear navigation
+
+### Admin Interface
+- **Full CRUD Access**: Classes, schedules, and bookings management
+- **Class Creation**: Define recurring schedules with day/time patterns
+- **Instance Management**: Manually create one-off classes and manage bookings
+- **Member Management**: Add/remove members from class bookings and waitlists
+
+### Booking Rules
+- **Login Required**: Only authenticated members can book classes
+- **Waitlist System**: Automatic promotion when spots become available
+- **No Booking Limits**: Members can book multiple classes
+- **Free Cancellation**: No time restrictions on cancellations
+- **FIFO Waitlist**: First to join waitlist gets first available spot
+
 ## Payments
 
 ### Model (`Payment`)

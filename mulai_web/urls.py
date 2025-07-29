@@ -45,6 +45,7 @@ urlpatterns = [
     path("accounts/", include("accounts.urls")),
     path("visits/", include("visits.urls")),
     path("alat/", include("equipment.urls", namespace="equipment")),
+    path("kelas/", include("classes.urls", namespace="classes")),
     # Redirect /kuesioner to Google Form
     path(
         "kuesioner/",

@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% load class_extras %}
+
+{% block title %}Jadwal Kelas - Mulai Gym{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="text-center mb-4">Jadwal Kelas</h1>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    {% regroup class_instances by date as grouped_classes %}
+    {% for group in grouped_classes %}
+        <h3 class="mt-4">{{ group.grouper|indonesian_day }}</h3>
+        <div class="list-group">
+            {% for instance in group.list %}
+                <div class="list-group-item border-0 mb-3 shadow-sm" style="border-radius: 12px; background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                    <div class="d-flex w-100 justify-content-between align-items-start mb-2">
+                        <h5 class="mb-0 fw-bold text-dark">{{ instance.class_schedule.class_obj.name }}</h5>
+                        <div>
+                            {% if instance.status == 'FULL' %}
+                                <span class="badge bg-danger text-white px-3 py-2 rounded-pill fw-bold">
+                                    <i class="fas fa-times-circle me-1"></i>Penuh
+                                </span>
+                            {% else %}
+                                <span class="badge bg-success text-white px-3 py-2 rounded-pill fw-bold">
+                                    <i class="fas fa-check-circle me-1"></i>Tersedia
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-clock text-primary me-2"></i>
+                        <span class="text-muted fw-medium">{{ instance.start_time|time:"H:i" }} - {{ instance.end_time|time:"H:i" }}</span>
+                    </div>
+                    
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="fas fa-users text-info me-2"></i>
+                        <small class="text-muted">Sisa slot: <span class="fw-bold text-dark">{{ instance.available_slots }}</span></small>
+                    </div>
+                    
+                    <div class="d-flex justify-content-end">
+                        <a href="{% url 'classes:class_detail' instance.pk %}" class="btn btn-primary px-4 py-2 rounded-pill fw-bold shadow-sm">
+                            <i class="fas fa-eye me-2"></i>Lihat Detail
+                        </a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% empty %}
+        <p class="text-center">Tidak ada kelas yang tersedia untuk saat ini.</p>
+    {% endfor %}
+</div>
+{% endblock %} 

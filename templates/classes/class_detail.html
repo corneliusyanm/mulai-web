@@ -1,0 +1,181 @@
+{% extends 'base.html' %}
+{% load class_extras %}
+
+{% block title %}{{ instance.class_schedule.class_obj.name }} - Mulai Gym{% endblock %}
+
+{% block content %}
+<style>
+  .back-button {
+      color: #BEF006;
+      text-decoration: none;
+      font-size: 1.2rem;
+      margin-top: 1rem;
+      margin-bottom: 4rem;
+      display: inline-block;
+  }
+  .back-button:hover {
+      color: #BEF006;
+      text-decoration: none;
+  }
+</style>
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Header Section -->
+            <div class="text-center mb-5">
+                <h1 class="display-5 fw-bold text-white mb-3">{{ instance.class_schedule.class_obj.name }}</h1>
+                <div class="badge bg-light text-dark px-4 py-2 rounded-pill fs-6 fw-bold">
+                    <i class="fas fa-calendar-alt me-2"></i>{{ instance.date|indonesian_day }}
+                </div>
+            </div>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert" style="border-radius: 12px;">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <!-- Main Card -->
+            <div class="card shadow-lg border-0 mb-4" style="border-radius: 20px; background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                <div class="card-body p-4">
+                    <!-- Time and Status Section -->
+                    <div class="row align-items-center mb-3">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="bg-primary rounded-circle p-2 me-2" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-clock text-white"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-0 fw-bold">{{ instance.start_time|time:"H:i" }} - {{ instance.end_time|time:"H:i" }}</h5>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 text-md-end">
+                            {% if instance.status == 'FULL' %}
+                                <span class="badge bg-danger text-white px-3 py-2 rounded-pill fw-bold">
+                                    <i class="fas fa-times-circle me-1"></i>Penuh
+                                </span>
+                            {% else %}
+                                <span class="badge bg-success text-white px-3 py-2 rounded-pill fw-bold">
+                                    <i class="fas fa-check-circle me-1"></i>Tersedia
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="mb-3">
+                        <h6 class="text-muted fw-bold mb-2">DESKRIPSI KELAS</h6>
+                        <p class="lead text-dark">{{ instance.class_schedule.class_obj.description }}</p>
+                    </div>
+
+                    <!-- Action Button -->
+                    <div class="text-center">
+                        {% if user.is_authenticated %}
+                            <form action="{% if member in instance.booked_members.all or member in instance.waitlisted_members.all %}{% url 'classes:cancel_class' instance.id %}{% else %}{% url 'classes:book_class' instance.id %}{% endif %}" method="post" class="d-inline">
+                                {% csrf_token %}
+                                {% if member in instance.booked_members.all %}
+                                    <button type="submit" class="btn btn-danger px-4 py-2 rounded-pill fw-bold shadow">
+                                        <i class="fas fa-times me-2"></i>Batalkan Booking
+                                    </button>
+                                {% elif member in instance.waitlisted_members.all %}
+                                    <button type="submit" class="btn btn-warning px-4 py-2 rounded-pill fw-bold shadow">
+                                        <i class="fas fa-clock me-2"></i>Keluar dari Antrian
+                                    </button>
+                                {% else %}
+                                    {% if instance.status == 'FULL' %}
+                                        <button type="submit" class="btn btn-info px-4 py-2 rounded-pill fw-bold shadow">
+                                            <i class="fas fa-list me-2"></i>Masuk Antrian
+                                        </button>
+                                    {% else %}
+                                         <button type="submit" class="btn btn-primary px-4 py-2 rounded-pill fw-bold shadow">
+                                            <i class="fas fa-check me-2"></i>Booking Sekarang
+                                        </button>
+                                    {% endif %}
+                                {% endif %}
+                            </form>
+                        {% else %}
+                            <a href="{% url 'member_login' %}" class="btn btn-secondary px-4 py-2 rounded-pill fw-bold shadow">
+                                <i class="fas fa-sign-in-alt me-2"></i>Masuk untuk Booking
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Members Lists -->
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm h-100" style="border-radius: 15px;">
+                        <div class="card-header bg-success text-white text-center py-2" style="border-radius: 15px 15px 0 0;">
+                            <h6 class="mb-0 fw-bold">
+                                <i class="fas fa-user-check me-2"></i>Sudah Booking ({{ instance.booked_members.count }})
+                            </h6>
+                        </div>
+                        <div class="card-body p-0">
+                            {% if instance.booked_members.all %}
+                                <div class="list-group list-group-flush">
+                                    {% for member in instance.booked_members.all %}
+                                        <div class="list-group-item border-0 py-2 px-3">
+                                            <div class="d-flex align-items-center">
+                                                <div class="bg-success rounded-circle p-1 me-2" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
+                                                    <i class="fas fa-user text-white" style="font-size: 0.8rem;"></i>
+                                                </div>
+                                                <span class="fw-medium">{{ member.name }}</span>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="text-center py-4">
+                                    <i class="fas fa-user-plus text-muted mb-2" style="font-size: 2rem;"></i>
+                                    <p class="text-muted mb-0 small">Belum ada yang booking</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm h-100" style="border-radius: 15px;">
+                        <div class="card-header bg-warning text-white text-center py-2" style="border-radius: 15px 15px 0 0;">
+                            <h6 class="mb-0 fw-bold">
+                                <i class="fas fa-clock me-2"></i>Antrian ({{ instance.waitlisted_members.count }})
+                            </h6>
+                        </div>
+                        <div class="card-body p-0">
+                            {% if instance.waitlisted_members.all %}
+                                <div class="list-group list-group-flush">
+                                    {% for member in instance.waitlisted_members.all %}
+                                        <div class="list-group-item border-0 py-2 px-3">
+                                            <div class="d-flex align-items-center">
+                                                <div class="bg-warning rounded-circle p-1 me-2" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
+                                                    <span class="text-white fw-bold small">{{ forloop.counter }}</span>
+                                                </div>
+                                                <span class="fw-medium">{{ member.name }}</span>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="text-center py-4">
+                                    <i class="fas fa-list text-muted mb-2" style="font-size: 2rem;"></i>
+                                    <p class="text-muted mb-0 small">Antrian kosong</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-1">
+              <a href="{% url 'classes:class_list' %}" class="back-button">
+                <i class="fas fa-arrow-left"></i> Kembali ke daftar kelas
+            </a>
+          </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

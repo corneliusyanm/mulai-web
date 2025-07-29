@@ -129,11 +129,13 @@
                 <li class="nav-item">
                     <a class="nav-link fw-bold" href="{% url 'equipment:list' %}">• Panduan Alat (Baru!)</a>
                 </li>
+                {% if user.is_authenticated %}
+                <li class="nav-item">
+                    <a class="nav-link fw-bold" href="{% url 'classes:class_list' %}">• Jadwal Kelas (Baru!)</a>
+                </li>
+                {% endif %}
                 <li class="nav-item">
                     <a class="nav-link fw-bold" href="{% url 'masukkan' %}">• Kotak Masukkan</a>
-                </li>
-                <li class="nav-item">
-                  <a class="nav-link fw-bold" href="{{ request.scheme }}://{{ request.get_host }}/#kontak">• Alamat & Kontak Kami</a>
                 </li>
                 <li class="nav-item">
                   <a class="nav-link fw-bold" href="{% url 'tamu_signup' %}">• Registrasi Tamu</a>

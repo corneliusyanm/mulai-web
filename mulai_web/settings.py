@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     "widget_tweaks",
     "equipment",
     "reminders",
+    "classes",
 ]
 
 MIDDLEWARE = [

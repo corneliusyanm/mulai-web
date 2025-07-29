@@ -8,6 +8,8 @@ from visits.admin import VisitAdmin, admin_site
 from visits.models import Visit
 from reminders.models import Reminder
 from reminders.admin import ReminderAdmin
+from classes.models import Class, ClassInstance
+from classes.admin import ClassAdmin, ClassInstanceAdmin
 from payments.admin import PaymentAdminForm
 
 # Import the new models and admin configurations from the purchases app
@@ -168,3 +170,10 @@ if not admin_site._registry.get(Package):  # Check if Package is already registe
 # Register Reminder model
 if not admin_site._registry.get(Reminder):
     admin_site.register(Reminder, ReminderAdmin)
+
+# Register Class models
+if not admin_site._registry.get(Class):
+    admin_site.register(Class, ClassAdmin)
+
+if not admin_site._registry.get(ClassInstance):
+    admin_site.register(ClassInstance, ClassInstanceAdmin)

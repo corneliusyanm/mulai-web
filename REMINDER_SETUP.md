@@ -218,4 +218,153 @@ After setup, check your admin panel:
 - **Current Reminders**: `/admin/reminders/reminder/current/`
 - **Reminder History**: `/admin/reminders/reminder/history/`
 
-The reminders should appear automatically based on your member data and the business rules defined in the system. 
+The reminders should appear automatically based on your member data and the business rules defined in the system.
+
+---
+
+# Class Instance Generation Setup
+
+This section covers setting up the automated class instance generation for the class booking system.
+
+## Prerequisites
+
+- Class booking system deployed via CI/CD pipeline
+- `generate_daily_class_instances.sh` script available on the droplet
+
+## Step 1: Copy and Setup Class Generation Script
+
+```bash
+# Copy the script (if not already deployed)
+scp generate_daily_class_instances.sh root@YOUR_DROPLET_IP:/root/mulai_web/
+
+# SSH into your droplet
+ssh root@YOUR_DROPLET_IP
+
+# Make script executable
+cd /root/mulai_web
+chmod +x generate_daily_class_instances.sh
+```
+
+## Step 2: Test Class Instance Generation
+
+```bash
+# Test with default 3 days
+./generate_daily_class_instances.sh
+
+# Test with custom number of days (e.g., 5 days)
+./generate_daily_class_instances.sh 5
+
+# Test with 1 week for special events
+./generate_daily_class_instances.sh 7
+```
+
+**Expected output:**
+```
+2025-07-26 14:35:00: Starting class instance generation for 3 days
+2025-07-26 14:35:00: Generating class instances...
+Generating class instances for 3 days ahead...
+Marked 2 past instances as COMPLETED
+Created instance: Yoga on 2025-07-26
+Created instance: Pilates on 2025-07-27
+Created 5 new class instances
+Class instance generation completed successfully
+2025-07-26 14:35:01: Class instance generation completed successfully
+2025-07-26 14:35:01: Script execution finished
+```
+
+## Step 3: Set Up Cron Jobs
+
+```bash
+# Edit the crontab
+crontab -e
+```
+
+Add both reminder and class generation cron jobs:
+```bash
+# Daily reminders at 6:00 AM
+0 6 * * * /root/mulai_web/generate_daily_reminders.sh >/dev/null 2>&1
+
+# Daily class instances (3 days ahead) at 6:05 AM
+5 6 * * * /root/mulai_web/generate_daily_class_instances.sh 3 >/dev/null 2>&1
+```
+
+**Alternative configurations:**
+```bash
+# Generate more days during weekends for better planning
+5 6 * * 1-5 /root/mulai_web/generate_daily_class_instances.sh 3 >/dev/null 2>&1
+5 6 * * 6-0 /root/mulai_web/generate_daily_class_instances.sh 7 >/dev/null 2>&1
+
+# Run twice daily for high-demand periods
+5 6,18 * * * /root/mulai_web/generate_daily_class_instances.sh 3 >/dev/null 2>&1
+```
+
+## Step 4: Monitor Class Instance Generation
+
+```bash
+# View class instance generation logs
+tail -f /root/mulai_web/class_instance_generation.log
+
+# Check for errors
+grep "ERROR" /root/mulai_web/class_instance_generation.log
+
+# Manual command testing
+docker exec mulai_web python manage.py generate_class_instances --help
+docker exec mulai_web python manage.py generate_class_instances 5
+```
+
+## Step 5: Verify in Admin Panel
+
+Check your admin panel to ensure class instances are being created:
+- **Classes**: `/admin/classes/class/`
+- **Class Instances**: `/admin/classes/classinstance/`
+- **Class Schedules**: `/admin/classes/classschedule/`
+
+## Usage Scenarios
+
+### Regular Operations (3 days)
+```bash
+# Standard cron job - generates today, tomorrow, day after
+5 6 * * * /root/mulai_web/generate_daily_class_instances.sh 3
+```
+
+### Special Events (extended planning)
+```bash
+# Manual execution for events requiring longer booking windows
+./generate_daily_class_instances.sh 14  # 2 weeks ahead
+```
+
+### Emergency/Maintenance
+```bash
+# Generate only today's classes
+./generate_daily_class_instances.sh 1
+
+# Generate full week
+./generate_daily_class_instances.sh 7
+```
+
+## Log Rotation for Class Instances
+
+```bash
+# Add to logrotate config
+sudo nano /etc/logrotate.d/class-instance-generation
+```
+
+Add this content:
+```
+/root/mulai_web/class_instance_generation.log {
+    daily
+    rotate 30
+    compress
+    delaycompress
+    missingok
+    notifempty
+}
+```
+
+## Success Indicators for Class System
+
+✅ Class instances appear in admin panel  
+✅ Members can see and book upcoming classes  
+✅ Past instances automatically marked as "COMPLETED"  
+✅ No duplicate instances created  
+✅ Logs show consistent daily execution 
