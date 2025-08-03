@@ -4,8 +4,12 @@ from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect, render
 from django.urls import path, reverse
 from django.utils import timezone
+from django.db.models import Count, Q
+from datetime import timedelta
+import json
 
 from .models import Visit
+from accounts.models import Member
 
 
 class CustomAdminSite(admin.AdminSite):
@@ -70,11 +74,97 @@ class CustomAdminSite(admin.AdminSite):
                     ]
                 )
 
+            # Add Analytics section
+            analytics_app = {
+                "name": "Analytics",
+                "app_label": "analytics",
+                "app_url": None,
+                "has_module_perms": True,
+                "models": [
+                    {
+                        "name": "Membership Projections",
+                        "object_name": "Membership Projections",
+                        "admin_url": reverse("admin:membership-analytics"),
+                        "view_only": True,
+                        "perms": {"view": True},
+                    },
+                ],
+            }
+            app_list.append(analytics_app)
+
         return app_list
 
 
 # Create an instance of the custom admin site
 admin_site = CustomAdminSite(name="custom_admin")
+
+
+# Add custom URLs to admin site
+def get_custom_admin_urls():
+    return [
+        path(
+            "analytics/membership/",
+            membership_analytics_view,
+            name="membership-analytics",
+        ),
+    ]
+
+
+admin_site.get_urls = lambda: get_custom_admin_urls() + admin_site.__class__.get_urls(
+    admin_site
+)
+
+
+def membership_analytics_view(request):
+    """View for membership analytics dashboard"""
+    if not request.user.is_staff:
+        raise PermissionDenied
+
+    # Calculate weekly projections for next 52 weeks
+    today = timezone.now().date()
+    weeks_data = []
+
+    for week_num in range(52):
+        # Calculate the end of each week (Saturday)
+        week_end = today + timedelta(days=(week_num + 1) * 7 - today.weekday() - 1)
+
+        # Count members who will still be active by end of this week
+        active_count = Member.objects.filter(
+            active_until__gte=timezone.make_aware(
+                timezone.datetime.combine(week_end, timezone.datetime.min.time())
+            )
+        ).count()
+
+        pemula_count = Member.objects.filter(
+            pemula_active_until__gte=timezone.make_aware(
+                timezone.datetime.combine(week_end, timezone.datetime.min.time())
+            )
+        ).count()
+
+        semi_private_count = Member.objects.filter(
+            semi_private_active_until__gte=timezone.make_aware(
+                timezone.datetime.combine(week_end, timezone.datetime.min.time())
+            )
+        ).count()
+
+        weeks_data.append(
+            {
+                "week_end": week_end.strftime("%Y-%m-%d"),
+                "week_label": week_end.strftime("%d %b"),
+                "active_count": active_count,
+                "pemula_count": pemula_count,
+                "semi_private_count": semi_private_count,
+            }
+        )
+
+    context = {
+        **admin_site.each_context(request),
+        "title": "Membership Analytics",
+        "weeks_data": json.dumps(weeks_data),
+        "weeks_count": len(weeks_data),
+    }
+
+    return render(request, "admin/analytics/membership_projections.html", context)
 
 
 @admin.register(Visit)
