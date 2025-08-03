@@ -42,7 +42,7 @@ urlpatterns = [
     path("forget-member/", visit_views.forget_member, name="forget_member"),
     path("", home, name="home"),
     path("lowongan-kerja/", lowongan_kerja, name="lowongan_kerja"),
-    path("accounts/", include("accounts.urls")),
+    path("", include("accounts.urls")),
     path("visits/", include("visits.urls")),
     path("alat/", include("equipment.urls", namespace="equipment")),
     path("kelas/", include("classes.urls", namespace="classes")),

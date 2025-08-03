@@ -115,14 +115,14 @@ graph TD
 - **`MemberLoginForm`**: Includes `email` (optional), `country_code` (optional), and `phone_number_display` (optional). Requires either email or phone to be provided. Formats phone number if provided.
 
 ### Views (`accounts/views.py`)
-- **`member_login`** (`/accounts/masuk/`): Accepts POST data from `MemberLoginForm`. 
+- **`member_login`** (`/masuk/`): Accepts POST data from `MemberLoginForm`. 
   - Validates that either email or phone was provided.
   - If email provided, finds `Member` by email.
   - If phone provided (and no email), finds `Member` by formatted `phone_number`.
   - On success, stores `member.email` in session (`member_email`) and redirects to details.
   - On failure (not found, invalid form), shows error message.
-- **`member_logout`** (`/accounts/keluar/`): Logs the member out by clearing the session.
-- **`MemberSignUpView`** (`/accounts/daftar/`): After successful signup, stores `member.email` in session (`member_email`) for auto-login.
+- **`member_logout`** (`/keluar/`): Logs the member out by clearing the session.
+- **`MemberSignUpView`** (`/daftar/`): After successful signup, stores `member.email` in session (`member_email`) for auto-login.
 
 ### Templates
 - `login.html`: Updated to include email and phone number fields (with country code).
