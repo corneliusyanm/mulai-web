@@ -426,6 +426,184 @@ python manage.py generate_class_instances 7
 
 ---
 
+## Advanced Membership Analytics
+
+The analytics dashboard provides comprehensive insights into membership trends, revenue projections, and business intelligence to help optimize gym operations and member retention.
+
+### Overview (`visits/admin.py`)
+
+The analytics system is fully integrated into Django admin as a custom admin site extension, accessible via the "Analytics" section on the admin homepage.
+
+### Key Features
+
+#### **📊 Interactive Membership Projections**
+- **52-week forward projections** for all membership types
+- **Click-to-drill-down**: Click any chart point to see exact member list for that week
+- **Real-time calculations** based on current member expiry dates
+- **Responsive charts** using Chart.js with smooth animations
+
+#### **🔍 Advanced Member Lookup**
+- **Date picker tool**: Find all active members on any specific date
+- **Membership type filtering**: Active, Pemula, Semi-Private members
+- **AJAX-powered search** with instant results
+- **Detailed member information** with payment and visit history
+
+#### **🧠 Smart Alerts & Business Intelligence**
+- **Expiry warnings**: Automatic alerts for members expiring in 7/14/30 days
+- **Low engagement detection**: Active members who haven't visited recently
+- **Growth metrics**: 3-month trends, signup rates, revenue analysis
+- **Actionable insights** with direct links to member management
+
+#### **💰 Revenue Projections**
+- **12-week revenue forecasts** based on active membership data
+- **Package-based calculations** using real pricing data
+- **Business trend analysis**: Monthly revenue and growth patterns
+- **Visual revenue charts** for quick assessment
+
+#### **📈 Export & Integration**
+- **CSV export functionality** for any member list or date range
+- **WhatsApp integration**: Direct contact links for all members
+- **Bulk operations**: Export filtered member lists for campaigns
+- **Admin integration**: Seamless links to existing member management
+
+### Models & Data Sources
+
+The analytics system draws data from multiple models:
+- **`Member`**: Membership expiry dates and personal information
+- **`Payment`**: Revenue calculations and membership duration
+- **`Package`**: Pricing data for revenue projections
+- **`Visit`**: Member engagement and activity patterns
+
+### Analytics Views (`visits/admin.py`)
+
+#### **`membership_analytics_view`**
+- **URL**: `/admin/analytics/membership/`
+- **Purpose**: Main analytics dashboard with charts and insights
+- **Features**: 
+  - Configurable date ranges (3 months to 2 years)
+  - Custom start dates for projection planning
+  - Smart alerts and business insights
+  - Interactive charts with drill-down functionality
+
+#### **`members_by_date_view`** (AJAX)
+- **URL**: `/admin/analytics/members-by-date/`
+- **Purpose**: Get member list for specific date and membership type
+- **Parameters**: `date` (YYYY-MM-DD), `type` (active/pemula/semi_private)
+- **Returns**: JSON with member details and WhatsApp links
+
+#### **`member_details_view`** (AJAX)
+- **URL**: `/admin/analytics/member-details/<id>/`
+- **Purpose**: Detailed member information with history
+- **Returns**: Payment history, visit patterns, contact information
+
+#### **`export_members_view`**
+- **URL**: `/admin/analytics/export-members/`
+- **Purpose**: CSV export for member lists
+- **Parameters**: `date`, `type` for filtering
+- **Returns**: CSV file with member data
+
+### Business Intelligence Calculations
+
+#### **Smart Alerts Logic**
+```python
+# Members expiring soon
+expiring_7_days = Member.objects.filter(
+    active_until__gte=now,
+    active_until__lte=now + timedelta(days=7)
+).count()
+
+# Low engagement detection
+low_visit_members = Member.objects.filter(
+    active_until__gte=now
+).exclude(
+    visit__check_in_time__gte=now - timedelta(days=14)
+).count()
+```
+
+#### **Revenue Projections**
+```python
+# Weekly revenue estimate
+estimated_revenue = active_members * (avg_package_price / 4)
+```
+
+#### **Membership Projections**
+```python
+# Members active by end of week
+week_end_datetime = timezone.make_aware(
+    timezone.datetime.combine(week_end, timezone.datetime.min.time())
+)
+active_count = Member.objects.filter(
+    active_until__gte=week_end_datetime
+).count()
+```
+
+### User Interface & UX
+
+#### **Control Panel**
+- **Date range selector**: 3 months, 6 months, 1 year, 2 years
+- **Custom start date**: Plan projections from any date
+- **Member lookup tool**: Quick date-based member search
+- **Update controls**: Refresh charts without page reload
+
+#### **Smart Alerts Panel**
+- **Color-coded alerts**: Warning (orange), Info (blue)
+- **Actionable messages**: Direct links to member management
+- **Real-time calculations**: Based on current membership data
+
+#### **Interactive Features**
+- **Chart click events**: Click any data point to see member details
+- **Modal popups**: Member lists and detailed information overlays
+- **Responsive design**: Works perfectly on desktop and mobile
+- **WhatsApp integration**: One-click contact for any member
+
+### Daily Operations Workflow
+
+#### **Morning Review**
+1. Check smart alerts for expiring memberships
+2. Review low-engagement member alerts
+3. Plan follow-up actions via WhatsApp links
+
+#### **Business Planning**
+1. Analyze revenue projections for budget planning
+2. Use member lookup for campaign targeting
+3. Export member lists for marketing initiatives
+
+#### **Member Management**
+1. Click chart points to see weekly member lists
+2. Use detailed member view for personalized follow-up
+3. Track payment history and visit patterns
+
+### Admin Integration
+
+The analytics dashboard is seamlessly integrated into the existing custom admin site:
+
+```python
+# Added to CustomAdminSite.get_app_list()
+analytics_app = {
+    "name": "Analytics",
+    "app_label": "analytics", 
+    "models": [{
+        "name": "Membership Projections",
+        "admin_url": reverse("admin:membership-analytics"),
+    }],
+}
+```
+
+### Performance & Scalability
+
+- **Efficient queries**: Optimized database queries with proper indexing
+- **AJAX loading**: Smooth user experience with asynchronous data loading
+- **Cached calculations**: Smart caching for frequently accessed data
+- **Mobile responsive**: Works efficiently on all device sizes
+
+### Security & Permissions
+
+- **Staff-only access**: All analytics views require `is_staff` permission
+- **Permission checking**: Consistent security across all endpoints
+- **Data protection**: No sensitive data exposure to unauthorized users
+
+---
+
 ## Troubleshooting
 
 ### SSL Certificate Issues
@@ -457,6 +635,16 @@ The `payments` app includes comprehensive tests for:
 - Payment model functionality (membership duration calculations, field defaults)
 - Admin form validation (including `apakah_nyicil` field configuration)
 - Custom duration validation logic
+
+### Analytics Tests
+The `visits` app includes comprehensive analytics tests for:
+- **View Access Control**: Permission testing for admin and regular users
+- **Data Calculations**: Membership projection accuracy and business insights
+- **AJAX Endpoints**: Member lookup, details view, and data export functionality
+- **Smart Alerts**: Expiry warnings and engagement detection logic
+- **Revenue Projections**: Financial forecasting and package-based calculations
+- **Export Features**: CSV generation and data integrity validation
+- **Error Handling**: Invalid date formats and permission-denied scenarios
 
 ### Running Tests
 
