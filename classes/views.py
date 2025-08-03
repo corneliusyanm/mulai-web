@@ -1,16 +1,27 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import ListView, DetailView
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.mixins import LoginRequiredMixin
+
+
+from accounts.views import MemberRequiredMixin
 from django.contrib import messages
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from .models import ClassInstance, Member
 
+
+def member_login_required(view_func):
+    def _wrapped_view(request, *args, **kwargs):
+        if "member_email" not in request.session:
+            return redirect("member_login")
+        return view_func(request, *args, **kwargs)
+
+    return _wrapped_view
+
+
 # Create your views here.
 
 
-class ClassListView(LoginRequiredMixin, ListView):
+class ClassListView(MemberRequiredMixin, ListView):
     model = ClassInstance
     template_name = "classes/class_list.html"
     context_object_name = "class_instances"
@@ -21,7 +32,7 @@ class ClassListView(LoginRequiredMixin, ListView):
         )
 
 
-class ClassDetailView(LoginRequiredMixin, DetailView):
+class ClassDetailView(MemberRequiredMixin, DetailView):
     model = ClassInstance
     template_name = "classes/class_detail.html"
     context_object_name = "instance"
@@ -40,7 +51,7 @@ class ClassDetailView(LoginRequiredMixin, DetailView):
 
 
 @require_POST
-@login_required
+@member_login_required
 def book_class(request, instance_id):
     instance = get_object_or_404(ClassInstance, id=instance_id)
     member = get_object_or_404(Member, email=request.session.get("member_email"))
@@ -72,7 +83,7 @@ def book_class(request, instance_id):
 
 
 @require_POST
-@login_required
+@member_login_required
 def cancel_class(request, instance_id):
     instance = get_object_or_404(ClassInstance, id=instance_id)
     member = get_object_or_404(Member, email=request.session.get("member_email"))
