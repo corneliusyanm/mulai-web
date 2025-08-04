@@ -308,8 +308,8 @@ class AnalyticsViewsTest(TestCase):
             years_of_working_out="1",
             goals="Lose weight",
             know_mulai_gym_from="instagram",
-            active_until=timezone.now() + timedelta(days=5),
-            pemula_active_until=timezone.now() + timedelta(days=3),
+            active_until=timezone.now() + timedelta(days=6),
+            pemula_active_until=timezone.now() + timedelta(days=4),
         )
 
         self.member_inactive = Member.objects.create(

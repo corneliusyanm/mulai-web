@@ -110,6 +110,14 @@ graph TD
 
 ## Accounts
 
+### URLs
+The account-related pages are accessible at the following URLs:
+- **Registration**: `/daftar/`
+- **Login**: `/masuk/`
+- **Logout**: `/keluar/`
+- **Member Details**: `/akun/`
+- **Edit Profile**: `/akun/edit/`
+
 ### Forms (`accounts/forms.py`)
 - **`MemberSignUpForm`, `MemberEditForm`**: Include `country_code` (default +62) and `phone_number_display` fields. The `clean` method standardizes the phone number (e.g., removes +, strips leading 0) and stores it in the `phone_number` model field (digits only). Performs uniqueness validation.
 - **`MemberLoginForm`**: Includes `email` (optional), `country_code` (optional), and `phone_number_display` (optional). Requires either email or phone to be provided. Formats phone number if provided.

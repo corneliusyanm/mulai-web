@@ -80,7 +80,7 @@
 
                     <!-- Action Button -->
                     <div class="text-center">
-                        {% if user.is_authenticated %}
+                        {% if member %}
                             <form action="{% if member in instance.booked_members.all or member in instance.waitlisted_members.all %}{% url 'classes:cancel_class' instance.id %}{% else %}{% url 'classes:book_class' instance.id %}{% endif %}" method="post" class="d-inline">
                                 {% csrf_token %}
                                 {% if member in instance.booked_members.all %}

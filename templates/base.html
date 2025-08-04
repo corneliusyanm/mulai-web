@@ -129,7 +129,7 @@
                 <li class="nav-item">
                     <a class="nav-link fw-bold" href="{% url 'equipment:list' %}">• Panduan Alat (Baru!)</a>
                 </li>
-                {% if user.is_authenticated %}
+                {% if request.session.member_email %}
                 <li class="nav-item">
                     <a class="nav-link fw-bold" href="{% url 'classes:class_list' %}">• Jadwal Kelas (Baru!)</a>
                 </li>
