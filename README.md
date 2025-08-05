@@ -318,6 +318,8 @@ python manage.py generate_class_instances 7
 - **Full CRUD Access**: Classes, schedules, and bookings management
 - **Class Creation**: Define recurring schedules with day/time patterns
 - **Instance Management**: Manually create one-off classes and manage bookings
+- **Smart Filtering**: Default view shows only OPEN and FULL instances (active classes)
+- **Status Filters**: Access completed/cancelled instances via status filter when needed
 - **Member Management**: Add/remove members from class bookings and waitlists
 
 ### Booking Rules

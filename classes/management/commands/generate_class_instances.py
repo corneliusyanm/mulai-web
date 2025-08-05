@@ -27,9 +27,8 @@ class Command(BaseCommand):
         )
 
         # Mark past instances as COMPLETED
-        yesterday = today - timedelta(days=1)
         completed_instances = ClassInstance.objects.filter(
-            date__lt=yesterday, status__in=["OPEN", "FULL"]
+            date__lt=today, status__in=["OPEN", "FULL"]
         )
         completed_count = completed_instances.count()
         for instance in completed_instances:

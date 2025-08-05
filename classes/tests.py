@@ -1,10 +1,13 @@
-from django.test import TestCase
+from django.test import TestCase, RequestFactory
 from django.utils import timezone
 from django.core.management import call_command
+from django.contrib.admin.sites import AdminSite
+from django.contrib.auth.models import User
 from datetime import date, timedelta
 from io import StringIO
 from accounts.models import Member
 from classes.models import Class, ClassSchedule, ClassInstance
+from classes.admin import ClassInstanceAdmin
 
 
 class ClassModelTest(TestCase):
@@ -169,6 +172,137 @@ class GenerateClassInstancesCommandTest(TestCase):
         output = out.getvalue()
         self.assertIn("Marked 1 past instances as COMPLETED", output)
 
+    def test_command_marks_yesterday_instances_completed(self):
+        """Test that command specifically marks yesterday's instances as COMPLETED (bug fix test)"""
+        # Create an instance for yesterday - this was the specific bug we fixed
+        yesterday = timezone.now().date() - timedelta(days=1)
+        yesterday_instance = ClassInstance.objects.create(
+            class_schedule=self.today_schedule,
+            date=yesterday,
+            start_time=self.today_schedule.start_time,
+            end_time=self.today_schedule.end_time,
+            status="OPEN",
+        )
+
+        # Also create a FULL instance to test that both statuses get completed
+        yesterday_full_instance = ClassInstance.objects.create(
+            class_schedule=self.tomorrow_schedule,  # Use different schedule to avoid conflicts
+            date=yesterday,
+            start_time=self.tomorrow_schedule.start_time,
+            end_time=self.tomorrow_schedule.end_time,
+            status="FULL",
+        )
+
+        # Verify they start as OPEN and FULL
+        self.assertEqual(yesterday_instance.status, "OPEN")
+        self.assertEqual(yesterday_full_instance.status, "FULL")
+
+        out = StringIO()
+        call_command("generate_class_instances", stdout=out)
+
+        # Refresh and verify both are now COMPLETED
+        yesterday_instance.refresh_from_db()
+        yesterday_full_instance.refresh_from_db()
+        self.assertEqual(yesterday_instance.status, "COMPLETED")
+        self.assertEqual(yesterday_full_instance.status, "COMPLETED")
+
+        output = out.getvalue()
+        self.assertIn("Marked 2 past instances as COMPLETED", output)
+
+    def test_command_doesnt_mark_today_instances_completed(self):
+        """Test that command does NOT mark today's instances as COMPLETED"""
+        today = timezone.now().date()
+
+        # Create instances for today
+        today_open_instance = ClassInstance.objects.create(
+            class_schedule=self.today_schedule,
+            date=today,
+            start_time=self.today_schedule.start_time,
+            end_time=self.today_schedule.end_time,
+            status="OPEN",
+        )
+
+        today_full_instance = ClassInstance.objects.create(
+            class_schedule=self.tomorrow_schedule,
+            date=today,
+            start_time=self.tomorrow_schedule.start_time,
+            end_time=self.tomorrow_schedule.end_time,
+            status="FULL",
+        )
+
+        out = StringIO()
+        call_command("generate_class_instances", stdout=out)
+
+        # Refresh and verify they remain in their original status
+        today_open_instance.refresh_from_db()
+        today_full_instance.refresh_from_db()
+        self.assertEqual(today_open_instance.status, "OPEN")
+        self.assertEqual(today_full_instance.status, "FULL")
+
+        output = out.getvalue()
+        # Should mark 0 instances as completed since today's instances shouldn't be completed
+        self.assertIn("Marked 0 past instances as COMPLETED", output)
+
+    def test_command_only_completes_open_and_full_instances(self):
+        """Test that command only marks OPEN and FULL instances as COMPLETED, not already COMPLETED/CANCELLED ones"""
+        yesterday = timezone.now().date() - timedelta(days=1)
+
+        # Create instances with different statuses
+        open_instance = ClassInstance.objects.create(
+            class_schedule=self.today_schedule,
+            date=yesterday,
+            start_time=self.today_schedule.start_time,
+            end_time=self.today_schedule.end_time,
+            status="OPEN",
+        )
+
+        full_instance = ClassInstance.objects.create(
+            class_schedule=self.tomorrow_schedule,
+            date=yesterday,
+            start_time=self.tomorrow_schedule.start_time,
+            end_time=self.tomorrow_schedule.end_time,
+            status="FULL",
+        )
+
+        # Create instances that are already COMPLETED and CANCELLED
+        already_completed_instance = ClassInstance.objects.create(
+            class_schedule=self.today_schedule,
+            date=yesterday
+            - timedelta(days=1),  # Day before yesterday to avoid conflicts
+            start_time=self.today_schedule.start_time,
+            end_time=self.today_schedule.end_time,
+            status="COMPLETED",
+        )
+
+        already_cancelled_instance = ClassInstance.objects.create(
+            class_schedule=self.tomorrow_schedule,
+            date=yesterday
+            - timedelta(days=1),  # Day before yesterday to avoid conflicts
+            start_time=self.tomorrow_schedule.start_time,
+            end_time=self.tomorrow_schedule.end_time,
+            status="CANCELLED",
+        )
+
+        out = StringIO()
+        call_command("generate_class_instances", stdout=out)
+
+        # Refresh all instances
+        open_instance.refresh_from_db()
+        full_instance.refresh_from_db()
+        already_completed_instance.refresh_from_db()
+        already_cancelled_instance.refresh_from_db()
+
+        # Verify only OPEN and FULL instances were changed to COMPLETED
+        self.assertEqual(open_instance.status, "COMPLETED")
+        self.assertEqual(full_instance.status, "COMPLETED")
+        # These should remain unchanged
+        self.assertEqual(already_completed_instance.status, "COMPLETED")
+        self.assertEqual(already_cancelled_instance.status, "CANCELLED")
+
+        output = out.getvalue()
+        # Should only mark the 2 OPEN/FULL instances as completed
+        self.assertIn("Marked 2 past instances as COMPLETED", output)
+
     def test_command_doesnt_create_duplicates(self):
         """Test that command doesn't create duplicate instances"""
         today = timezone.now().date()
@@ -206,3 +340,154 @@ class GenerateClassInstancesCommandTest(TestCase):
 
         output = out.getvalue()
         self.assertIn("Generating class instances for 10 days ahead", output)
+
+
+class ClassInstanceAdminTest(TestCase):
+    """Test ClassInstanceAdmin filtering behavior"""
+
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.site = AdminSite()
+        self.admin = ClassInstanceAdmin(ClassInstance, self.site)
+
+        # Create test data
+        self.yoga_class = Class.objects.create(
+            name="Yoga", description="A relaxing yoga class.", max_members=10
+        )
+        self.schedule = ClassSchedule.objects.create(
+            class_obj=self.yoga_class,
+            day_of_week=0,  # Monday
+            start_time="09:00:00",
+            end_time="10:00:00",
+        )
+
+        # Create instances with different statuses
+        today = timezone.now().date()
+        self.open_instance = ClassInstance.objects.create(
+            class_schedule=self.schedule,
+            date=today,
+            start_time=self.schedule.start_time,
+            end_time=self.schedule.end_time,
+            status="OPEN",
+        )
+        self.full_instance = ClassInstance.objects.create(
+            class_schedule=self.schedule,
+            date=today + timedelta(days=1),
+            start_time=self.schedule.start_time,
+            end_time=self.schedule.end_time,
+            status="FULL",
+        )
+        self.completed_instance = ClassInstance.objects.create(
+            class_schedule=self.schedule,
+            date=today - timedelta(days=1),
+            start_time=self.schedule.start_time,
+            end_time=self.schedule.end_time,
+            status="COMPLETED",
+        )
+        self.cancelled_instance = ClassInstance.objects.create(
+            class_schedule=self.schedule,
+            date=today + timedelta(days=2),
+            start_time=self.schedule.start_time,
+            end_time=self.schedule.end_time,
+            status="CANCELLED",
+        )
+
+    def test_default_queryset_shows_only_open_and_full(self):
+        """Test that default admin view only shows OPEN and FULL instances"""
+        request = self.factory.get("/admin/classes/classinstance/")
+
+        # Test the default filter behavior (no status parameter)
+        from classes.admin import ActiveStatusFilter
+
+        filter_instance = ActiveStatusFilter(request, {}, ClassInstance, self.admin)
+        filtered_qs = filter_instance.queryset(request, ClassInstance.objects.all())
+
+        statuses = list(filtered_qs.values_list("status", flat=True))
+
+        # Should only contain OPEN and FULL
+        self.assertIn("OPEN", statuses)
+        self.assertIn("FULL", statuses)
+        self.assertNotIn("COMPLETED", statuses)
+        self.assertNotIn("CANCELLED", statuses)
+
+        # Should have exactly 2 instances (OPEN and FULL)
+        self.assertEqual(filtered_qs.count(), 2)
+
+    def test_status_filter_shows_all_when_applied(self):
+        """Test that applying status filter shows instances of that status"""
+        # Test COMPLETED filter
+        request = self.factory.get("/admin/classes/classinstance/?status=COMPLETED")
+
+        # Test the filter directly with proper parameter passing
+        from classes.admin import ActiveStatusFilter
+
+        filter_instance = ActiveStatusFilter(
+            request, {"status": "COMPLETED"}, ClassInstance, self.admin
+        )
+        filtered_qs = filter_instance.queryset(request, ClassInstance.objects.all())
+
+        statuses = list(filtered_qs.values_list("status", flat=True))
+        self.assertEqual(statuses, ["COMPLETED"])
+        self.assertEqual(filtered_qs.count(), 1)
+
+    def test_open_status_filter(self):
+        """Test filtering for OPEN status specifically"""
+        request = self.factory.get("/admin/classes/classinstance/?status=OPEN")
+
+        from classes.admin import ActiveStatusFilter
+
+        filter_instance = ActiveStatusFilter(
+            request, {"status": "OPEN"}, ClassInstance, self.admin
+        )
+        filtered_qs = filter_instance.queryset(request, ClassInstance.objects.all())
+
+        statuses = list(filtered_qs.values_list("status", flat=True))
+        self.assertEqual(statuses, ["OPEN"])
+        self.assertEqual(filtered_qs.count(), 1)
+
+    def test_full_status_filter(self):
+        """Test filtering for FULL status specifically"""
+        request = self.factory.get("/admin/classes/classinstance/?status=FULL")
+
+        from classes.admin import ActiveStatusFilter
+
+        filter_instance = ActiveStatusFilter(
+            request, {"status": "FULL"}, ClassInstance, self.admin
+        )
+        filtered_qs = filter_instance.queryset(request, ClassInstance.objects.all())
+
+        statuses = list(filtered_qs.values_list("status", flat=True))
+        self.assertEqual(statuses, ["FULL"])
+        self.assertEqual(filtered_qs.count(), 1)
+
+    def test_cancelled_status_filter(self):
+        """Test filtering for CANCELLED status specifically"""
+        request = self.factory.get("/admin/classes/classinstance/?status=CANCELLED")
+
+        from classes.admin import ActiveStatusFilter
+
+        filter_instance = ActiveStatusFilter(
+            request, {"status": "CANCELLED"}, ClassInstance, self.admin
+        )
+        filtered_qs = filter_instance.queryset(request, ClassInstance.objects.all())
+
+        statuses = list(filtered_qs.values_list("status", flat=True))
+        self.assertEqual(statuses, ["CANCELLED"])
+        self.assertEqual(filtered_qs.count(), 1)
+
+    def test_other_filters_dont_affect_status_filtering(self):
+        """Test that other filters (like date) don't interfere with status logic"""
+        today = timezone.now().date()
+        request = self.factory.get(f"/admin/classes/classinstance/?date__exact={today}")
+
+        # Test the default filter behavior when other filters are applied but no status filter
+        from classes.admin import ActiveStatusFilter
+
+        filter_instance = ActiveStatusFilter(request, {}, ClassInstance, self.admin)
+        filtered_qs = filter_instance.queryset(request, ClassInstance.objects.all())
+
+        # Should still apply the default OPEN/FULL filter since no status filter is applied
+        statuses = list(filtered_qs.values_list("status", flat=True))
+        self.assertIn("OPEN", statuses)
+        self.assertNotIn("COMPLETED", statuses)
+        self.assertNotIn("CANCELLED", statuses)
