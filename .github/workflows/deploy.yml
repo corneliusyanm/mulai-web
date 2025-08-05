@@ -24,11 +24,12 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.13"
+          cache: 'pip'
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
@@ -48,7 +49,7 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       
       - name: Deploy to Digital Ocean droplet
         uses: appleboy/ssh-action@master
@@ -74,26 +75,46 @@ jobs:
             echo "Secret key exists: $([[ ! -z "$DJANGO_SECRET_KEY" ]] && echo 'yes' || echo 'no')"
             echo "DB connection info available: $([[ ! -z "$DB_HOST" ]] && echo 'yes' || echo 'no')"
             
-            # Clean up disk space
-            echo "Cleaning up disk space..."
-            # Remove unused Docker images, containers, networks, and volumes
-            docker system prune -af --volumes
-            # Check disk space after cleanup
-            echo "Disk space after cleanup:"
-            df -h
+            # Check disk space and clean up only if needed (>80% usage)
+            DISK_USAGE=$(df / | awk 'NR==2 {print $5}' | sed 's/%//')
+            if [ "$DISK_USAGE" -gt 80 ]; then
+              echo "Disk usage at ${DISK_USAGE}%, cleaning up..."
+              # Remove unused Docker images, containers, networks, and volumes
+              docker system prune -af --volumes
+              echo "Disk space after cleanup:"
+              df -h
+            else
+              echo "Disk usage at ${DISK_USAGE}%, no cleanup needed"
+            fi
             
             # Update git remote with new token
             git remote set-url origin "https://oauth2:${GH_TOKEN}@github.com/corneliusyanm/mulai-web.git"
             git fetch origin
             git reset --hard origin/main
             
-            docker build -t mulai_web .
+            # Enable Docker BuildKit for faster builds and better caching
+            export DOCKER_BUILDKIT=1
+            
+            # Build with cache optimization (safe fallback if no previous image)
+            if docker image inspect mulai_web:latest >/dev/null 2>&1; then
+              echo "Using cache from previous image..."
+              docker build \
+                --cache-from mulai_web:latest \
+                --build-arg BUILDKIT_INLINE_CACHE=1 \
+                -t mulai_web .
+            else
+              echo "No previous image found, building without cache..."
+              docker build \
+                --build-arg BUILDKIT_INLINE_CACHE=1 \
+                -t mulai_web .
+            fi
             docker stop mulai_web || true
             docker rm mulai_web || true
             
-            # Pass the variables directly
+            # Pass the variables directly with restart policy
             docker run -d \
               --name mulai_web \
+              --restart unless-stopped \
               -p 8000:8000 \
               --health-cmd "curl -f http://localhost:8000/ || exit 1" \
               --health-interval=5s \
@@ -111,10 +132,12 @@ jobs:
               -v /root/mulai_web/data:/app/data \
               mulai_web
 
-            # Wait for container to become healthy or fail
+            # Wait for container to become healthy or fail (optimized timing)
             echo "Waiting for container to start..."
-            for i in {1..12}; do
-              STATUS=$(docker inspect --format '{{.State.Health.Status}}' mulai_web)
+            for i in {1..20}; do
+              STATUS=$(docker inspect --format '{{.State.Health.Status}}' mulai_web 2>/dev/null || echo "starting")
+              echo "Health check attempt $i: $STATUS"
+              
               if [ "$STATUS" = "healthy" ]; then
                 echo "Container is healthy!"
                 break
@@ -124,7 +147,13 @@ jobs:
                 docker logs mulai_web
                 exit 1
               fi
-              sleep 5
+              
+              # Faster initial checks, slower later ones
+              if [ $i -le 5 ]; then
+                sleep 2
+              else
+                sleep 3
+              fi
             done
 
             # Final check
@@ -134,16 +163,29 @@ jobs:
               exit 1
             fi
 
-            # Run migrations
+            # Run migrations first, then collectstatic (sequential for safety)
             echo "Running migrations..."
             docker exec mulai_web python manage.py migrate
+            if [ $? -ne 0 ]; then
+              echo "Migration failed!"
+              exit 1
+            fi
 
-            # Run collectstatic after container is running
             echo "Collecting static files..."
             docker exec mulai_web python manage.py collectstatic --noinput
+            if [ $? -ne 0 ]; then
+              echo "Collectstatic failed!"
+              exit 1
+            fi
 
-            # Verify environment variables
-            echo "Container environment variables:"
-            docker exec mulai_web env | grep DJANGO
+            # Final health verification
+            echo "Verifying deployment health..."
+            FINAL_STATUS=$(docker inspect --format '{{.State.Health.Status}}' mulai_web)
+            if [ "$FINAL_STATUS" != "healthy" ]; then
+              echo "Final health check failed: $FINAL_STATUS"
+              docker logs --tail=50 mulai_web
+              exit 1
+            fi
 
-            echo "Deployment completed successfully!"
+            echo "✅ Deployment completed successfully!"
+            echo "Container status: $(docker ps --filter name=mulai_web --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}')"
