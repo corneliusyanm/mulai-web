@@ -7,7 +7,7 @@ from collections import defaultdict
 # Create your views here.
 
 
-@cache_page(60 * 15)  # Cache for 15 minutes
+@cache_page(60 * 60 * 4)  # Cache for 4 hours
 def equipment_list(request):
     # Try to get cached data first
     cache_key = "equipment_grouped_list"
@@ -21,9 +21,9 @@ def equipment_list(request):
             muscle_group = equipment.muscle_group or "Lainnya"
             grouped_equipments[muscle_group].append(equipment)
 
-        # Convert to regular dict and cache for 1 hour
+        # Convert to regular dict and cache for 12 hours
         grouped_equipments = dict(grouped_equipments)
-        cache.set(cache_key, grouped_equipments, 60 * 60)
+        cache.set(cache_key, grouped_equipments, 60 * 60 * 12)
 
     context = {"grouped_equipments": grouped_equipments}
     return render(request, "equipment/list.html", context)

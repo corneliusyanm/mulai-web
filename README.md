@@ -400,7 +400,7 @@ python manage.py generate_class_instances 7
 - **YouTube Thumbnail Loading**: Uses YouTube's thumbnail API instead of loading full iframe videos
 - **Progressive Loading**: First 2 videos load immediately, remaining videos load when scrolled into view
 - **Lazy Loading**: Intersection Observer API detects when videos come into viewport
-- **Caching**: 15-minute page cache + 1-hour data cache to reduce database queries
+- **Caching**: 4-hour page cache + 12-hour data cache to reduce database queries
 - **Mobile Optimization**: Reduced bandwidth usage with thumbnail-first approach
 
 ### Views (`equipment/views.py`)
@@ -423,8 +423,8 @@ python manage.py generate_class_instances 7
   - Intersection Observer: 25% visibility threshold with 50px margin
   - Click-to-load: Users can click any thumbnail to load video immediately
 - **Caching Strategy**:
-  - Page-level: 15-minute cache for entire equipment list page
-  - Data-level: 1-hour cache for equipment data
+  - Page-level: 4-hour cache for entire equipment list page
+  - Data-level: 12-hour cache for equipment data
   - Cache invalidation: Automatic when equipment is modified via admin
 
 ## Products & Sales
