@@ -273,6 +273,7 @@ The class booking system allows members to book and manage their attendance for 
 
 ### Features
 - **Members-Only Access**: Class booking is restricted to logged-in members only.
+- **Smart Time Filtering**: Only shows upcoming classes; automatically hides classes that have started.
 - **Waitlist**: Members can join a waitlist for full classes.
 - **Automatic Status Updates**: Class instances are automatically marked as "FULL" or "OPEN".
 - **Cancellation**: Members can cancel their bookings with automatic waitlist promotion.
@@ -309,7 +310,9 @@ python manage.py generate_class_instances 7
 ```
 
 ### User Interface
-- **Class List**: Shows all available classes (`/kelas/`) - members only
+- **Class List**: Shows upcoming classes only (`/kelas/`) - members only
+- **Time-Based Filtering**: Automatically hides classes that have already started
+- **Real-Time Updates**: Classes disappear from list as their start time passes
 - **Class Detail**: Individual class pages with booking functionality (`/kelas/<id>/`)
 - **My Account Integration**: Upcoming classes displayed on member account page
 - **Mobile-Friendly**: "Lihat Detail" buttons for clear navigation
@@ -328,6 +331,13 @@ python manage.py generate_class_instances 7
 - **No Booking Limits**: Members can book multiple classes
 - **Free Cancellation**: No time restrictions on cancellations
 - **FIFO Waitlist**: First to join waitlist gets first available spot
+
+### Technical Implementation
+- **Time-Based Filtering (`classes/views.py`)**:
+  - Uses timezone-aware datetime comparison to filter past classes
+  - Combines `date` and `start_time` fields for precise filtering
+  - Real-time filtering: `class_datetime > timezone.now()`
+  - Supports multiple timezones (UTC server time vs Jakarta local time)
 
 ## Payments
 

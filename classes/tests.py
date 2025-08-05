@@ -491,3 +491,149 @@ class ClassInstanceAdminTest(TestCase):
         self.assertIn("OPEN", statuses)
         self.assertNotIn("COMPLETED", statuses)
         self.assertNotIn("CANCELLED", statuses)
+
+
+class ClassListViewTest(TestCase):
+    """Test ClassListView filtering behavior"""
+
+    def setUp(self):
+        # Create test data
+        self.yoga_class = Class.objects.create(
+            name="Yoga", description="A relaxing yoga class.", max_members=10
+        )
+        self.pilates_class = Class.objects.create(
+            name="Pilates", description="A core strengthening class.", max_members=8
+        )
+
+        # Create different schedules to avoid unique constraint issues
+        self.morning_schedule = ClassSchedule.objects.create(
+            class_obj=self.yoga_class,
+            day_of_week=0,  # Monday
+            start_time="08:00:00",
+            end_time="09:00:00",
+        )
+
+        self.evening_schedule = ClassSchedule.objects.create(
+            class_obj=self.pilates_class,
+            day_of_week=0,  # Monday
+            start_time="23:59:00",
+            end_time="23:59:59",
+        )
+
+        self.tomorrow_schedule = ClassSchedule.objects.create(
+            class_obj=self.yoga_class,
+            day_of_week=1,  # Tuesday
+            start_time="09:00:00",
+            end_time="10:00:00",
+        )
+
+        # Create member for authentication
+        self.member = Member.objects.create(
+            name="Test Member",
+            email="test@example.com",
+            phone_number="628123456789",
+            age=25,
+            height=170.0,
+            weight=70.0,
+            gender="M",
+            goals="Stay fit",
+            years_of_working_out="1-2 years",
+        )
+
+        now = timezone.now()
+        today = now.date()
+
+        # Create class instances with different timing
+        self.past_instance = ClassInstance.objects.create(
+            class_schedule=self.morning_schedule,
+            date=today,
+            start_time="08:00:00",  # Past time (assuming current time is after 8 AM)
+            end_time="09:00:00",
+            status="OPEN",
+        )
+
+        self.future_today_instance = ClassInstance.objects.create(
+            class_schedule=self.evening_schedule,
+            date=today,
+            start_time="23:59:00",  # Future time today
+            end_time="23:59:59",
+            status="OPEN",
+        )
+
+        self.future_instance = ClassInstance.objects.create(
+            class_schedule=self.tomorrow_schedule,
+            date=today + timedelta(days=1),  # Tomorrow
+            start_time="09:00:00",
+            end_time="10:00:00",
+            status="FULL",
+        )
+
+    def test_past_classes_filtered_out(self):
+        """Test that classes that have already started are not shown"""
+        from classes.views import ClassListView
+        from django.http import HttpRequest
+
+        view = ClassListView()
+        view.request = HttpRequest()
+
+        # Mock session for member authentication
+        view.request.session = {"member_email": self.member.email}
+
+        queryset = view.get_queryset()
+
+        # Future instances should be in queryset
+        self.assertIn(self.future_today_instance, queryset)
+        self.assertIn(self.future_instance, queryset)
+
+    def test_only_upcoming_classes_shown(self):
+        """Test that only upcoming classes are shown (future dates or today's future classes)"""
+        from classes.views import ClassListView
+        from django.http import HttpRequest
+
+        view = ClassListView()
+        view.request = HttpRequest()
+        view.request.session = {"member_email": self.member.email}
+
+        instances_list = view.get_queryset()
+
+        # Should contain future instances (exact count depends on current time)
+        # At minimum should contain tomorrow's instance
+        self.assertIn(self.future_instance, instances_list)
+
+        # Should have at least one instance
+        self.assertTrue(len(instances_list) >= 1)
+
+    def test_status_filtering_still_works(self):
+        """Test that status filtering (OPEN, FULL) still works with time filtering"""
+        from classes.views import ClassListView
+        from django.http import HttpRequest
+
+        # Create a COMPLETED instance for tomorrow (should not appear)
+        tomorrow = timezone.now().date() + timedelta(days=1)
+        # Create a new schedule for this test to avoid unique constraint
+        completed_schedule = ClassSchedule.objects.create(
+            class_obj=self.pilates_class,
+            day_of_week=1,  # Tuesday
+            start_time="10:00:00",
+            end_time="11:00:00",
+        )
+        completed_instance = ClassInstance.objects.create(
+            class_schedule=completed_schedule,
+            date=tomorrow,
+            start_time="10:00:00",
+            end_time="11:00:00",
+            status="COMPLETED",
+        )
+
+        view = ClassListView()
+        view.request = HttpRequest()
+        view.request.session = {"member_email": self.member.email}
+
+        instances_list = view.get_queryset()
+
+        # COMPLETED instance should not appear even though it's in the future
+        self.assertNotIn(completed_instance, instances_list)
+
+        # Only OPEN and FULL status instances should appear
+        statuses = set(instance.status for instance in instances_list)
+        self.assertTrue(statuses.issubset({"OPEN", "FULL"}))

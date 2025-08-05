@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import ListView, DetailView
-
+from django.db.models import Q
 
 from accounts.views import MemberRequiredMixin
 from django.contrib import messages
@@ -27,9 +27,26 @@ class ClassListView(MemberRequiredMixin, ListView):
     context_object_name = "class_instances"
 
     def get_queryset(self):
-        return ClassInstance.objects.filter(status__in=["OPEN", "FULL"]).order_by(
-            "date", "start_time"
-        )
+        from datetime import datetime
+
+        now = timezone.now()
+
+        # Get all OPEN/FULL instances first, then filter in Python for precise datetime comparison
+        all_instances = ClassInstance.objects.filter(
+            status__in=["OPEN", "FULL"]
+        ).order_by("date", "start_time")
+
+        upcoming_instances = []
+        for instance in all_instances:
+            # Combine date and start_time into a timezone-aware datetime
+            class_dt = timezone.make_aware(
+                datetime.combine(instance.date, instance.start_time)
+            )
+
+            if class_dt > now:
+                upcoming_instances.append(instance)
+
+        return upcoming_instances
 
 
 class ClassDetailView(MemberRequiredMixin, DetailView):
