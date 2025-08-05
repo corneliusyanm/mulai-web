@@ -30,6 +30,41 @@ class EquipmentModelTest(TestCase):
             equipment = Equipment(name=name, video_link=url)
             self.assertEqual(equipment.get_youtube_embed_url(), expected_url)
 
+    def test_youtube_video_id_extraction(self):
+        """
+        Test the get_youtube_video_id method with different URL formats.
+        """
+        urls = {
+            "standard": "https://www.youtube.com/watch?v=abcdef123",
+            "shortened": "https://youtu.be/abcdef123",
+            "embed": "https://www.youtube.com/embed/abcdef123",
+            "with_params": "https://www.youtube.com/watch?v=abcdef123&t=30s",
+        }
+        expected_id = "abcdef123"
+
+        for name, url in urls.items():
+            equipment = Equipment(name=name, video_link=url)
+            self.assertEqual(equipment.get_youtube_video_id(), expected_id)
+
+    def test_youtube_thumbnail_url(self):
+        """
+        Test the get_youtube_thumbnail_url method.
+        """
+        equipment = Equipment(
+            name="Test Equipment",
+            video_link="https://www.youtube.com/watch?v=abcdef123",
+        )
+
+        # Test default quality
+        expected_default = "https://img.youtube.com/vi/abcdef123/hqdefault.jpg"
+        self.assertEqual(equipment.get_youtube_thumbnail_url(), expected_default)
+
+        # Test specific quality
+        expected_maxres = "https://img.youtube.com/vi/abcdef123/maxresdefault.jpg"
+        self.assertEqual(
+            equipment.get_youtube_thumbnail_url("maxresdefault"), expected_maxres
+        )
+
 
 class EquipmentViewsTest(TestCase):
     def setUp(self):

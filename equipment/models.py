@@ -19,13 +19,14 @@ class Equipment(models.Model):
             self.slug = slugify(self.name)
         super().save(*args, **kwargs)
 
-    def get_youtube_embed_url(self):
+    def get_youtube_video_id(self):
         """
-        Extracts the YouTube video ID and returns the embed URL.
+        Extracts the YouTube video ID from various URL formats.
         Supports standard, shortened, and embed URLs.
         """
         if "youtube.com/embed" in self.video_link:
-            return self.video_link
+            # Extract ID from embed URL
+            return self.video_link.split("/embed/")[1].split("?")[0]
 
         parsed_url = urlparse(self.video_link)
         if "youtu.be" in parsed_url.netloc:
@@ -34,8 +35,26 @@ class Equipment(models.Model):
             query_params = parse_qs(parsed_url.query)
             video_id = query_params.get("v", [None])[0]
 
+        return video_id
+
+    def get_youtube_embed_url(self):
+        """
+        Extracts the YouTube video ID and returns the embed URL.
+        Supports standard, shortened, and embed URLs.
+        """
+        video_id = self.get_youtube_video_id()
         if video_id:
             return f"https://www.youtube.com/embed/{video_id}"
+        return None
+
+    def get_youtube_thumbnail_url(self, quality="hqdefault"):
+        """
+        Returns YouTube thumbnail URL for the video.
+        Quality options: 'default', 'hqdefault', 'mqdefault', 'sddefault', 'maxresdefault'
+        """
+        video_id = self.get_youtube_video_id()
+        if video_id:
+            return f"https://img.youtube.com/vi/{video_id}/{quality}.jpg"
         return None
 
     def __str__(self):

@@ -396,12 +396,36 @@ python manage.py generate_class_instances 7
   - `muscle_group`: CharField (Primary muscle group targeted)
   - `detailed_muscle_group`: CharField (Specific muscle group targeted)
 
+### Performance Optimizations
+- **YouTube Thumbnail Loading**: Uses YouTube's thumbnail API instead of loading full iframe videos
+- **Progressive Loading**: First 2 videos load immediately, remaining videos load when scrolled into view
+- **Lazy Loading**: Intersection Observer API detects when videos come into viewport
+- **Caching**: 15-minute page cache + 1-hour data cache to reduce database queries
+- **Mobile Optimization**: Reduced bandwidth usage with thumbnail-first approach
+
 ### Views (`equipment/views.py`)
 - **`equipment_list`** (`/alat/`):
-  - Displays a grid of all available equipment, grouped by muscle group.
-  - Each item links to the detail page.
+  - Displays a grid of all available equipment, grouped by muscle group
+  - **Performance**: Uses cached data and progressive video loading for mobile optimization
+  - Each item shows YouTube thumbnail with play button overlay
+  - Videos load on demand (click or scroll into view)
 - **`equipment_detail`** (`/alat/<slug:slug>/`):
-  - Shows the details for a specific piece of equipment, including an embedded YouTube video guide.
+  - Shows the details for a specific piece of equipment, including an embedded YouTube video guide
+
+### Technical Implementation
+- **YouTube API Integration**:
+  - `get_youtube_video_id()`: Extracts video ID from various YouTube URL formats
+  - `get_youtube_thumbnail_url()`: Generates YouTube thumbnail URLs (multiple quality options)
+  - `get_youtube_embed_url()`: Creates embed URLs with performance-optimized parameters
+- **Lazy Loading Strategy**:
+  - Initial page load: Show thumbnails only (fast)
+  - Progressive loading: Load first 2 videos automatically, others on scroll
+  - Intersection Observer: 25% visibility threshold with 50px margin
+  - Click-to-load: Users can click any thumbnail to load video immediately
+- **Caching Strategy**:
+  - Page-level: 15-minute cache for entire equipment list page
+  - Data-level: 1-hour cache for equipment data
+  - Cache invalidation: Automatic when equipment is modified via admin
 
 ## Products & Sales
 
