@@ -162,8 +162,7 @@
             {% if item.get_youtube_embed_url %}
             <div class="video-container" 
                  data-video-id="{{ item.get_youtube_video_id }}"
-                 data-embed-url="{{ item.get_youtube_embed_url }}?modestbranding=1&showinfo=0&controls=0&rel=0&iv_load_policy=3&cc_load_policy=0&disablekb=1&fs=0"
-                 onclick="event.preventDefault(); loadVideo(this);">
+                 data-embed-url="{{ item.get_youtube_embed_url }}?modestbranding=1&showinfo=0&controls=0&rel=0&iv_load_policy=3&cc_load_policy=0&disablekb=1&fs=0">
               <img src="{{ item.get_youtube_thumbnail_url }}" 
                    alt="{{ item.name }} video thumbnail" 
                    class="video-thumbnail"
