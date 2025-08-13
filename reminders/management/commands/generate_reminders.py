@@ -37,6 +37,9 @@ class Command(BaseCommand):
         self.generate_no_visit_reminders(today, dry_run)
         self.generate_membership_expiry_reminders(today, dry_run)
 
+        # Clean up any malformed reminders before completing
+        self.cleanup_malformed_reminders(today, dry_run)
+
         self.stdout.write(self.style.SUCCESS("Reminder generation completed"))
 
     def auto_resolve_reminders(self, today, dry_run):
@@ -239,3 +242,46 @@ class Command(BaseCommand):
                         )
 
         self.stdout.write(f"Created {created_count} membership expiry reminders")
+
+    def cleanup_malformed_reminders(self, today, dry_run):
+        """Detect and fix malformed reminders with wrong reason text for their due_date"""
+        fixed_count = 0
+
+        # Find reminders with mismatched reason and due_date
+        malformed_reminders = Reminder.objects.filter(
+            reminder_type="MEMBERSHIP_EXPIRING", is_resolved=False
+        )
+
+        for reminder in malformed_reminders:
+            needs_fix = False
+            correct_reason = None
+
+            # Check if reason doesn't match due_date
+            if reminder.due_date == today and "3 hari lagi" in reminder.reason:
+                # Should be "hari ini" not "3 hari lagi"
+                expiry_date = (
+                    reminder.due_date
+                )  # In this case, due_date is the expiry date
+                correct_reason = (
+                    f"Membership habis hari ini ({expiry_date.strftime('%d %b %Y')})"
+                )
+                needs_fix = True
+            elif reminder.due_date == today and "3 hari lalu" in reminder.reason:
+                # Should be "hari ini" not "3 hari lalu"
+                expiry_date = reminder.due_date
+                correct_reason = (
+                    f"Membership habis hari ini ({expiry_date.strftime('%d %b %Y')})"
+                )
+                needs_fix = True
+
+            if needs_fix:
+                if not dry_run:
+                    reminder.reason = correct_reason
+                    reminder.save()
+                fixed_count += 1
+                self.stdout.write(
+                    f"  Fixed malformed reminder: {reminder.member.name} - {correct_reason}"
+                )
+
+        if fixed_count > 0:
+            self.stdout.write(f"Fixed {fixed_count} malformed reminders")

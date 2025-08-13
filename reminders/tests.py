@@ -417,6 +417,105 @@ class GenerateRemindersCommandTest(TestCase):
         member_today.delete()
         member_3_ago.delete()
 
+    def test_malformed_reminder_cleanup(self):
+        """Test that malformed reminders with wrong reason text are fixed"""
+        today = timezone.now().date()
+        old_created_date = timezone.now() - timedelta(days=30)
+
+        # Create member expiring today
+        member = Member.objects.create(
+            name="Test Member Malformed",
+            email="testmalformed@example.com",
+            phone_number="6281111111114",
+            gender="M",
+            age=25,
+            height=170.0,
+            weight=70.0,
+            years_of_working_out="1-2 years",
+            goals="Test",
+            know_mulai_gym_from="Test",
+            active_until=timezone.now().replace(hour=23, minute=59, second=59),
+        )
+        member.created_at = old_created_date
+        member.save()
+
+        # Create malformed reminder (wrong reason for due date)
+        malformed_reminder = Reminder.objects.create(
+            member=member,
+            reminder_type="MEMBERSHIP_EXPIRING",
+            reason=f"Membership habis 3 hari lagi ({member.active_until.date().strftime('%d %b %Y')})",  # Wrong!
+            due_date=today,  # Should be "hari ini" not "3 hari lagi"
+        )
+
+        # Run command to fix malformed reminders
+        out = StringIO()
+        call_command("generate_reminders", "--dry-run", stdout=out)
+        output = out.getvalue()
+
+        # Should detect and fix the malformed reminder
+        self.assertIn("Fixed malformed reminder", output)
+        self.assertIn("Membership habis hari ini", output)
+
+        # Clean up
+        member.delete()
+
+    def test_malformed_reminder_detection(self):
+        """Test that malformed reminders are detected correctly"""
+        today = timezone.now().date()
+        old_created_date = timezone.now() - timedelta(days=30)
+
+        # Create member expiring today
+        member = Member.objects.create(
+            name="Test Member Detection",
+            email="testdetection@example.com",
+            phone_number="6281111111115",
+            gender="M",
+            age=25,
+            height=170.0,
+            weight=70.0,
+            years_of_working_out="1-2 years",
+            goals="Test",
+            know_mulai_gym_from="Test",
+            active_until=timezone.now().replace(hour=23, minute=59, second=59),
+        )
+        member.created_at = old_created_date
+        member.save()
+
+        # Create multiple malformed reminders
+        malformed1 = Reminder.objects.create(
+            member=member,
+            reminder_type="MEMBERSHIP_EXPIRING",
+            reason=f"Membership habis 3 hari lagi ({member.active_until.date().strftime('%d %b %Y')})",  # Wrong!
+            due_date=today,  # Should be "hari ini" not "3 hari lagi"
+        )
+
+        malformed2 = Reminder.objects.create(
+            member=member,
+            reminder_type="MEMBERSHIP_EXPIRING",
+            reason=f"Membership habis 3 hari lalu (expired {member.active_until.date().strftime('%d %b %Y')})",  # Wrong!
+            due_date=today,  # Should be "hari ini" not "3 hari lalu"
+        )
+
+        # Check that 2 malformed reminders exist
+        malformed_count = Reminder.objects.filter(
+            member=member,
+            reminder_type="MEMBERSHIP_EXPIRING",
+            due_date=today,
+            is_resolved=False,
+        ).count()
+        self.assertEqual(malformed_count, 2)
+
+        # Run cleanup (actual execution to test the fix)
+        out = StringIO()
+        call_command("generate_reminders", stdout=out)
+        output = out.getvalue()
+
+        # Should detect and fix malformed reminders
+        self.assertIn("Fixed", output)
+
+        # Clean up
+        member.delete()
+
 
 class ReminderAdminTest(TestCase):
     def setUp(self):
