@@ -146,11 +146,13 @@ The reminder system is designed to help gym staff follow up with members at the 
   - `member`: ForeignKey (Member)
   - `reminder_type`: CharField (PAYMENT_DUE, NO_VISIT, MEMBERSHIP_EXPIRING)
   - `reason`: TextField (Human-readable explanation)
-  - `due_date`: DateField (The date this reminder is for)
+  - `due_date`: DateField (The specific date this reminder was triggered for)
   - `created_date`: DateTimeField (When reminder was created)
   - `is_resolved`: BooleanField (Whether reminder has been addressed)
   - `resolved_date`: DateTimeField (When reminder was marked resolved)
   - `mark_resolved()`: Method to mark reminder as resolved
+
+**Note**: The `due_date` field stores the actual reminder trigger date (e.g., "3 days before expiry", "on expiry day", "3 days after expiry") rather than the business due date. This ensures multiple reminder phases can be created for the same member/event without conflicts.
 
 ### Reminder Types & Logic
 
@@ -184,7 +186,7 @@ The reminder system is designed to help gym staff follow up with members at the 
 Reminders automatically resolve when conditions change:
 - **Payment**: New installment payment made
 - **No Visit**: Member visits gym
-- **Expiry**: Membership extended significantly
+- **Expiry**: Membership extended beyond the reminder date
 
 ### Admin Interface (`reminders/admin.py`)
 
@@ -673,6 +675,7 @@ The `reminders` app includes comprehensive tests for:
 - **Management Command Tests**: Auto-resolution logic, business rules (14-day member protection), and reminder generation for all three types
 - **Admin Tests**: Current reminders view, reminder history view, resolve actions, and error handling
 - **Edge Case Coverage**: New members, inactive members, duplicate prevention, and member visit patterns
+- **Multi-Phase Validation**: Comprehensive test ensuring all three phases of membership expiry reminders are generated correctly ("3 hari lagi", "hari ini", "3 hari lalu")
 
 ### Payment Tests
 The `payments` app includes comprehensive tests for:

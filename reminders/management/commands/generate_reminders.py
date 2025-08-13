@@ -69,11 +69,10 @@ class Command(BaseCommand):
                     should_resolve = True
 
             elif reminder.reminder_type == "MEMBERSHIP_EXPIRING":
-                # Resolve if member's active_until was extended after reminder
+                # Resolve if member's active_until was extended beyond the reminder date
                 if (
                     reminder.member.active_until
-                    and reminder.member.active_until.date()
-                    > reminder.due_date + timedelta(days=3)
+                    and reminder.member.active_until.date() > reminder.due_date
                 ):
                     should_resolve = True
 
@@ -127,11 +126,11 @@ class Command(BaseCommand):
 
                 for reminder_date, reason in reminder_dates:
                     if reminder_date == today:
-                        # Check if reminder already exists (with new constraint)
+                        # Check if reminder already exists for this specific date
                         existing = Reminder.objects.filter(
                             member=payment.member,
                             reminder_type="PAYMENT_DUE",
-                            due_date=next_due,
+                            due_date=reminder_date,
                         ).exists()
 
                         if not existing:
@@ -140,7 +139,7 @@ class Command(BaseCommand):
                                     member=payment.member,
                                     reminder_type="PAYMENT_DUE",
                                     reason=reason,
-                                    due_date=next_due,
+                                    due_date=reminder_date,
                                 )
                             created_count += 1
                             self.stdout.write(
@@ -219,11 +218,11 @@ class Command(BaseCommand):
 
             for reminder_date, reason in reminder_dates:
                 if reminder_date == today:
-                    # Check if reminder already exists (with new constraint)
+                    # Check if reminder already exists for this specific date
                     existing = Reminder.objects.filter(
                         member=member,
                         reminder_type="MEMBERSHIP_EXPIRING",
-                        due_date=expiry_date,
+                        due_date=reminder_date,
                     ).exists()
 
                     if not existing:
@@ -232,7 +231,7 @@ class Command(BaseCommand):
                                 member=member,
                                 reminder_type="MEMBERSHIP_EXPIRING",
                                 reason=reason,
-                                due_date=expiry_date,
+                                due_date=reminder_date,
                             )
                         created_count += 1
                         self.stdout.write(

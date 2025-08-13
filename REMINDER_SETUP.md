@@ -211,6 +211,7 @@ print('Members with recent payments:')
 ✅ Reminders appear in Django admin  
 ✅ Cron job listed in `crontab -l`  
 ✅ Daily logs show consistent execution
+✅ All three phases of membership expiry reminders working ("3 hari lagi", "hari ini", "3 hari lalu")
 
 ## Admin Panel Access
 
@@ -219,6 +220,8 @@ After setup, check your admin panel:
 - **Reminder History**: `/admin/reminders/reminder/history/`
 
 The reminders should appear automatically based on your member data and the business rules defined in the system.
+
+**Note**: The reminder system has been enhanced to ensure all three phases of membership expiry reminders are generated correctly. Previously, only "Membership habis 3 hari lagi" reminders were being created due to duplicate detection conflicts. This has been resolved by updating the `due_date` field logic to use the actual reminder trigger date rather than the business expiry date.
 
 ---
 
