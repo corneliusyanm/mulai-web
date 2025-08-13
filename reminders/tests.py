@@ -516,6 +516,51 @@ class GenerateRemindersCommandTest(TestCase):
         # Clean up
         member.delete()
 
+    def test_resolved_reminder_does_not_block_new_creation(self):
+        """Resolved reminders should not block creating a new reminder for the same date"""
+        # Setup member expiring today and older than 14 days
+        old_created_date = timezone.now() - timedelta(days=30)
+        member = Member.objects.create(
+            name="Resolved Block Test",
+            email="resolvedblock@example.com",
+            phone_number="6281111111116",
+            gender="M",
+            age=25,
+            height=170.0,
+            weight=70.0,
+            years_of_working_out="1-2 years",
+            goals="Test",
+            know_mulai_gym_from="Test",
+            active_until=timezone.now(),
+        )
+        member.created_at = old_created_date
+        member.save()
+
+        today = timezone.now().date()
+
+        # Create a resolved reminder for today (should not block)
+        Reminder.objects.create(
+            member=member,
+            reminder_type="MEMBERSHIP_EXPIRING",
+            reason=f"Membership habis hari ini ({today.strftime('%d %b %Y')})",
+            due_date=today,
+            is_resolved=True,
+            resolved_date=timezone.now(),
+        )
+
+        # Run generation in dry-run mode
+        out = StringIO()
+        call_command("generate_reminders", "--dry-run", stdout=out)
+        output = out.getvalue()
+
+        # Expect creation message for this member since resolved reminder should be ignored
+        self.assertIn(
+            "Created expiry reminder: Resolved Block Test - Membership habis hari ini",
+            output,
+        )
+
+        member.delete()
+
 
 class ReminderAdminTest(TestCase):
     def setUp(self):

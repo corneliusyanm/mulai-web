@@ -129,11 +129,12 @@ class Command(BaseCommand):
 
                 for reminder_date, reason in reminder_dates:
                     if reminder_date == today:
-                        # Check if reminder already exists for this specific date
+                        # Check if reminder already exists for this specific date (ignore resolved)
                         existing = Reminder.objects.filter(
                             member=payment.member,
                             reminder_type="PAYMENT_DUE",
                             due_date=reminder_date,
+                            is_resolved=False,
                         ).exists()
 
                         if not existing:
@@ -169,9 +170,12 @@ class Command(BaseCommand):
 
             # Only create a reminder if a last visit exists and it was exactly 14 days ago
             if last_visit and last_visit.check_in_time.date() == two_weeks_ago:
-                # For EXACT date reminders, check if a reminder already exists for this specific date
+                # For EXACT date reminders, check if a reminder already exists for this specific date (ignore resolved)
                 existing = Reminder.objects.filter(
-                    member=member, reminder_type="NO_VISIT", due_date=today
+                    member=member,
+                    reminder_type="NO_VISIT",
+                    due_date=today,
+                    is_resolved=False,
                 ).exists()
 
                 if not existing:
@@ -221,11 +225,12 @@ class Command(BaseCommand):
 
             for reminder_date, reason in reminder_dates:
                 if reminder_date == today:
-                    # Check if reminder already exists for this specific date
+                    # Check if reminder already exists for this specific date (ignore resolved)
                     existing = Reminder.objects.filter(
                         member=member,
                         reminder_type="MEMBERSHIP_EXPIRING",
                         due_date=reminder_date,
+                        is_resolved=False,
                     ).exists()
 
                     if not existing:
