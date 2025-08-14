@@ -221,7 +221,7 @@ After setup, check your admin panel:
 
 The reminders should appear automatically based on your member data and the business rules defined in the system.
 
-**Note**: The reminder system has been enhanced to ensure all three phases of membership expiry reminders are generated correctly. Previously, only "Membership habis 3 hari lagi" reminders were being created due to duplicate detection conflicts. This has been resolved by updating the `due_date` field logic to use the actual reminder trigger date rather than the business expiry date.
+**Note**: The reminder system correctly generates all three phases of membership expiry reminders ("3 hari lagi", "hari ini", "3 hari lalu") based on the actual membership expiry dates. Each reminder uses the correct trigger date as the `due_date` field.
 
 ---
 
