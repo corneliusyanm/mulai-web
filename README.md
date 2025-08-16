@@ -341,31 +341,62 @@ python manage.py generate_class_instances 7
   - Real-time filtering: `class_datetime > timezone.now()`
   - Supports multiple timezones (UTC server time vs Jakarta local time)
 
-## Payments
+## Payments & Packages
 
-### Model (`Payment`)
-- `payment_method`: CharField (TRANSFER, QRIS, CASH), default TRANSFER, blank=True.
-- `created_by`: ForeignKey (User), SET_NULL, null=True, blank=True. Automatically set in admin.
-- `membership_end_date`: Calculated in `save()`, not editable in forms.
-- `apakah_nyicil`: BooleanField, default False. Indicates if the payment is part of an installment plan.
+The payment system is designed to be highly automated and flexible, driven by a package-based architecture. This allows for precise control over membership types, durations, and billing, while minimizing manual data entry and potential for errors.
 
-### Admin (`visits/admin_init.py`)
-- **`CustomPaymentAdmin`**
-  - Uses `PaymentAdminForm`.
-  - `fieldsets` include `apakah_nyicil` but exclude `created_by`.
-  - `save_model` sets `created_by = request.user`.
-  - `payment_method` shown as dropdown.
-  - `apakah_nyicil` displayed as radio buttons (Ya/Tidak).
+### Key Features
+- **Package-Driven Logic**: All membership updates are determined by the selected `Package`.
+- **Automated Membership Updates**: Automatically extends `active_until`, `pemula_active_until`, and `semi_private_active_until` based on the package code.
+- **Intelligent Stacking**: New memberships are intelligently stacked on top of existing ones.
+- **Simplified Admin Interface**: Redundant duration fields have been removed for a cleaner, more intuitive experience.
+- **Manual Override**: A `skip_membership_update` option allows admins to bypass automatic updates for complex scenarios.
+- **Legacy Payment Handling**: Payments without a package require manual membership updates, ensuring full admin control.
 
-### Membership Duration Logic (`Payment.save()`)
-1.  **Determine Start Date**:
-    - If member active (`active_until >= today`): `start_date = member.active_until + 1 day`.
-    - If member inactive (`active_until < today` or `None`): `start_date = payment_date` (or today).
-2.  **Calculate Payment `membership_end_date`**:
-    - Based on `start_date + duration` (using `relativedelta`).
-3.  **Update Member `active_until`**:
-    - Always set `member.active_until = self.membership_end_date`.
-    - Ensures correct stacking/renewal regardless of current status.
+### Models
+- **`Package` (`payments/models.py`)**: Represents a membership or service package.
+  - `code`: A structured code that defines the package's behavior (e.g., `1-SILVER-3`).
+  - `description`: A human-readable description of the package.
+- **`Payment` (`payments/models.py`)**: Represents a transaction for a package.
+  - `package`: ForeignKey to the `Package` model.
+  - `created_by`: Automatically set to the admin who created the payment.
+  - `skip_membership_update`: A boolean to bypass automatic membership updates.
+
+### Package Code Structure
+
+The `Package` code is structured as `TYPE-LEVEL-DURATION`, which dictates how a payment affects a member's various membership expiration dates.
+
+- **`TYPE`**: A number that determines which membership fields to update.
+- **`LEVEL`**: A string that provides more detail about the package (e.g., `BRONZE`, `SILVER`, `ADD-GOLD`).
+- **`DURATION`**: A number representing the duration in months (`0` for a 1-day pass).
+
+#### Package Type Behaviors
+
+- **`0-BRONZE-*`**: Updates only `active_until`.
+- **`1-SILVER-*`**: Updates `active_until` and `pemula_active_until`.
+- **`2-GOLD-*`**: Updates `active_until` and `semi_private_active_until`.
+- **`3-PLATINUM-*`**: Updates `active_until`, `pemula_active_until`, and `semi_private_active_until`.
+- **`4-DIAMOND-*`**: Updates only `active_until`.
+- **`5-ADD-SILVER-*`**: Updates only `pemula_active_until`.
+- **`5-ADD-GOLD-*`**: Updates only `semi_private_active_until`.
+
+### Admin Interface (`visits/admin_init.py`)
+
+- **Simplified Form**: The payment form now only requires selecting a `Package`, and the system handles the rest.
+- **Improved List Display**:
+  - **Package**: Shows the full package code and description.
+  - **Membership Type**: A smart column that shows what type of membership was granted (e.g., "Gym + Pemula", "Semi Private Only").
+  - **Created By**: Correctly displays the admin who created the payment.
+- **Manual Control**:
+  - For payments without a package, the "Membership Type" column will display "Legacy - Manual Update Required".
+  - The `skip_membership_update` checkbox is available for one-off manual adjustments.
+
+### Membership Logic (`Payment.save()`)
+
+1.  **Parse Package Code**: The `save()` method first parses the package code to determine the membership type and duration.
+2.  **Calculate End Date**: It then intelligently calculates the new end date for each relevant membership, stacking it on top of any existing active period.
+3.  **Update Member**: Finally, it updates the corresponding `active_until`, `pemula_active_until`, or `semi_private_active_until` fields on the `Member` model.
+4.  **Legacy Handling**: If no package is selected, no automatic updates are made, and the admin is expected to handle it manually.
 
 ## Tamu (Guest Book)
 
@@ -709,10 +740,13 @@ The `reminders` app includes comprehensive tests for:
 - **Multi-Phase Validation**: Comprehensive test ensuring all three phases of membership expiry reminders are generated correctly ("3 hari lagi", "hari ini", "3 hari lalu")
 
 ### Payment Tests
-The `payments` app includes comprehensive tests for:
-- Payment model functionality (membership duration calculations, field defaults)
-- Admin form validation (including `apakah_nyicil` field configuration)
-- Custom duration validation logic
+The `payments` app includes a comprehensive test suite (24 tests) covering:
+- **Package-Based Logic**: Correct membership updates for all package types (BRONZE, SILVER, GOLD, PLATINUM, DIAMOND, ADD-ONs).
+- **Membership Stacking**: Ensures new memberships correctly stack on top of existing ones.
+- **Legacy Payments**: Payments without packages require manual admin updates and do not auto-update memberships.
+- **Skip Update Feature**: The `skip_membership_update` flag correctly bypasses automatic updates.
+- **Admin Form**: The simplified admin form is validated.
+- **`created_by` Field**: The `created_by` field is correctly populated on creation.
 
 ### Analytics Tests
 The `visits` app includes comprehensive analytics tests for:
