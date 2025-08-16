@@ -88,3 +88,6 @@ yarn-error.log*
 # System Files
 .DS_Store
 Thumbs.db
+
+
+qr/generated_qr/
