@@ -235,6 +235,7 @@ Comprehensive test suite covering:
 - **Command Tests**: All reminder types, business rules, auto-resolution
 - **Admin Tests**: Views, resolve actions, error handling
 - **Edge Cases**: New members, inactive members, duplicate prevention
+- **Multi-Phase Validation**: Comprehensive test ensuring all three phases of membership expiry reminders are generated correctly ("3 hari lagi", "hari ini", "3 hari lalu")
 
 ### Usage Workflow
 
@@ -459,6 +460,24 @@ The `Package` code is structured as `TYPE-LEVEL-DURATION`, which dictates how a 
   - Page-level: 4-hour cache for entire equipment list page
   - Data-level: 12-hour cache for equipment data
   - Cache invalidation: Automatic when equipment is modified via admin
+
+### View Analytics & Insights
+
+To understand which equipment guides are most popular, a view tracking system has been implemented with the following features:
+
+- **View Counters**: The `Equipment` model now tracks:
+  - `total_views`: The total number of times a guide has been viewed.
+  - `authenticated_views`: Views from logged-in members.
+  - `anonymous_views`: Views from anonymous visitors.
+
+- **Smart Bot Detection**: A robust bot detection mechanism is in place to ensure data accuracy. It filters out traffic from over 25 common patterns associated with bots, crawlers, and scrapers (e.g., `Googlebot`, `curl`, `python-requests`, `scrapy`).
+
+- **24-Hour Cooldown**: To provide meaningful analytics on unique daily views, a 24-hour cooldown is applied. A user's repeat view of the same equipment guide is only counted once every 24 hours, preventing spam from rapid page reloads.
+
+- **Admin Dashboard**: The equipment admin interface has been enhanced to display these analytics:
+  - **Popularity Ranking**: Equipment is now sorted by `total_views` by default, showing the most popular guides at the top.
+  - **Member Engagement**: A new "Member Engagement" column calculates the percentage of views that come from authenticated members.
+  - **Detailed Analytics**: The edit page for each equipment now includes a collapsible "Analytics" section showing the raw view counts.
 
 ## Products & Sales
 
@@ -757,6 +776,13 @@ The `visits` app includes comprehensive analytics tests for:
 - **Revenue Projections**: Financial forecasting and package-based calculations
 - **Export Features**: CSV generation and data integrity validation
 - **Error Handling**: Invalid date formats and permission-denied scenarios
+
+### Equipment Tests
+The `equipment` app includes tests for the view analytics system:
+- **Model Tests**: Correct initialization of view counters and atomic updates via `increment_view_count()`.
+- **Bot Detection**: Validates that over 25 bot patterns are correctly identified and that legitimate browser user agents are ignored.
+- **View Counting Logic**: Ensures the 24-hour cooldown works correctly and that bots are not counted.
+- **Integration Tests**: Full end-to-end tests verifying that page visits correctly trigger view count increments for both anonymous and authenticated users.
 
 ### Running Tests
 

@@ -1,6 +1,9 @@
-from django.test import TestCase
+from django.test import TestCase, RequestFactory
 from django.urls import reverse
+from django.contrib.sessions.middleware import SessionMiddleware
 from .models import Equipment
+from .views import is_likely_bot, should_count_view
+import time
 
 
 class EquipmentModelTest(TestCase):
@@ -108,3 +111,289 @@ class EquipmentViewsTest(TestCase):
             reverse("equipment:detail", kwargs={"slug": "non-existent-slug"})
         )
         self.assertEqual(response.status_code, 404)
+
+
+class EquipmentAnalyticsTest(TestCase):
+    def setUp(self):
+        self.equipment = Equipment.objects.create(
+            name="Test Equipment",
+            muscle_group="Test",
+            video_link="https://www.youtube.com/watch?v=test123",
+        )
+        self.factory = RequestFactory()
+
+    def test_initial_view_counts(self):
+        """Test that equipment is created with zero view counts."""
+        self.assertEqual(self.equipment.total_views, 0)
+        self.assertEqual(self.equipment.authenticated_views, 0)
+        self.assertEqual(self.equipment.anonymous_views, 0)
+
+    def test_increment_view_count_authenticated(self):
+        """Test incrementing view count for authenticated users."""
+        self.equipment.increment_view_count(is_authenticated=True)
+
+        # Refresh from database
+        self.equipment.refresh_from_db()
+
+        self.assertEqual(self.equipment.total_views, 1)
+        self.assertEqual(self.equipment.authenticated_views, 1)
+        self.assertEqual(self.equipment.anonymous_views, 0)
+
+    def test_increment_view_count_anonymous(self):
+        """Test incrementing view count for anonymous users."""
+        self.equipment.increment_view_count(is_authenticated=False)
+
+        # Refresh from database
+        self.equipment.refresh_from_db()
+
+        self.assertEqual(self.equipment.total_views, 1)
+        self.assertEqual(self.equipment.authenticated_views, 0)
+        self.assertEqual(self.equipment.anonymous_views, 1)
+
+    def test_increment_view_count_multiple(self):
+        """Test multiple view count increments."""
+        # 2 authenticated views
+        self.equipment.increment_view_count(is_authenticated=True)
+        self.equipment.increment_view_count(is_authenticated=True)
+
+        # 3 anonymous views
+        self.equipment.increment_view_count(is_authenticated=False)
+        self.equipment.increment_view_count(is_authenticated=False)
+        self.equipment.increment_view_count(is_authenticated=False)
+
+        # Refresh from database
+        self.equipment.refresh_from_db()
+
+        self.assertEqual(self.equipment.total_views, 5)
+        self.assertEqual(self.equipment.authenticated_views, 2)
+        self.assertEqual(self.equipment.anonymous_views, 3)
+
+
+class BotDetectionTest(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+
+    def test_bot_detection_common_bots(self):
+        """Test detection of common bot user agents."""
+        bot_user_agents = [
+            "Googlebot/2.1",
+            "Mozilla/5.0 (compatible; bingbot/2.0)",
+            "facebookexternalhit/1.1",
+            "Twitterbot/1.0",
+            "python-requests/2.25.1",
+            "curl/7.68.0",
+            "Wget/1.20.3",
+            "bot crawler spider",
+            "scrapy/2.5.0",
+        ]
+
+        for user_agent in bot_user_agents:
+            request = self.factory.get("/")
+            request.META["HTTP_USER_AGENT"] = user_agent
+            self.assertTrue(
+                is_likely_bot(request), f"Failed to detect bot: {user_agent}"
+            )
+
+    def test_bot_detection_legitimate_browsers(self):
+        """Test that legitimate browser user agents are not flagged as bots."""
+        legitimate_user_agents = [
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.1 Mobile/15E148 Safari/604.1",
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+        ]
+
+        for user_agent in legitimate_user_agents:
+            request = self.factory.get("/")
+            request.META["HTTP_USER_AGENT"] = user_agent
+            self.assertFalse(
+                is_likely_bot(request), f"Incorrectly flagged as bot: {user_agent}"
+            )
+
+    def test_bot_detection_short_user_agent(self):
+        """Test that suspiciously short user agents are flagged as bots."""
+        request = self.factory.get("/")
+        request.META["HTTP_USER_AGENT"] = "short"  # Less than 10 characters
+        self.assertTrue(is_likely_bot(request))
+
+    def test_bot_detection_missing_user_agent(self):
+        """Test that missing user agent is flagged as bot."""
+        request = self.factory.get("/")
+        # Don't set HTTP_USER_AGENT
+        self.assertTrue(is_likely_bot(request))
+
+
+class ViewCountingLogicTest(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.equipment = Equipment.objects.create(
+            name="Test Equipment",
+            muscle_group="Test",
+            video_link="https://www.youtube.com/watch?v=test123",
+        )
+
+    def add_session_to_request(self, request):
+        """Helper method to add session support to request."""
+        middleware = SessionMiddleware(lambda r: None)
+        middleware.process_request(request)
+        request.session.save()
+
+    def test_should_count_view_normal_user(self):
+        """Test that normal users get their views counted."""
+        request = self.factory.get("/")
+        request.META["HTTP_USER_AGENT"] = "Mozilla/5.0 (Chrome/91.0) Normal Browser"
+        self.add_session_to_request(request)
+
+        result = should_count_view(request, self.equipment.slug)
+        self.assertTrue(result)
+
+    def test_should_count_view_bot_user(self):
+        """Test that bot users don't get their views counted."""
+        request = self.factory.get("/")
+        request.META["HTTP_USER_AGENT"] = "Googlebot/2.1"
+        self.add_session_to_request(request)
+
+        result = should_count_view(request, self.equipment.slug)
+        self.assertFalse(result)
+
+    def test_should_count_view_time_based_deduplication(self):
+        """Test time-based deduplication with custom cooldown."""
+        request = self.factory.get("/")
+        request.META["HTTP_USER_AGENT"] = "Mozilla/5.0 (Chrome/91.0) Normal Browser"
+        self.add_session_to_request(request)
+
+        # First view should be counted
+        result1 = should_count_view(request, self.equipment.slug, cooldown_hours=1)
+        self.assertTrue(result1)
+
+        # Second view within cooldown should not be counted
+        result2 = should_count_view(request, self.equipment.slug, cooldown_hours=1)
+        self.assertFalse(result2)
+
+    def test_should_count_view_after_cooldown(self):
+        """Test that views are counted again after cooldown expires."""
+        request = self.factory.get("/")
+        request.META["HTTP_USER_AGENT"] = "Mozilla/5.0 (Chrome/91.0) Normal Browser"
+        self.add_session_to_request(request)
+
+        # Set a very short cooldown for testing
+        result1 = should_count_view(
+            request, self.equipment.slug, cooldown_hours=0.001
+        )  # ~3.6 seconds
+        self.assertTrue(result1)
+
+        # Simulate time passing by manually setting an old timestamp
+        session_key = f"viewed_equipment_{self.equipment.slug}_last_time"
+        old_time = time.time() - (0.001 * 60 * 60) - 1  # Just past cooldown
+        request.session[session_key] = old_time
+
+        # View should be counted again
+        result2 = should_count_view(request, self.equipment.slug, cooldown_hours=0.001)
+        self.assertTrue(result2)
+
+    def test_should_count_view_different_equipment(self):
+        """Test that different equipment can be viewed by same user."""
+        request = self.factory.get("/")
+        request.META["HTTP_USER_AGENT"] = "Mozilla/5.0 (Chrome/91.0) Normal Browser"
+        self.add_session_to_request(request)
+
+        equipment2 = Equipment.objects.create(
+            name="Another Equipment",
+            muscle_group="Test",
+            video_link="https://www.youtube.com/watch?v=test456",
+        )
+
+        # Both should be counted
+        result1 = should_count_view(request, self.equipment.slug)
+        result2 = should_count_view(request, equipment2.slug)
+
+        self.assertTrue(result1)
+        self.assertTrue(result2)
+
+
+class EquipmentDetailViewAnalyticsTest(TestCase):
+    def setUp(self):
+        self.equipment = Equipment.objects.create(
+            name="Bench Press",
+            muscle_group="Chest",
+            video_link="https://www.youtube.com/watch?v=bench123",
+        )
+
+    def test_equipment_detail_view_increments_anonymous_count(self):
+        """Test that visiting equipment detail increments anonymous view count."""
+        # Simulate anonymous user
+        response = self.client.get(
+            reverse("equipment:detail", kwargs={"slug": self.equipment.slug}),
+            HTTP_USER_AGENT="Mozilla/5.0 (Chrome/91.0) Normal Browser",
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        # Refresh from database
+        self.equipment.refresh_from_db()
+
+        self.assertEqual(self.equipment.total_views, 1)
+        self.assertEqual(self.equipment.anonymous_views, 1)
+        self.assertEqual(self.equipment.authenticated_views, 0)
+
+    def test_equipment_detail_view_increments_authenticated_count(self):
+        """Test that visiting equipment detail increments authenticated view count."""
+        # Simulate authenticated member by setting session
+        session = self.client.session
+        session["member_email"] = "test@example.com"
+        session.save()
+
+        response = self.client.get(
+            reverse("equipment:detail", kwargs={"slug": self.equipment.slug}),
+            HTTP_USER_AGENT="Mozilla/5.0 (Chrome/91.0) Normal Browser",
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        # Refresh from database
+        self.equipment.refresh_from_db()
+
+        self.assertEqual(self.equipment.total_views, 1)
+        self.assertEqual(self.equipment.authenticated_views, 1)
+        self.assertEqual(self.equipment.anonymous_views, 0)
+
+    def test_equipment_detail_view_bot_not_counted(self):
+        """Test that bot visits are not counted."""
+        response = self.client.get(
+            reverse("equipment:detail", kwargs={"slug": self.equipment.slug}),
+            HTTP_USER_AGENT="Googlebot/2.1",
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        # Refresh from database
+        self.equipment.refresh_from_db()
+
+        # Should remain at 0 since bot visit was not counted
+        self.assertEqual(self.equipment.total_views, 0)
+        self.assertEqual(self.equipment.authenticated_views, 0)
+        self.assertEqual(self.equipment.anonymous_views, 0)
+
+    def test_equipment_detail_view_duplicate_not_counted(self):
+        """Test that duplicate visits within cooldown are not counted."""
+        # First visit
+        response1 = self.client.get(
+            reverse("equipment:detail", kwargs={"slug": self.equipment.slug}),
+            HTTP_USER_AGENT="Mozilla/5.0 (Chrome/91.0) Normal Browser",
+        )
+        self.assertEqual(response1.status_code, 200)
+
+        # Second visit (should not be counted due to session tracking)
+        response2 = self.client.get(
+            reverse("equipment:detail", kwargs={"slug": self.equipment.slug}),
+            HTTP_USER_AGENT="Mozilla/5.0 (Chrome/91.0) Normal Browser",
+        )
+        self.assertEqual(response2.status_code, 200)
+
+        # Refresh from database
+        self.equipment.refresh_from_db()
+
+        # Should only count once
+        self.assertEqual(self.equipment.total_views, 1)
+        self.assertEqual(self.equipment.anonymous_views, 1)
+        self.assertEqual(self.equipment.authenticated_views, 0)

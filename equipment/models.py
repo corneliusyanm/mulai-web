@@ -11,6 +11,17 @@ class Equipment(models.Model):
     muscle_group = models.CharField(max_length=50, blank=True)
     detailed_muscle_group = models.CharField(max_length=100, blank=True)
 
+    # View analytics
+    total_views = models.PositiveIntegerField(
+        default=0, help_text="Total number of page views"
+    )
+    authenticated_views = models.PositiveIntegerField(
+        default=0, help_text="Views from logged-in users"
+    )
+    anonymous_views = models.PositiveIntegerField(
+        default=0, help_text="Views from anonymous users"
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -56,6 +67,29 @@ class Equipment(models.Model):
         if video_id:
             return f"https://img.youtube.com/vi/{video_id}/{quality}.jpg"
         return None
+
+    def increment_view_count(self, is_authenticated=False):
+        """
+        Increment the view count for this equipment.
+        Uses F() expression to avoid race conditions.
+        """
+        from django.db.models import F
+
+        if is_authenticated:
+            Equipment.objects.filter(pk=self.pk).update(
+                total_views=F("total_views") + 1,
+                authenticated_views=F("authenticated_views") + 1,
+            )
+        else:
+            Equipment.objects.filter(pk=self.pk).update(
+                total_views=F("total_views") + 1,
+                anonymous_views=F("anonymous_views") + 1,
+            )
+
+        # Refresh the instance to get updated values
+        self.refresh_from_db(
+            fields=["total_views", "authenticated_views", "anonymous_views"]
+        )
 
     def __str__(self):
         return self.name
