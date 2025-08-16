@@ -26,27 +26,24 @@ class PaymentModelTest(TestCase):
             know_mulai_gym_from="friends",
         )
 
-    def test_payment_for_new_member(self):
+    def test_payment_for_new_member_without_package(self):
         """
-        Test creating a payment for a new member.
-        The active_until date should be based on the payment date.
+        Test creating a payment for a new member without package.
+        Should NOT auto-update membership - admin handles manually.
         """
         payment_date = timezone.now()
         payment = Payment.objects.create(
             member=self.member,
             amount=150000,
             payment_date=payment_date,
-            duration_choice=30,  # 1 Month
-        )
-        expected_end_date = (
-            payment_date.date() + relativedelta(months=1) - timedelta(days=1)
         )
         self.member.refresh_from_db()
-        self.assertEqual(self.member.active_until.date(), expected_end_date)
+        # No package = no auto-update, admin handles manually
+        self.assertIsNone(self.member.active_until)
 
-    def test_payment_for_active_member(self):
+    def test_payment_for_active_member_without_package(self):
         """
-        Test that a new payment for an active member stacks the duration.
+        Test that a payment without package for an active member doesn't auto-update.
         """
         # Make the member active
         initial_end_date = timezone.now() + timedelta(days=15)
@@ -57,24 +54,20 @@ class PaymentModelTest(TestCase):
             member=self.member,
             amount=150000,
             payment_date=timezone.now(),
-            duration_choice=30,  # 1 Month
-        )
-
-        expected_start_date = initial_end_date.date() + timedelta(days=1)
-        expected_end_date = (
-            expected_start_date + relativedelta(months=1) - timedelta(days=1)
         )
 
         self.member.refresh_from_db()
-        self.assertEqual(self.member.active_until.date(), expected_end_date)
+        # Should remain unchanged - no auto-update without package
+        self.assertEqual(self.member.active_until, initial_end_date)
 
-    def test_payment_for_expired_member(self):
+    def test_payment_for_expired_member_without_package(self):
         """
-        Test payment for a member whose membership has expired.
-        The new period should start from the payment date.
+        Test payment for a member whose membership has expired without package.
+        Should NOT auto-update - admin handles manually.
         """
         # Set a past active_until date
-        self.member.active_until = timezone.now() - timedelta(days=10)
+        expired_date = timezone.now() - timedelta(days=10)
+        self.member.active_until = expired_date
         self.member.save()
 
         payment_date = timezone.now()
@@ -82,34 +75,28 @@ class PaymentModelTest(TestCase):
             member=self.member,
             amount=150000,
             payment_date=payment_date,
-            duration_choice=30,  # 1 Month
-        )
-
-        expected_end_date = (
-            payment_date.date() + relativedelta(months=1) - timedelta(days=1)
         )
 
         self.member.refresh_from_db()
-        self.assertEqual(self.member.active_until.date(), expected_end_date)
+        # Should remain expired - no auto-update without package
+        self.assertEqual(self.member.active_until, expired_date)
 
-    def test_payment_with_custom_duration(self):
+    def test_payment_without_package_no_auto_update(self):
         """
-        Test payment with a custom duration in days.
+        Test payment without package doesn't auto-update membership.
         """
         payment_date = timezone.now()
-        custom_days = 45
         payment = Payment.objects.create(
             member=self.member,
             amount=200000,
             payment_date=payment_date,
-            duration_choice=0,  # Custom
-            duration_days=custom_days,
         )
 
-        expected_end_date = payment_date.date() + timedelta(days=custom_days - 1)
-
         self.member.refresh_from_db()
-        self.assertEqual(self.member.active_until.date(), expected_end_date)
+        # No package = no auto-update, admin handles manually
+        self.assertIsNone(self.member.active_until)
+        # Payment should have membership_end_date set for tracking
+        self.assertEqual(payment.membership_end_date.date(), payment_date.date())
 
     def test_payment_apakah_nyicil_default_false(self):
         """
@@ -119,7 +106,6 @@ class PaymentModelTest(TestCase):
             member=self.member,
             amount=150000,
             payment_date=timezone.now(),
-            duration_choice=30,
         )
         self.assertFalse(payment.apakah_nyicil)
 
@@ -131,7 +117,6 @@ class PaymentModelTest(TestCase):
             member=self.member,
             amount=150000,
             payment_date=timezone.now(),
-            duration_choice=30,
             apakah_nyicil=True,
         )
         self.assertTrue(payment.apakah_nyicil)
@@ -198,7 +183,6 @@ class PaymentAdminFormTest(TestCase):
             member=self.member,
             package=self.package,
             amount=150000,
-            duration_choice=30,
             payment_date=timezone.now(),
             payment_method="TRANSFER",
             apakah_nyicil=True,
@@ -474,16 +458,18 @@ class PackageBasedPaymentTest(TestCase):
         self.assertFalse(payment.skip_membership_update)
 
     def test_legacy_fallback_when_no_package(self):
-        """Test that payments without packages fall back to old logic"""
+        """Test that payments without packages don't auto-update memberships (manual admin update required)"""
         payment = Payment.objects.create(
             member=self.member,
             amount=400000,
             payment_date=timezone.now(),
-            duration_choice=30,  # 1 month
         )
 
         self.member.refresh_from_db()
-        self.assertIsNotNone(self.member.active_until)
-        # Should use legacy logic - only update active_until
+        # Legacy payments should NOT auto-update any memberships - admin handles manually
+        self.assertIsNone(self.member.active_until)
         self.assertIsNone(self.member.pemula_active_until)
         self.assertIsNone(self.member.semi_private_active_until)
+
+        # Payment should have membership_end_date set to payment_date for tracking
+        self.assertIsNotNone(payment.membership_end_date)

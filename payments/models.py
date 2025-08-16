@@ -21,15 +21,6 @@ class Package(models.Model):
 
 
 class Payment(models.Model):
-    DURATION_CHOICES = [
-        (1, "1 Day"),
-        (30, "1 Month"),
-        (90, "3 Months"),
-        (180, "6 Months"),
-        (365, "12 Months"),
-        (0, "Custom"),  # For custom duration input
-    ]
-
     PAYMENT_METHOD_CHOICES = [
         ("TRANSFER", "Transfer"),
         ("QRIS", "QRIS"),
@@ -42,10 +33,6 @@ class Payment(models.Model):
     )
     amount = models.DecimalField(max_digits=12, decimal_places=0)  # Changed for Rupiah
     payment_date = models.DateTimeField(default=timezone.now)
-    duration_choice = models.IntegerField(choices=DURATION_CHOICES, default=30)
-    duration_days = models.IntegerField(
-        help_text="Custom duration in days", null=True, blank=True
-    )
     membership_end_date = models.DateTimeField(
         editable=False
     )  # Make it not editable in forms
@@ -238,45 +225,16 @@ class Payment(models.Model):
             self.member.save(update_fields=member_fields_to_update)
 
     def update_legacy_membership(self):
-        """Fallback to old logic when no package is specified"""
-        today = timezone.now().date()
-        start_date = None
+        """Fallback logic when no package is specified - admin must update manually"""
+        # For legacy payments without packages, don't auto-update memberships
+        # Admin should handle membership updates manually
 
-        # Determine start date based on member's current status
-        if self.member.active_until and self.member.active_until.date() >= today:
-            # Member is active, start new period after current one ends
-            start_date = self.member.active_until.date() + timedelta(days=1)
-        else:
-            # Member is inactive or has no active_until, start from payment date
-            start_date = self.payment_date.date() if self.payment_date else today
+        # Just set a default membership_end_date for tracking purposes
+        if not self.membership_end_date:
+            # Set membership_end_date to payment_date for tracking (not used for actual membership)
+            self.membership_end_date = self.payment_date
 
-        # Calculate end date based on duration choice and start_date
-        end_date = start_date
-        end_time = datetime.max.time()  # Default to end of day
-
-        if self.duration_choice == 1:  # 1 Day
-            end_date = start_date
-        elif self.duration_choice == 30:  # 1 Month
-            end_date = start_date + relativedelta(months=1) - timedelta(days=1)
-        elif self.duration_choice == 90:  # 3 Months
-            end_date = start_date + relativedelta(months=3) - timedelta(days=1)
-        elif self.duration_choice == 180:  # 6 Months
-            end_date = start_date + relativedelta(months=6) - timedelta(days=1)
-        elif self.duration_choice == 365:  # 12 Months
-            end_date = start_date + relativedelta(months=12) - timedelta(days=1)
-        elif self.duration_choice == 0 and self.duration_days:  # Custom
-            end_date = start_date + timedelta(days=self.duration_days - 1)
-        else:
-            end_date = start_date
-
-        # Set the membership end date
-        self.membership_end_date = timezone.make_aware(
-            datetime.combine(end_date, end_time)
-        )
-
-        # Update member's active_until
-        self.member.active_until = self.membership_end_date
-        self.member.save(update_fields=["active_until"])
+        # No automatic member field updates - admin handles manually
 
     def save(self, *args, **kwargs):
         # Only calculate membership end date for new payments or if explicitly needed

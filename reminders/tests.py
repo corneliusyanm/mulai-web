@@ -216,7 +216,6 @@ class GenerateRemindersCommandTest(TestCase):
             amount=500000,
             payment_date=payment_date,
             apakah_nyicil=True,
-            duration_choice=30,
         )
 
         out = StringIO()
@@ -236,7 +235,6 @@ class GenerateRemindersCommandTest(TestCase):
             amount=500000,
             payment_date=payment_date,
             apakah_nyicil=True,
-            duration_choice=30,
         )
 
         out = StringIO()
@@ -292,7 +290,6 @@ class GenerateRemindersCommandTest(TestCase):
             amount=500000,
             payment_date=timezone.now(),
             apakah_nyicil=True,
-            duration_choice=30,
         )
 
         out = StringIO()

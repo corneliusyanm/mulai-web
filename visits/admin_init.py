@@ -64,14 +64,14 @@ if not admin_site._registry.get(Payment):
         form = PaymentAdminForm
         list_display = (
             "member",
-            "get_package_code",
+            "get_package_display",
             "formatted_amount",
-            "get_duration_display",
             "formatted_payment_date",
             "formatted_membership_end",
             "membership_status",
             "payment_method",
-            "created_by",
+            "get_membership_types_updated",
+            "get_created_by_display",
         )
         list_filter = ("payment_date", "payment_method", "package")
         search_fields = ("member__email", "member__name", "member__phone_number")
@@ -95,19 +95,43 @@ if not admin_site._registry.get(Payment):
             ),
         )
 
-        def get_package_code(self, obj):
+        def get_package_display(self, obj):
             if obj.package:
-                return obj.package.code
-            return "-"
+                return f"{obj.package.code} - {obj.package.description}"
+            return "No Package"
 
-        get_package_code.short_description = "Package"
+        get_package_display.short_description = "Package"
 
-        def get_duration_display(self, obj):
-            if obj.duration_choice == 0:
-                return f"{obj.duration_days} days (Custom)"
-            return dict(Payment.DURATION_CHOICES).get(obj.duration_choice)
+        def get_membership_types_updated(self, obj):
+            if obj.skip_membership_update:
+                return "Skipped"
 
-        get_duration_display.short_description = "Duration"
+            if not obj.package:
+                return "Legacy"
+
+            type_num, level, _ = obj.parse_package_code()
+
+            if type_num == "0":  # BRONZE
+                return "Gym"
+            elif type_num == "1":  # SILVER
+                return "Gym + Pemula"
+            elif type_num == "2":  # GOLD
+                return "Gym + Semi Private"
+            elif type_num == "3":  # PLATINUM
+                return "Gym + All Classes"
+            elif type_num == "4":  # DIAMOND
+                return "Gym + PT"
+            elif type_num == "5":  # ADD-ON
+                if "SILVER" in level:
+                    return "Pemula Only"
+                elif "GOLD" in level:
+                    return "Semi Private Only"
+                elif "DIAMOND" in level:
+                    return "PT Only"
+
+            return "Unknown"
+
+        get_membership_types_updated.short_description = "Membership Type"
 
         def formatted_amount(self, obj):
             return f"Rp {obj.amount:,.0f}"
@@ -134,9 +158,17 @@ if not admin_site._registry.get(Payment):
 
         membership_status.short_description = "Status"
 
+        def get_created_by_display(self, obj):
+            if obj.created_by:
+                return obj.created_by.username
+            return "Unknown"
+
+        get_created_by_display.short_description = "Created By"
+
         def save_model(self, request, obj, form, change):
-            # Always set created_by to current user
-            obj.created_by = request.user
+            # Set created_by to current user only on creation (not on updates)
+            if not change:  # This means it's a new object being created
+                obj.created_by = request.user
             super().save_model(request, obj, form, change)
 
         class Media:
