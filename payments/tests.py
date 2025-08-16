@@ -167,11 +167,10 @@ class PaymentAdminFormTest(TestCase):
             "member",
             "package",
             "amount",
-            "duration_choice",
-            "duration_days",
             "payment_date",
             "payment_method",
             "apakah_nyicil",
+            "skip_membership_update",
             "notes",
         ]
         for field in expected_fields:
@@ -213,35 +212,278 @@ class PaymentAdminFormTest(TestCase):
         )
         self.assertEqual(form.initial["apakah_nyicil"], True)
 
-    def test_payment_admin_form_custom_duration_validation(self):
+    def test_payment_admin_form_skip_membership_update_configuration(self):
         """
-        Test that custom duration validation logic works.
+        Test that skip_membership_update field is properly configured.
         """
         form = PaymentAdminForm()
+        skip_field = form.fields["skip_membership_update"]
 
-        # Test the clean method directly with mock data
-        cleaned_data = {
-            "duration_choice": 0,  # Custom
-            "duration_days": None,
-            "member": self.member,
-            "package": self.package,
-            "amount": 150000,
-            "payment_method": "TRANSFER",
-            "apakah_nyicil": False,
-        }
+        self.assertEqual(skip_field.label, "Skip otomatis update membership?")
+        self.assertEqual(
+            skip_field.help_text, "Jika Ya, admin harus update membership secara manual"
+        )
+        self.assertEqual(skip_field.initial, False)
+        self.assertEqual(skip_field.widget.choices, [(True, "Ya"), (False, "Tidak")])
 
-        # Manually set the cleaned_data and test validation
-        form.cleaned_data = cleaned_data
-        try:
-            result = form.clean()
-            # If no exception, the validation passed incorrectly
-            self.fail("Expected validation error for missing duration_days")
-        except Exception:
-            # Expected behavior - validation should fail
-            pass
 
-        # Test valid case
-        cleaned_data["duration_days"] = 45
-        form.cleaned_data = cleaned_data
-        result = form.clean()
-        self.assertEqual(result, cleaned_data)  # Should return cleaned data
+class PackageBasedPaymentTest(TestCase):
+    def setUp(self):
+        self.member = Member.objects.create(
+            name="Test Member",
+            email="test@example.com",
+            phone_number="6281234567890",
+            gender="M",
+            age=25,
+            height=170,
+            weight=65,
+            years_of_working_out="1",
+            goals="To be healthy",
+            know_mulai_gym_from="friends",
+        )
+
+        # Create test packages
+        self.bronze_1_month = Package.objects.create(
+            code="0-BRONZE-1", default_price=400000, description="Gym Reguler 1 bulan"
+        )
+        self.silver_3_months = Package.objects.create(
+            code="1-SILVER-3",
+            default_price=1750000,
+            description="Gym + Kelas Pemula 3 bulan",
+        )
+        self.gold_6_months = Package.objects.create(
+            code="2-GOLD-6",
+            default_price=4380000,
+            description="Gym + Semi Private 6 bulan",
+        )
+        self.platinum_1_month = Package.objects.create(
+            code="3-PLATINUM-1",
+            default_price=930000,
+            description="Gym + All In 1 bulan",
+        )
+        self.diamond_2_months = Package.objects.create(
+            code="4-DIAMOND-2",
+            default_price=3070000,
+            description="Gym + PT 1on1 2 bulan",
+        )
+        self.add_silver_1_month = Package.objects.create(
+            code="5-ADD-SILVER-1",
+            default_price=300000,
+            description="Kelas Pemula aja 1 bulan",
+        )
+        self.add_gold_3_months = Package.objects.create(
+            code="5-ADD-GOLD-3",
+            default_price=1500000,
+            description="Kelas Semi Private aja 3 bulan",
+        )
+        self.bronze_1_day = Package.objects.create(
+            code="0-BRONZE-0", default_price=75000, description="Gym Reguler 1x visit"
+        )
+
+    def test_parse_package_code(self):
+        """Test package code parsing functionality"""
+        payment = Payment(package=self.bronze_1_month)
+        type_num, level, duration = payment.parse_package_code()
+        self.assertEqual(type_num, "0")
+        self.assertEqual(level, "BRONZE")
+        self.assertEqual(duration, "1")
+
+        payment = Payment(package=self.add_silver_1_month)
+        type_num, level, duration = payment.parse_package_code()
+        self.assertEqual(type_num, "5")
+        self.assertEqual(level, "ADD-SILVER")
+        self.assertEqual(duration, "1")
+
+    def test_get_duration_from_package(self):
+        """Test duration extraction from package codes"""
+        payment = Payment(package=self.bronze_1_month)
+        duration = payment.get_duration_from_package()
+        self.assertEqual(duration, 1)  # 1 month
+
+        payment = Payment(package=self.bronze_1_day)
+        duration = payment.get_duration_from_package()
+        self.assertEqual(duration, 0)  # 1 day (0 months)
+
+        payment = Payment(package=self.silver_3_months)
+        duration = payment.get_duration_from_package()
+        self.assertEqual(duration, 3)  # 3 months
+
+    def test_bronze_package_updates_only_active_until(self):
+        """Test that BRONZE packages only update active_until"""
+        payment = Payment.objects.create(
+            member=self.member,
+            package=self.bronze_1_month,
+            amount=400000,
+            payment_date=timezone.now(),
+        )
+
+        self.member.refresh_from_db()
+        self.assertIsNotNone(self.member.active_until)
+        self.assertIsNone(self.member.pemula_active_until)
+        self.assertIsNone(self.member.semi_private_active_until)
+
+    def test_silver_package_updates_active_and_pemula(self):
+        """Test that SILVER packages update active_until and pemula_active_until"""
+        payment = Payment.objects.create(
+            member=self.member,
+            package=self.silver_3_months,
+            amount=1750000,
+            payment_date=timezone.now(),
+        )
+
+        self.member.refresh_from_db()
+        self.assertIsNotNone(self.member.active_until)
+        self.assertIsNotNone(self.member.pemula_active_until)
+        self.assertIsNone(self.member.semi_private_active_until)
+
+    def test_gold_package_updates_active_and_semi_private(self):
+        """Test that GOLD packages update active_until and semi_private_active_until"""
+        payment = Payment.objects.create(
+            member=self.member,
+            package=self.gold_6_months,
+            amount=4380000,
+            payment_date=timezone.now(),
+        )
+
+        self.member.refresh_from_db()
+        self.assertIsNotNone(self.member.active_until)
+        self.assertIsNone(self.member.pemula_active_until)
+        self.assertIsNotNone(self.member.semi_private_active_until)
+
+    def test_platinum_package_updates_all_memberships(self):
+        """Test that PLATINUM packages update all membership types"""
+        payment = Payment.objects.create(
+            member=self.member,
+            package=self.platinum_1_month,
+            amount=930000,
+            payment_date=timezone.now(),
+        )
+
+        self.member.refresh_from_db()
+        self.assertIsNotNone(self.member.active_until)
+        self.assertIsNotNone(self.member.pemula_active_until)
+        self.assertIsNotNone(self.member.semi_private_active_until)
+
+    def test_diamond_package_updates_only_active_until(self):
+        """Test that DIAMOND packages only update active_until"""
+        payment = Payment.objects.create(
+            member=self.member,
+            package=self.diamond_2_months,
+            amount=3070000,
+            payment_date=timezone.now(),
+        )
+
+        self.member.refresh_from_db()
+        self.assertIsNotNone(self.member.active_until)
+        self.assertIsNone(self.member.pemula_active_until)
+        self.assertIsNone(self.member.semi_private_active_until)
+
+    def test_add_silver_package_updates_only_pemula(self):
+        """Test that ADD-SILVER packages only update pemula_active_until"""
+        payment = Payment.objects.create(
+            member=self.member,
+            package=self.add_silver_1_month,
+            amount=300000,
+            payment_date=timezone.now(),
+        )
+
+        self.member.refresh_from_db()
+        self.assertIsNone(self.member.active_until)
+        self.assertIsNotNone(self.member.pemula_active_until)
+        self.assertIsNone(self.member.semi_private_active_until)
+
+    def test_add_gold_package_updates_only_semi_private(self):
+        """Test that ADD-GOLD packages only update semi_private_active_until"""
+        payment = Payment.objects.create(
+            member=self.member,
+            package=self.add_gold_3_months,
+            amount=1500000,
+            payment_date=timezone.now(),
+        )
+
+        self.member.refresh_from_db()
+        self.assertIsNone(self.member.active_until)
+        self.assertIsNone(self.member.pemula_active_until)
+        self.assertIsNotNone(self.member.semi_private_active_until)
+
+    def test_one_day_package_duration(self):
+        """Test that packages with -0 duration create 1-day memberships"""
+        payment_date = timezone.now()
+        payment = Payment.objects.create(
+            member=self.member,
+            package=self.bronze_1_day,
+            amount=75000,
+            payment_date=payment_date,
+        )
+
+        self.member.refresh_from_db()
+        expected_end_date = payment_date.date()
+        self.assertEqual(self.member.active_until.date(), expected_end_date)
+
+    def test_skip_membership_update_field(self):
+        """Test that skip_membership_update prevents automatic updates"""
+        payment = Payment.objects.create(
+            member=self.member,
+            package=self.bronze_1_month,
+            amount=400000,
+            payment_date=timezone.now(),
+            skip_membership_update=True,
+        )
+
+        self.member.refresh_from_db()
+        # Member should not have been updated because skip was True
+        self.assertIsNone(self.member.active_until)
+
+    def test_membership_stacking_with_packages(self):
+        """Test that memberships stack correctly with package-based logic"""
+        # Give member an initial active membership
+        initial_end_date = timezone.now() + timedelta(days=10)
+        self.member.active_until = initial_end_date
+        self.member.pemula_active_until = (
+            initial_end_date  # Set same date for consistent stacking
+        )
+        self.member.save()
+
+        # Add a SILVER package
+        payment = Payment.objects.create(
+            member=self.member,
+            package=self.silver_3_months,
+            amount=1750000,
+            payment_date=timezone.now(),
+        )
+
+        self.member.refresh_from_db()
+
+        # Both active_until and pemula_active_until should be extended from the same initial end date
+        expected_start_date = initial_end_date.date() + timedelta(days=1)
+        expected_end_date = (
+            expected_start_date + relativedelta(months=3) - timedelta(days=1)
+        )
+
+        self.assertEqual(self.member.active_until.date(), expected_end_date)
+        self.assertEqual(self.member.pemula_active_until.date(), expected_end_date)
+
+    def test_skip_membership_update_default_false(self):
+        """Test that skip_membership_update defaults to False"""
+        payment = Payment.objects.create(
+            member=self.member,
+            package=self.bronze_1_month,
+            amount=400000,
+            payment_date=timezone.now(),
+        )
+        self.assertFalse(payment.skip_membership_update)
+
+    def test_legacy_fallback_when_no_package(self):
+        """Test that payments without packages fall back to old logic"""
+        payment = Payment.objects.create(
+            member=self.member,
+            amount=400000,
+            payment_date=timezone.now(),
+            duration_choice=30,  # 1 month
+        )
+
+        self.member.refresh_from_db()
+        self.assertIsNotNone(self.member.active_until)
+        # Should use legacy logic - only update active_until
+        self.assertIsNone(self.member.pemula_active_until)
+        self.assertIsNone(self.member.semi_private_active_until)

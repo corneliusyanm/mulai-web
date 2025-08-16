@@ -11,18 +11,19 @@ class PaymentAdminForm(forms.ModelForm):
             "member",
             "package",
             "amount",
-            "duration_choice",
-            "duration_days",
             "payment_date",
             "payment_method",
             "apakah_nyicil",
+            "skip_membership_update",
             "notes",
         )
         widgets = {
             "payment_date": widgets.AdminSplitDateTime(),
-            "duration_choice": forms.RadioSelect(),
             "payment_method": forms.Select(attrs={"class": "form-control"}),
             "apakah_nyicil": forms.RadioSelect(
+                choices=[(True, "Ya"), (False, "Tidak")]
+            ),
+            "skip_membership_update": forms.RadioSelect(
                 choices=[(True, "Ya"), (False, "Tidak")]
             ),
         }
@@ -42,19 +43,16 @@ class PaymentAdminForm(forms.ModelForm):
             ]
             self.fields["apakah_nyicil"].initial = False
 
-        # Hide duration_days field initially (will be shown via JavaScript if
-        # Custom is selected)
-        if "duration_days" in self.fields:
-            self.fields["duration_days"].widget.attrs["style"] = "display: none;"
-            self.fields["duration_days"].widget.attrs["class"] = "custom-duration-field"
-
-    def clean(self):
-        cleaned_data = super().clean()
-        duration_choice = cleaned_data.get("duration_choice")
-        duration_days = cleaned_data.get("duration_days")
-
-        # If custom duration is selected, duration_days is required
-        if duration_choice == 0 and not duration_days:
-            self.add_error("duration_days", "Please enter custom duration days")
-
-        return cleaned_data
+        # Configure skip_membership_update field
+        if "skip_membership_update" in self.fields:
+            self.fields["skip_membership_update"].label = (
+                "Skip otomatis update membership?"
+            )
+            self.fields["skip_membership_update"].help_text = (
+                "Jika Ya, admin harus update membership secara manual"
+            )
+            self.fields["skip_membership_update"].widget.choices = [
+                (True, "Ya"),
+                (False, "Tidak"),
+            ]
+            self.fields["skip_membership_update"].initial = False
