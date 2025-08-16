@@ -75,6 +75,7 @@ if not admin_site._registry.get(Payment):
         )
         list_filter = ("payment_date", "payment_method", "package")
         search_fields = ("member__email", "member__name", "member__phone_number")
+        autocomplete_fields = ["member"]
 
         fieldsets = (
             (
@@ -151,7 +152,9 @@ if not admin_site._registry.get(Product):
 if not admin_site._registry.get(Sale):
     admin_site.register(Sale, SaleAdmin)
 
-# Visit model is already registered in visits/admin.py
+# Register Visit model to custom admin site
+if not admin_site._registry.get(Visit):
+    admin_site.register(Visit, VisitAdmin)
 
 # Register Package model
 if not admin_site._registry.get(Package):  # Check if Package is already registered

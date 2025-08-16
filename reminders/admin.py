@@ -7,7 +7,6 @@ from django.urls import path
 from .models import Reminder
 
 
-@admin.register(Reminder)
 class ReminderAdmin(admin.ModelAdmin):
     list_display = (
         "member",
@@ -23,6 +22,7 @@ class ReminderAdmin(admin.ModelAdmin):
         ("created_date", DateFieldListFilter),
     )
     search_fields = ("member__name", "member__email", "member__phone_number", "reason")
+    autocomplete_fields = ["member"]
     readonly_fields = ("created_date", "resolved_date")
 
     def get_urls(self):

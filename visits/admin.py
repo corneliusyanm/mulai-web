@@ -512,7 +512,6 @@ def export_members_view(request):
     return response
 
 
-@admin.register(Visit)
 class VisitAdmin(admin.ModelAdmin):
     list_display = (
         "member",
@@ -525,6 +524,7 @@ class VisitAdmin(admin.ModelAdmin):
         ("check_out_time", DateFieldListFilter),
     )
     search_fields = ("member__name", "member__email", "member__phone_number")
+    autocomplete_fields = ["member"]
     change_list_template = "admin/visits/visit/change_list.html"
 
     def get_urls(self):
