@@ -5,16 +5,31 @@ from django.shortcuts import redirect, render, get_object_or_404
 from django.urls import path, reverse
 from django.utils import timezone
 from django.utils.html import format_html
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, Q, Sum, Avg, F, Case, When, IntegerField, FloatField
 from django.http import JsonResponse, HttpResponse
 from datetime import timedelta, datetime
 from dateutil.relativedelta import relativedelta
 import json
 import csv
+from decimal import Decimal
 
 from .models import Visit
 from accounts.models import Member
 from payments.models import Payment, Package
+from purchases.models import Sale, Product, SaleItem
+
+
+class DecimalEncoder(json.JSONEncoder):
+    """Custom JSON encoder to handle Decimal, date, and datetime objects"""
+
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            return float(obj)
+        elif hasattr(obj, "strftime"):  # datetime or date objects
+            return obj.strftime("%Y-%m-%d")
+        elif hasattr(obj, "total_seconds"):  # timedelta objects
+            return obj.total_seconds() / 3600  # Convert to hours
+        return super().default(obj)
 
 
 class CustomAdminSite(admin.AdminSite):
@@ -93,6 +108,13 @@ class CustomAdminSite(admin.AdminSite):
                         "view_only": True,
                         "perms": {"view": True},
                     },
+                    {
+                        "name": "Business Intelligence",
+                        "object_name": "Business Intelligence",
+                        "admin_url": reverse("admin:business-analytics"),
+                        "view_only": True,
+                        "perms": {"view": True},
+                    },
                 ],
             }
             app_list.append(analytics_app)
@@ -113,6 +135,11 @@ def get_custom_admin_urls():
             name="membership-analytics",
         ),
         path(
+            "analytics/business/",
+            business_analytics_view,
+            name="business-analytics",
+        ),
+        path(
             "analytics/members-by-date/",
             members_by_date_view,
             name="members-by-date",
@@ -126,6 +153,26 @@ def get_custom_admin_urls():
             "analytics/export-members/",
             export_members_view,
             name="export-members",
+        ),
+        path(
+            "analytics/revenue-data/",
+            revenue_data_view,
+            name="revenue-data",
+        ),
+        path(
+            "analytics/sales-data/",
+            sales_data_view,
+            name="sales-data",
+        ),
+        path(
+            "analytics/visits-data/",
+            visits_data_view,
+            name="visits-data",
+        ),
+        path(
+            "analytics/export-business/",
+            export_business_data_view,
+            name="export-business",
         ),
     ]
 
@@ -509,6 +556,676 @@ def export_members_view(request):
                 "Active" if (expiry and expiry >= timezone.now()) else "Inactive",
             ]
         )
+
+    return response
+
+
+def business_analytics_view(request):
+    """Comprehensive business intelligence dashboard"""
+    if not request.user.is_staff:
+        raise PermissionDenied
+
+    # Get date range from request or default to last 12 months
+    months_back = int(request.GET.get("months", 12))
+    analysis_type = request.GET.get("type", "overview")
+
+    now = timezone.now()
+    start_date = now - relativedelta(months=months_back)
+
+    # Calculate comprehensive business metrics
+    business_metrics = calculate_business_metrics(start_date, now)
+    revenue_analytics = calculate_revenue_analytics(start_date, now)
+    sales_analytics = calculate_sales_analytics(start_date, now)
+    visit_analytics = calculate_visit_analytics(start_date, now)
+    member_analytics = calculate_member_analytics(start_date, now)
+    repurchase_analytics = calculate_repurchase_analytics(start_date, now)
+
+    context = {
+        **admin_site.each_context(request),
+        "title": "Business Intelligence Dashboard",
+        "business_metrics": business_metrics,
+        "revenue_analytics": json.dumps(revenue_analytics, cls=DecimalEncoder),
+        "sales_analytics": json.dumps(sales_analytics, cls=DecimalEncoder),
+        "visit_analytics": json.dumps(visit_analytics, cls=DecimalEncoder),
+        "member_analytics": json.dumps(member_analytics, cls=DecimalEncoder),
+        "repurchase_analytics": repurchase_analytics,
+        "months_back": months_back,
+        "analysis_type": analysis_type,
+        "start_date": start_date.strftime("%Y-%m-%d"),
+        "end_date": now.strftime("%Y-%m-%d"),
+    }
+
+    return render(request, "admin/analytics/business_intelligence.html", context)
+
+
+def calculate_business_metrics(start_date, end_date):
+    """Calculate key business performance indicators"""
+
+    # Revenue metrics
+    total_revenue = (
+        Payment.objects.filter(
+            payment_date__gte=start_date, payment_date__lte=end_date
+        ).aggregate(total=Sum("amount"))["total"]
+        or 0
+    )
+
+    store_revenue = (
+        Sale.objects.filter(
+            created_at__gte=start_date, created_at__lte=end_date
+        ).aggregate(total=Sum("total_amount"))["total"]
+        or 0
+    )
+
+    # Member metrics
+    total_members = Member.objects.count()
+    new_members = Member.objects.filter(created_at__gte=start_date).count()
+    active_members = Member.objects.filter(active_until__gte=end_date).count()
+
+    # Visit metrics
+    total_visits = Visit.objects.filter(check_in_time__gte=start_date).count()
+    unique_visitors = (
+        Visit.objects.filter(check_in_time__gte=start_date)
+        .values("member")
+        .distinct()
+        .count()
+    )
+
+    # Average metrics
+    avg_visit_duration = Visit.objects.filter(
+        check_in_time__gte=start_date, check_out_time__isnull=False
+    ).aggregate(avg_duration=Avg(F("check_out_time") - F("check_in_time")))[
+        "avg_duration"
+    ]
+
+    avg_revenue_per_member = float(total_revenue) / max(new_members, 1)
+
+    # Customer lifetime value estimation
+    if active_members > 0:
+        avg_payment = (
+            Payment.objects.filter(payment_date__gte=start_date).aggregate(
+                avg=Avg("amount")
+            )["avg"]
+            or 0
+        )
+
+        # Estimate based on average payment frequency
+        payment_frequency = Payment.objects.filter(
+            payment_date__gte=start_date
+        ).count() / max(active_members, 1)
+
+        customer_lifetime_value = (
+            float(avg_payment) * payment_frequency * 12
+        )  # Annual estimate
+    else:
+        customer_lifetime_value = 0
+
+    return {
+        "total_revenue": float(total_revenue),
+        "store_revenue": float(store_revenue),
+        "membership_revenue": float(total_revenue),
+        "total_members": total_members,
+        "new_members": new_members,
+        "active_members": active_members,
+        "total_visits": total_visits,
+        "unique_visitors": unique_visitors,
+        "avg_visit_duration": (
+            avg_visit_duration.total_seconds() / 3600 if avg_visit_duration else 0
+        ),  # in hours
+        "avg_revenue_per_member": avg_revenue_per_member,
+        "customer_lifetime_value": customer_lifetime_value,
+        "member_retention_rate": (active_members / max(total_members, 1)) * 100,
+    }
+
+
+def calculate_revenue_analytics(start_date, end_date):
+    """Calculate detailed revenue analytics"""
+
+    # Monthly revenue trend
+    monthly_data = []
+    current_date = start_date.replace(day=1)
+
+    while current_date <= end_date:
+        next_month = current_date + relativedelta(months=1)
+
+        membership_revenue = (
+            Payment.objects.filter(
+                payment_date__gte=current_date, payment_date__lt=next_month
+            ).aggregate(total=Sum("amount"))["total"]
+            or 0
+        )
+
+        store_revenue = (
+            Sale.objects.filter(
+                created_at__gte=current_date, created_at__lt=next_month
+            ).aggregate(total=Sum("total_amount"))["total"]
+            or 0
+        )
+
+        monthly_data.append(
+            {
+                "month": current_date.strftime("%Y-%m"),
+                "month_label": current_date.strftime("%b %Y"),
+                "membership_revenue": float(membership_revenue),
+                "store_revenue": float(store_revenue),
+                "total_revenue": float(membership_revenue + store_revenue),
+            }
+        )
+
+        current_date = next_month
+
+    # Revenue by payment method
+    payment_methods = (
+        Payment.objects.filter(payment_date__gte=start_date)
+        .values("payment_method")
+        .annotate(total=Sum("amount"), count=Count("id"))
+        .order_by("-total")
+    )
+
+    # Convert Decimal values to float for JSON serialization
+    payment_methods = [
+        {**item, "total": float(item["total"]) if item["total"] else 0}
+        for item in payment_methods
+    ]
+
+    # Revenue by package
+    package_revenue = (
+        Payment.objects.filter(payment_date__gte=start_date, package__isnull=False)
+        .values("package__code", "package__description")
+        .annotate(total=Sum("amount"), count=Count("id"))
+        .order_by("-total")
+    )
+
+    # Convert Decimal values to float for JSON serialization
+    package_revenue = [
+        {**item, "total": float(item["total"]) if item["total"] else 0}
+        for item in package_revenue
+    ]
+
+    return {
+        "monthly_trends": monthly_data,
+        "payment_methods": payment_methods,
+        "package_revenue": package_revenue,
+    }
+
+
+def calculate_sales_analytics(start_date, end_date):
+    """Calculate store sales analytics"""
+
+    # Top selling products
+    top_products = (
+        SaleItem.objects.filter(sale__created_at__gte=start_date)
+        .values("product__name")
+        .annotate(
+            quantity_sold=Sum("quantity"),
+            total_revenue=Sum(F("quantity") * F("price_at_purchase")),
+            transaction_count=Count("sale", distinct=True),
+        )
+        .order_by("-total_revenue")[:10]
+    )
+
+    # Convert Decimal values to float for JSON serialization
+    top_products = [
+        {
+            **item,
+            "total_revenue": (
+                float(item["total_revenue"]) if item["total_revenue"] else 0
+            ),
+        }
+        for item in top_products
+    ]
+
+    # Daily sales trend
+    daily_sales = (
+        Sale.objects.filter(created_at__gte=start_date)
+        .extra(select={"day": "date(created_at)"})
+        .values("day")
+        .annotate(
+            total_sales=Sum("total_amount"),
+            transaction_count=Count("id"),
+            avg_transaction=Avg("total_amount"),
+        )
+        .order_by("day")
+    )
+
+    # Convert Decimal values to float and date to string for JSON serialization
+    daily_sales = [
+        {
+            **item,
+            "day": (
+                item["day"].strftime("%Y-%m-%d")
+                if hasattr(item["day"], "strftime")
+                else str(item["day"])
+            ),
+            "total_sales": float(item["total_sales"]) if item["total_sales"] else 0,
+            "avg_transaction": (
+                float(item["avg_transaction"]) if item["avg_transaction"] else 0
+            ),
+        }
+        for item in daily_sales
+    ]
+
+    # Sales by payment method
+    sales_payment_methods = (
+        Sale.objects.filter(created_at__gte=start_date)
+        .values("payment_method")
+        .annotate(total=Sum("total_amount"), count=Count("id"))
+        .order_by("-total")
+    )
+
+    # Convert Decimal values to float for JSON serialization
+    sales_payment_methods = [
+        {**item, "total": float(item["total"]) if item["total"] else 0}
+        for item in sales_payment_methods
+    ]
+
+    return {
+        "top_products": top_products,
+        "daily_trends": daily_sales,
+        "payment_methods": sales_payment_methods,
+    }
+
+
+def calculate_visit_analytics(start_date, end_date):
+    """Calculate visit patterns and member engagement"""
+
+    # Daily visit patterns
+    daily_visits = (
+        Visit.objects.filter(check_in_time__gte=start_date)
+        .extra(select={"day": "date(check_in_time)"})
+        .values("day")
+        .annotate(
+            total_visits=Count("id"), unique_members=Count("member", distinct=True)
+        )
+        .order_by("day")
+    )
+
+    # Hourly patterns
+    hourly_visits = (
+        Visit.objects.filter(check_in_time__gte=start_date)
+        .extra(select={"hour": "extract(hour from check_in_time)"})
+        .values("hour")
+        .annotate(visit_count=Count("id"))
+        .order_by("hour")
+    )
+
+    # Member visit frequency
+    member_frequencies = (
+        Visit.objects.filter(check_in_time__gte=start_date)
+        .values("member")
+        .annotate(visit_count=Count("id"))
+        .values("visit_count")
+        .annotate(member_count=Count("member"))
+        .order_by("visit_count")
+    )
+
+    # Average session duration
+    avg_duration_by_day = (
+        Visit.objects.filter(
+            check_in_time__gte=start_date, check_out_time__isnull=False
+        )
+        .extra(select={"day": "date(check_in_time)"})
+        .values("day")
+        .annotate(avg_duration=Avg(F("check_out_time") - F("check_in_time")))
+        .order_by("day")
+    )
+
+    # Convert date objects to strings for JSON serialization
+    daily_visits_list = [
+        {
+            **item,
+            "day": (
+                item["day"].strftime("%Y-%m-%d")
+                if hasattr(item["day"], "strftime")
+                else str(item["day"])
+            ),
+        }
+        for item in daily_visits
+    ]
+
+    session_durations_list = [
+        {
+            **item,
+            "day": (
+                item["day"].strftime("%Y-%m-%d")
+                if hasattr(item["day"], "strftime")
+                else str(item["day"])
+            ),
+            "avg_duration": (
+                item["avg_duration"].total_seconds() / 3600
+                if item["avg_duration"]
+                else 0
+            ),
+        }
+        for item in avg_duration_by_day
+    ]
+
+    return {
+        "daily_visits": daily_visits_list,
+        "hourly_patterns": list(hourly_visits),
+        "member_frequencies": list(member_frequencies),
+        "session_durations": session_durations_list,
+    }
+
+
+def calculate_member_analytics(start_date, end_date):
+    """Calculate member acquisition and retention analytics"""
+
+    # Member acquisition trend
+    monthly_signups = (
+        Member.objects.filter(created_at__gte=start_date)
+        .extra(select={"month": "date_trunc('month', created_at)"})
+        .values("month")
+        .annotate(new_members=Count("id"))
+        .order_by("month")
+    )
+
+    # Member segmentation by activity
+    member_segments = []
+    active_threshold = timezone.now() - timedelta(days=7)
+    regular_threshold = timezone.now() - timedelta(days=30)
+
+    # Highly active (visited in last 7 days)
+    highly_active = (
+        Member.objects.filter(visit__check_in_time__gte=active_threshold)
+        .distinct()
+        .count()
+    )
+
+    # Moderately active (visited in last 30 days but not last 7)
+    moderately_active = (
+        Member.objects.filter(
+            visit__check_in_time__gte=regular_threshold,
+            visit__check_in_time__lt=active_threshold,
+        )
+        .exclude(visit__check_in_time__gte=active_threshold)
+        .distinct()
+        .count()
+    )
+
+    # Inactive (haven't visited in 30+ days)
+    inactive = Member.objects.exclude(
+        visit__check_in_time__gte=regular_threshold
+    ).count()
+
+    member_segments = [
+        {
+            "segment": "Highly Active",
+            "count": highly_active,
+            "percentage": (highly_active / max(Member.objects.count(), 1)) * 100,
+        },
+        {
+            "segment": "Moderately Active",
+            "count": moderately_active,
+            "percentage": (moderately_active / max(Member.objects.count(), 1)) * 100,
+        },
+        {
+            "segment": "Inactive",
+            "count": inactive,
+            "percentage": (inactive / max(Member.objects.count(), 1)) * 100,
+        },
+    ]
+
+    # Convert datetime objects to strings for JSON serialization
+    monthly_signups_list = [
+        {
+            **item,
+            "month": (
+                item["month"].strftime("%Y-%m-%d")
+                if hasattr(item["month"], "strftime")
+                else str(item["month"])
+            ),
+        }
+        for item in monthly_signups
+    ]
+
+    return {
+        "monthly_signups": monthly_signups_list,
+        "member_segments": member_segments,
+    }
+
+
+def calculate_repurchase_analytics(start_date, end_date):
+    """Calculate customer lifetime value and repurchase behavior"""
+
+    # Repurchase rate calculation
+    members_with_payments = (
+        Payment.objects.filter(payment_date__gte=start_date)
+        .values("member")
+        .distinct()
+        .count()
+    )
+
+    members_with_multiple_payments = (
+        Payment.objects.filter(payment_date__gte=start_date)
+        .values("member")
+        .annotate(payment_count=Count("id"))
+        .filter(payment_count__gt=1)
+        .count()
+    )
+
+    repurchase_rate = (
+        members_with_multiple_payments / max(members_with_payments, 1)
+    ) * 100
+
+    # Average time between purchases
+    member_payment_intervals = []
+    for member in Member.objects.filter(
+        payment__payment_date__gte=start_date
+    ).distinct():
+        payments = Payment.objects.filter(
+            member=member, payment_date__gte=start_date
+        ).order_by("payment_date")
+
+        if payments.count() > 1:
+            intervals = []
+            for i in range(1, len(payments)):
+                interval = (
+                    payments[i].payment_date - payments[i - 1].payment_date
+                ).days
+                intervals.append(interval)
+
+            if intervals:
+                member_payment_intervals.extend(intervals)
+
+    avg_repurchase_interval = (
+        sum(member_payment_intervals) / len(member_payment_intervals)
+        if member_payment_intervals
+        else 0
+    )
+
+    # Customer lifetime value by cohort
+    cohort_data = []
+    for months_ago in range(6, 0, -1):  # Last 6 months cohorts
+        cohort_start = timezone.now() - relativedelta(months=months_ago)
+        cohort_end = cohort_start + relativedelta(months=1)
+
+        cohort_members = Member.objects.filter(
+            created_at__gte=cohort_start, created_at__lt=cohort_end
+        )
+
+        if cohort_members.exists():
+            total_revenue = (
+                Payment.objects.filter(
+                    member__in=cohort_members, payment_date__gte=cohort_start
+                ).aggregate(total=Sum("amount"))["total"]
+                or 0
+            )
+
+            avg_clv = float(total_revenue) / cohort_members.count()
+
+            cohort_data.append(
+                {
+                    "cohort": cohort_start.strftime("%b %Y"),
+                    "members": cohort_members.count(),
+                    "total_revenue": float(total_revenue),
+                    "avg_clv": avg_clv,
+                }
+            )
+
+    return {
+        "repurchase_rate": repurchase_rate,
+        "avg_repurchase_interval": avg_repurchase_interval,
+        "cohort_analysis": cohort_data,
+        "members_with_payments": members_with_payments,
+        "repeat_customers": members_with_multiple_payments,
+    }
+
+
+def revenue_data_view(request):
+    """AJAX endpoint for revenue data"""
+    if not request.user.is_staff:
+        return JsonResponse({"error": "Permission denied"}, status=403)
+
+    months_back = int(request.GET.get("months", 12))
+    chart_type = request.GET.get("chart", "monthly")
+
+    now = timezone.now()
+    start_date = now - relativedelta(months=months_back)
+
+    if chart_type == "monthly":
+        data = calculate_revenue_analytics(start_date, now)
+        return JsonResponse(data)
+    elif chart_type == "weekly":
+        # Calculate weekly data
+        weekly_data = []
+        current_date = start_date
+
+        while current_date <= now:
+            week_end = current_date + timedelta(days=7)
+
+            revenue = (
+                Payment.objects.filter(
+                    payment_date__gte=current_date, payment_date__lt=week_end
+                ).aggregate(total=Sum("amount"))["total"]
+                or 0
+            )
+
+            weekly_data.append(
+                {
+                    "week": current_date.strftime("%Y-W%U"),
+                    "week_label": current_date.strftime("%d %b"),
+                    "revenue": float(revenue),
+                }
+            )
+
+            current_date = week_end
+
+        return JsonResponse({"weekly_trends": weekly_data})
+
+    return JsonResponse({"error": "Invalid chart type"}, status=400)
+
+
+def sales_data_view(request):
+    """AJAX endpoint for sales data"""
+    if not request.user.is_staff:
+        return JsonResponse({"error": "Permission denied"}, status=403)
+
+    months_back = int(request.GET.get("months", 12))
+    now = timezone.now()
+    start_date = now - relativedelta(months=months_back)
+
+    data = calculate_sales_analytics(start_date, now)
+    return JsonResponse(data)
+
+
+def visits_data_view(request):
+    """AJAX endpoint for visit analytics"""
+    if not request.user.is_staff:
+        return JsonResponse({"error": "Permission denied"}, status=403)
+
+    months_back = int(request.GET.get("months", 3))
+    now = timezone.now()
+    start_date = now - relativedelta(months=months_back)
+
+    data = calculate_visit_analytics(start_date, now)
+    return JsonResponse(data)
+
+
+def export_business_data_view(request):
+    """Export comprehensive business analytics to CSV"""
+    if not request.user.is_staff:
+        raise PermissionDenied
+
+    export_type = request.GET.get("type", "revenue")
+    months_back = int(request.GET.get("months", 12))
+
+    now = timezone.now()
+    start_date = now - relativedelta(months=months_back)
+
+    response = HttpResponse(content_type="text/csv")
+    filename = f"business_analytics_{export_type}_{start_date.strftime('%Y%m%d')}_{now.strftime('%Y%m%d')}.csv"
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+    writer = csv.writer(response)
+
+    if export_type == "revenue":
+        writer.writerow(
+            [
+                "Date",
+                "Membership Revenue",
+                "Store Revenue",
+                "Total Revenue",
+                "Payment Method",
+                "Package",
+            ]
+        )
+
+        payments = Payment.objects.filter(payment_date__gte=start_date).select_related(
+            "package"
+        )
+        for payment in payments:
+            writer.writerow(
+                [
+                    payment.payment_date.strftime("%Y-%m-%d"),
+                    payment.amount,
+                    0,  # Store revenue
+                    payment.amount,
+                    payment.payment_method,
+                    payment.package.code if payment.package else "N/A",
+                ]
+            )
+
+        sales = Sale.objects.filter(created_at__gte=start_date)
+        for sale in sales:
+            writer.writerow(
+                [
+                    sale.created_at.strftime("%Y-%m-%d"),
+                    0,  # Membership revenue
+                    sale.total_amount,
+                    sale.total_amount,
+                    sale.payment_method,
+                    "Store Sale",
+                ]
+            )
+
+    elif export_type == "visits":
+        writer.writerow(
+            ["Date", "Member Name", "Check In", "Check Out", "Duration (hours)"]
+        )
+
+        visits = Visit.objects.filter(check_in_time__gte=start_date).select_related(
+            "member"
+        )
+        for visit in visits:
+            duration = 0
+            if visit.check_out_time:
+                duration = (
+                    visit.check_out_time - visit.check_in_time
+                ).total_seconds() / 3600
+
+            writer.writerow(
+                [
+                    visit.check_in_time.strftime("%Y-%m-%d"),
+                    visit.member.name,
+                    visit.check_in_time.strftime("%H:%M"),
+                    (
+                        visit.check_out_time.strftime("%H:%M")
+                        if visit.check_out_time
+                        else "Still visiting"
+                    ),
+                    round(duration, 2),
+                ]
+            )
 
     return response
 

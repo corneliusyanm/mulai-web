@@ -785,6 +785,17 @@ The `visits` app includes comprehensive analytics tests for:
 - **Export Features**: CSV generation and data integrity validation
 - **Error Handling**: Invalid date formats and permission-denied scenarios
 
+### Business Intelligence Tests
+The `visits` app includes comprehensive business intelligence tests for:
+- **Revenue Analytics**: Monthly trends, payment methods, and package revenue analysis
+- **Sales Analytics**: Product performance, daily trends, and store revenue tracking
+- **Visit Analytics**: Daily patterns, hourly trends, and member engagement metrics
+- **Member Analytics**: Acquisition trends, segmentation, and activity analysis
+- **Repurchase Analytics**: Customer lifetime value, repurchase rates, and cohort analysis
+- **KPI Calculations**: Business metrics accuracy and data consistency validation
+- **AJAX Endpoints**: Real-time data loading and export functionality testing
+- **Permission Security**: Access control for all business intelligence features
+
 ### Equipment Tests
 The `equipment` app includes tests for the view analytics system:
 - **Model Tests**: Correct initialization of view counters and atomic updates via `increment_view_count()`.

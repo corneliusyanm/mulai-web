@@ -9,6 +9,7 @@ import json
 from accounts.models import Member
 from .models import Visit
 from payments.models import Payment, Package
+from purchases.models import Product, Sale, SaleItem
 
 User = get_user_model()
 
@@ -566,3 +567,270 @@ class AnalyticsViewsTest(TestCase):
                 self.assertIn("week", projection)
                 self.assertIn("revenue", projection)
                 self.assertIsInstance(projection["revenue"], (int, float))
+
+
+class BusinessIntelligenceViewsTest(TestCase):
+    """Test cases for the comprehensive business intelligence dashboard"""
+
+    def setUp(self):
+        # Create superuser for admin access
+        self.superuser = User.objects.create_superuser(
+            "admin", "admin@example.com", "password"
+        )
+        self.client.login(username="admin", password="password")
+
+        # Create test data for comprehensive analytics
+        self.member1 = Member.objects.create(
+            name="Test Member 1",
+            email="member1@example.com",
+            phone_number="6281234567890",
+            gender="M",
+            age=25,
+            height=170,
+            weight=70,
+            years_of_working_out="2",
+            goals="Build muscle",
+            know_mulai_gym_from="friends",
+            active_until=timezone.now() + timedelta(days=90),
+        )
+
+        self.member2 = Member.objects.create(
+            name="Test Member 2",
+            email="member2@example.com",
+            phone_number="6281234567891",
+            gender="F",
+            age=30,
+            height=165,
+            weight=60,
+            years_of_working_out="1",
+            goals="Lose weight",
+            know_mulai_gym_from="instagram",
+            active_until=timezone.now() + timedelta(days=30),
+        )
+
+        # Create packages and payments
+        self.package = Package.objects.create(
+            code="M1", description="Monthly Membership", default_price=500000
+        )
+
+        Payment.objects.create(
+            member=self.member1,
+            package=self.package,
+            amount=500000,
+            payment_date=timezone.now() - timedelta(days=30),
+        )
+
+        Payment.objects.create(
+            member=self.member1,
+            package=self.package,
+            amount=500000,
+            payment_date=timezone.now() - timedelta(days=10),
+        )
+
+        # Create visits
+        Visit.objects.create(
+            member=self.member1,
+            check_in_time=timezone.now() - timedelta(days=5),
+            check_out_time=timezone.now() - timedelta(days=5, hours=-2),
+        )
+
+        Visit.objects.create(
+            member=self.member2, check_in_time=timezone.now() - timedelta(days=2)
+        )
+
+        # Create products and sales
+        self.product = Product.objects.create(name="Protein Powder", price=200000)
+
+        self.sale = Sale.objects.create(
+            member=self.member1, payment_method="CASH", created_by=self.superuser
+        )
+
+        SaleItem.objects.create(
+            sale=self.sale, product=self.product, quantity=2, price_at_purchase=200000
+        )
+
+        # Update sale total
+        self.sale.update_total_amount()
+
+    def test_business_analytics_view_access(self):
+        """Test that business analytics dashboard is accessible"""
+        response = self.client.get(reverse("admin:business-analytics"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Business Intelligence Dashboard")
+
+    def test_business_analytics_view_access_denied(self):
+        """Test that non-staff users cannot access business analytics"""
+        self.client.logout()
+        user = User.objects.create_user("user", "user@example.com", "password")
+        self.client.login(username="user", password="password")
+
+        response = self.client.get(reverse("admin:business-analytics"))
+        self.assertEqual(response.status_code, 403)
+
+    def test_business_metrics_calculation(self):
+        """Test business metrics calculation"""
+        response = self.client.get(reverse("admin:business-analytics"))
+        context = response.context
+
+        business_metrics = context["business_metrics"]
+
+        # Check key metrics
+        self.assertIn("total_revenue", business_metrics)
+        self.assertIn("store_revenue", business_metrics)
+        self.assertIn("total_members", business_metrics)
+        self.assertIn("active_members", business_metrics)
+        self.assertIn("total_visits", business_metrics)
+        self.assertIn("customer_lifetime_value", business_metrics)
+        self.assertIn("member_retention_rate", business_metrics)
+
+        # Verify data consistency
+        self.assertEqual(business_metrics["total_members"], 2)
+        self.assertGreaterEqual(business_metrics["total_visits"], 2)
+        self.assertGreater(business_metrics["total_revenue"], 0)
+
+    def test_revenue_analytics_data(self):
+        """Test revenue analytics data structure"""
+        response = self.client.get(reverse("admin:business-analytics"))
+        context = response.context
+
+        revenue_analytics = json.loads(context["revenue_analytics"])
+
+        # Check structure
+        self.assertIn("monthly_trends", revenue_analytics)
+        self.assertIn("payment_methods", revenue_analytics)
+        self.assertIn("package_revenue", revenue_analytics)
+
+        # Verify monthly trends structure
+        if revenue_analytics["monthly_trends"]:
+            trend = revenue_analytics["monthly_trends"][0]
+            self.assertIn("month", trend)
+            self.assertIn("membership_revenue", trend)
+            self.assertIn("store_revenue", trend)
+            self.assertIn("total_revenue", trend)
+
+    def test_sales_analytics_data(self):
+        """Test sales analytics data structure"""
+        response = self.client.get(reverse("admin:business-analytics"))
+        context = response.context
+
+        sales_analytics = json.loads(context["sales_analytics"])
+
+        # Check structure
+        self.assertIn("top_products", sales_analytics)
+        self.assertIn("daily_trends", sales_analytics)
+        self.assertIn("payment_methods", sales_analytics)
+
+    def test_visit_analytics_data(self):
+        """Test visit analytics data structure"""
+        response = self.client.get(reverse("admin:business-analytics"))
+        context = response.context
+
+        visit_analytics = json.loads(context["visit_analytics"])
+
+        # Check structure
+        self.assertIn("daily_visits", visit_analytics)
+        self.assertIn("hourly_patterns", visit_analytics)
+        self.assertIn("member_frequencies", visit_analytics)
+
+    def test_repurchase_analytics(self):
+        """Test repurchase analytics calculation"""
+        response = self.client.get(reverse("admin:business-analytics"))
+        context = response.context
+
+        repurchase_analytics = context["repurchase_analytics"]
+
+        # Check structure
+        self.assertIn("repurchase_rate", repurchase_analytics)
+        self.assertIn("avg_repurchase_interval", repurchase_analytics)
+        self.assertIn("cohort_analysis", repurchase_analytics)
+        self.assertIn("members_with_payments", repurchase_analytics)
+
+        # Member1 has 2 payments, so repurchase rate should be > 0
+        self.assertGreater(repurchase_analytics["repurchase_rate"], 0)
+
+    def test_revenue_data_ajax_endpoint(self):
+        """Test AJAX endpoint for revenue data"""
+        response = self.client.get(reverse("admin:revenue-data"))
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertIn("monthly_trends", data)
+
+    def test_sales_data_ajax_endpoint(self):
+        """Test AJAX endpoint for sales data"""
+        response = self.client.get(reverse("admin:sales-data"))
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertIn("top_products", data)
+
+    def test_visits_data_ajax_endpoint(self):
+        """Test AJAX endpoint for visits data"""
+        response = self.client.get(reverse("admin:visits-data"))
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertIn("daily_visits", data)
+
+    def test_export_business_data_revenue(self):
+        """Test CSV export for revenue data"""
+        response = self.client.get(
+            reverse("admin:export-business"), {"type": "revenue", "months": 12}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "text/csv")
+        self.assertIn("attachment", response["Content-Disposition"])
+
+    def test_export_business_data_visits(self):
+        """Test CSV export for visits data"""
+        response = self.client.get(
+            reverse("admin:export-business"), {"type": "visits", "months": 12}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "text/csv")
+
+    def test_business_analytics_custom_timeframe(self):
+        """Test business analytics with custom timeframe"""
+        response = self.client.get(
+            reverse("admin:business-analytics"), {"months": 6, "type": "revenue"}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        context = response.context
+
+        self.assertEqual(context["months_back"], 6)
+        self.assertEqual(context["analysis_type"], "revenue")
+
+    def test_ajax_endpoints_permission_denied(self):
+        """Test that AJAX endpoints deny access to non-staff users"""
+        self.client.logout()
+        user = User.objects.create_user("user", "user@example.com", "password")
+        self.client.login(username="user", password="password")
+
+        endpoints = ["admin:revenue-data", "admin:sales-data", "admin:visits-data"]
+
+        for endpoint in endpoints:
+            response = self.client.get(reverse(endpoint))
+            self.assertEqual(response.status_code, 403)
+
+    def test_member_segmentation_calculation(self):
+        """Test member segmentation logic"""
+        response = self.client.get(reverse("admin:business-analytics"))
+        context = response.context
+
+        member_analytics = json.loads(context["member_analytics"])
+
+        # Check member segments
+        self.assertIn("member_segments", member_analytics)
+        segments = member_analytics["member_segments"]
+
+        # Should have segments
+        self.assertTrue(len(segments) > 0)
+
+        # Check segment structure
+        for segment in segments:
+            self.assertIn("segment", segment)
+            self.assertIn("count", segment)
+            self.assertIn("percentage", segment)
