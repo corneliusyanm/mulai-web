@@ -237,7 +237,10 @@ class MemberSignUpForm(forms.ModelForm):
             else ""
         )
 
-        if "belum" in years_of_working_out:
+        if any(
+            sub in years_of_working_out
+            for sub in ["belum", "belom", "blm", "blum", "belm", "blon", "belon"]
+        ):
             instance.is_pemula = True
         elif "tahun" in years_of_working_out:
             instance.is_pemula = False
