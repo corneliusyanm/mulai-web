@@ -1,6 +1,8 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.utils import timezone
+from django.utils.html import format_html
+from django.urls import reverse
 
 from accounts.models import Member, User
 from payments.models import Payment, Package
@@ -63,7 +65,8 @@ if not admin_site._registry.get(Payment):
     class CustomPaymentAdmin(admin.ModelAdmin):
         form = PaymentAdminForm
         list_display = (
-            "member",
+            "clickable_id",
+            "clickable_member",
             "get_package_display",
             "formatted_amount",
             "formatted_payment_date",
@@ -94,6 +97,22 @@ if not admin_site._registry.get(Payment):
                 },
             ),
         )
+
+        def clickable_id(self, obj):
+            """Clickable ID that links to the payment detail page"""
+            url = reverse("admin:payments_payment_change", args=[obj.id])
+            return format_html('<a href="{}">{}</a>', url, obj.id)
+
+        clickable_id.short_description = "ID"
+        clickable_id.admin_order_field = "id"
+
+        def clickable_member(self, obj):
+            """Clickable member name that links to the member detail page"""
+            url = reverse("admin:accounts_member_change", args=[obj.member.id])
+            return format_html('<a href="{}">{}</a>', url, obj.member.name)
+
+        clickable_member.short_description = "Member"
+        clickable_member.admin_order_field = "member__name"
 
         def get_package_display(self, obj):
             if obj.package:

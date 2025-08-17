@@ -4,6 +4,7 @@ from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect, render, get_object_or_404
 from django.urls import path, reverse
 from django.utils import timezone
+from django.utils.html import format_html
 from django.db.models import Count, Q, Sum
 from django.http import JsonResponse, HttpResponse
 from datetime import timedelta, datetime
@@ -514,7 +515,8 @@ def export_members_view(request):
 
 class VisitAdmin(admin.ModelAdmin):
     list_display = (
-        "member",
+        "clickable_id",
+        "clickable_member",
         "formatted_check_in",
         "formatted_check_out",
         "visit_status",
@@ -542,6 +544,22 @@ class VisitAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         # Show most recent visits first
         return super().get_queryset(request).order_by("-check_in_time")
+
+    def clickable_id(self, obj):
+        """Clickable ID that links to the visit detail page"""
+        url = reverse("admin:visits_visit_change", args=[obj.id])
+        return format_html('<a href="{}">{}</a>', url, obj.id)
+
+    clickable_id.short_description = "ID"
+    clickable_id.admin_order_field = "id"
+
+    def clickable_member(self, obj):
+        """Clickable member name that links to the member detail page"""
+        url = reverse("admin:accounts_member_change", args=[obj.member.id])
+        return format_html('<a href="{}">{}</a>', url, obj.member.name)
+
+    clickable_member.short_description = "Member"
+    clickable_member.admin_order_field = "member__name"
 
     def formatted_check_in(self, obj):
         return timezone.localtime(obj.check_in_time).strftime("%d %b %Y %H:%M")

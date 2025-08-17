@@ -9,6 +9,7 @@
             <table>
                 <thead>
                     <tr>
+                        <th>ID</th>
                         <th>Member</th>
                         <th>Check In Time</th>
                         <th>Check Out Time</th>
@@ -19,7 +20,8 @@
                 <tbody>
                     {% for visit in visits %}
                     <tr>
-                        <td>{{ visit.member.name }} ({{ visit.member.email }})</td>
+                        <td><a href="{% url 'admin:visits_visit_change' visit.id %}">{{ visit.id }}</a></td>
+                        <td><a href="{% url 'admin:accounts_member_change' visit.member.id %}">{{ visit.member.name }}</a> ({{ visit.member.email }})</td>
                         <td>{{ visit.check_in_time|date:"d M Y H:i" }}</td>
                         <td>{{ visit.check_out_time|date:"d M Y H:i" }}</td>
                         <td>{{ visit.check_in_time|timesince:visit.check_out_time }}</td>
@@ -36,7 +38,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="5">No visit history found</td>
+                        <td colspan="6">No visit history found</td>
                     </tr>
                     {% endfor %}
                 </tbody>
