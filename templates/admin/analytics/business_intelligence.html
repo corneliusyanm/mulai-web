@@ -61,11 +61,15 @@
 }
 
 .control-group select, .control-group input {
-    padding: 10px 15px;
+    padding: 15px 20px;
     border: 2px solid #e1e5e9;
     border-radius: 8px;
-    font-size: 14px;
+    font-size: 16px;
     transition: all 0.3s ease;
+    min-width: 200px;
+    width: 100%;
+    min-height: 50px;
+    line-height: 1.5;
 }
 
 .control-group select:focus, .control-group input:focus {
@@ -203,6 +207,12 @@
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.3s ease;
+}
+
+.section-actions button.active {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
 }
 
 .section-actions button:hover {
@@ -397,12 +407,23 @@
     <div class="controls-panel">
         <div class="control-group">
             <label>Time Period</label>
-            <select id="monthsSelect">
-                <option value="3" {% if months_back == 3 %}selected{% endif %}>Last 3 Months</option>
-                <option value="6" {% if months_back == 6 %}selected{% endif %}>Last 6 Months</option>
-                <option value="12" {% if months_back == 12 %}selected{% endif %}>Last 12 Months</option>
-                <option value="24" {% if months_back == 24 %}selected{% endif %}>Last 2 Years</option>
+            <select id="periodSelect">
+                <option value="7_days" {% if period_type == '7_days' %}selected{% endif %}>Last 7 Days</option>
+                <option value="2_weeks" {% if period_type == '2_weeks' %}selected{% endif %}>Last 2 Weeks</option>
+                <option value="4_weeks" {% if period_type == '4_weeks' %}selected{% endif %}>Last 4 Weeks</option>
+                <option value="8_weeks" {% if period_type == '8_weeks' %}selected{% endif %}>Last 8 Weeks</option>
+                <option value="3_months" {% if period_type == '3_months' %}selected{% endif %}>Last 3 Months</option>
+                <option value="6_months" {% if period_type == '6_months' %}selected{% endif %}>Last 6 Months</option>
+                <option value="custom" {% if period_type == 'custom' %}selected{% endif %}>Custom Date Range</option>
             </select>
+        </div>
+        <div class="control-group" id="customDateRange" style="display: {% if period_type == 'custom' %}flex{% else %}none{% endif %};">
+            <label>From Date</label>
+            <input type="date" id="startDate" value="{{ start_date }}">
+        </div>
+        <div class="control-group" id="customDateRangeTo" style="display: {% if period_type == 'custom' %}flex{% else %}none{% endif %};">
+            <label>To Date</label>
+            <input type="date" id="endDate" value="{{ end_date }}">
         </div>
         <div class="control-group">
             <label>Analysis Type</label>
@@ -457,8 +478,8 @@
             <div class="section-header" style="background: #f7fafc; color: #2d3748;">
                 <div class="section-title" style="color: #2d3748;">💰 Revenue Trends</div>
                 <div class="section-actions">
-                    <button onclick="switchChart('revenue', 'monthly')">Monthly</button>
-                    <button onclick="switchChart('revenue', 'weekly')">Weekly</button>
+                    <button class="monthly-btn active" onclick="switchChart('revenue', 'monthly')">Monthly</button>
+                    <button class="weekly-btn" onclick="switchChart('revenue', 'weekly')">Weekly</button>
                 </div>
             </div>
             <div class="chart-container">
@@ -485,8 +506,8 @@
             <div class="section-header" style="background: #f7fafc; color: #2d3748;">
                 <div class="section-title" style="color: #2d3748;">🏃‍♂️ Visit Patterns</div>
                 <div class="section-actions">
-                    <button onclick="switchChart('visits', 'daily')">Daily</button>
-                    <button onclick="switchChart('visits', 'hourly')">Hourly</button>
+                    <button class="daily-btn active" onclick="switchChart('visits', 'daily')">Daily</button>
+                    <button class="hourly-btn" onclick="switchChart('visits', 'hourly')">Hourly</button>
                 </div>
             </div>
             <div class="chart-container">
@@ -775,12 +796,24 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function updateDashboard() {
-    const months = document.getElementById('monthsSelect').value;
-    const type = document.getElementById('analysisType').value;
+    const period = document.getElementById('periodSelect').value;
+    const analysisType = document.getElementById('analysisType').value;
     
     const url = new URL(window.location);
-    url.searchParams.set('months', months);
-    url.searchParams.set('type', type);
+    
+    if (period === 'custom') {
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        url.searchParams.set('start_date', startDate);
+        url.searchParams.set('end_date', endDate);
+        url.searchParams.set('period_type', 'custom');
+    } else {
+        url.searchParams.set('period_type', period);
+        url.searchParams.delete('start_date');
+        url.searchParams.delete('end_date');
+    }
+    
+    url.searchParams.set('type', analysisType);
     
     window.location.href = url.toString();
 }
@@ -800,20 +833,134 @@ function switchTab(tabName) {
 }
 
 function switchChart(chartType, viewType) {
-    // Implementation for switching chart views
     console.log(`Switching ${chartType} chart to ${viewType} view`);
-    // You can implement AJAX calls here to fetch different data
+    console.log('visitData:', visitData);
+    
+    if (chartType === 'visits') {
+        const chart = Chart.getChart('visitsChart');
+        
+        if (!chart) {
+            console.error('Chart not found');
+            return;
+        }
+        
+        if (viewType === 'daily') {
+            // Update to daily view
+            if (visitData.daily_visits && visitData.daily_visits.length > 0) {
+                chart.data.labels = visitData.daily_visits.slice(-14).map(d => 
+                    new Date(d.day).toLocaleDateString('id-ID', {month: 'short', day: 'numeric'})
+                );
+                chart.data.datasets[0].data = visitData.daily_visits.slice(-14).map(d => d.total_visits);
+                chart.data.datasets[0].label = 'Daily Visits';
+                
+                // Update button states
+                document.querySelector('.daily-btn').classList.add('active');
+                document.querySelector('.hourly-btn').classList.remove('active');
+                
+                chart.update();
+            }
+        } 
+        else if (viewType === 'hourly') {
+            console.log('Hourly patterns data:', visitData.hourly_patterns);
+            
+            // Update to hourly view (showing hourly patterns)
+            if (visitData.hourly_patterns && visitData.hourly_patterns.length > 0) {
+                // Create labels for all 24 hours
+                const hourLabels = [];
+                const hourData = [];
+                
+                for (let hour = 0; hour < 24; hour++) {
+                    hourLabels.push(`${hour.toString().padStart(2, '0')}:00`);
+                    
+                    // Find data for this hour
+                    const hourRecord = visitData.hourly_patterns.find(h => h.hour === hour);
+                    hourData.push(hourRecord ? hourRecord.total_visits : 0);
+                }
+                
+                chart.data.labels = hourLabels;
+                chart.data.datasets[0].data = hourData;
+                chart.data.datasets[0].label = 'Hourly Visits';
+                
+                // Update button states
+                document.querySelector('.hourly-btn').classList.add('active');
+                document.querySelector('.daily-btn').classList.remove('active');
+                
+                chart.update();
+            } else {
+                console.warn('No hourly patterns data available');
+                alert('No hourly data available for the selected period.');
+            }
+        }
+    }
+    
+    if (chartType === 'revenue') {
+        const chart = Chart.getChart('revenueChart');
+        
+        if (viewType === 'weekly') {
+            // You can add weekly revenue data processing here
+            console.log('Switching to weekly revenue view');
+        } else if (viewType === 'monthly') {
+            // Reset to monthly view
+            console.log('Switching to monthly revenue view');
+        }
+        
+        // Update button states for revenue
+        if (viewType === 'weekly') {
+            document.querySelector('.weekly-btn').classList.add('active');
+            document.querySelector('.monthly-btn').classList.remove('active');
+        } else {
+            document.querySelector('.monthly-btn').classList.add('active');
+            document.querySelector('.weekly-btn').classList.remove('active');
+        }
+    }
 }
 
 function exportData() {
-    const months = document.getElementById('monthsSelect').value;
-    const url = `/admin/analytics/export-business/?type=revenue&months=${months}`;
+    const period = document.getElementById('periodSelect').value;
+    const analysisType = document.getElementById('analysisType').value;
+    
+    let url = `/admin/analytics/export-business/?type=revenue`;
+    
+    if (period === 'custom') {
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        url += `&start_date=${startDate}&end_date=${endDate}&period_type=custom`;
+    } else {
+        url += `&period_type=${period}`;
+    }
+    
     window.open(url, '_blank');
 }
 
+// Show/hide custom date range fields
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('periodSelect').addEventListener('change', function() {
+        const customFields = document.getElementById('customDateRange');
+        const customFieldsTo = document.getElementById('customDateRangeTo');
+        
+        if (this.value === 'custom') {
+            customFields.style.display = 'flex';
+            customFieldsTo.style.display = 'flex';
+        } else {
+            customFields.style.display = 'none';
+            customFieldsTo.style.display = 'none';
+        }
+    });
+});
+
 function exportSalesData() {
-    const months = document.getElementById('monthsSelect').value;
-    const url = `/admin/analytics/export-business/?type=visits&months=${months}`;
+    const period = document.getElementById('periodSelect').value;
+    
+    let url = `/admin/analytics/export-business/?type=visits`;
+    
+    if (period === 'custom') {
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        url += `&start_date=${startDate}&end_date=${endDate}&period_type=custom`;
+    } else {
+        url += `&period_type=${period}`;
+    }
+    
     window.open(url, '_blank');
 }
 </script>

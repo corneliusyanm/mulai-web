@@ -565,20 +565,56 @@ def business_analytics_view(request):
     if not request.user.is_staff:
         raise PermissionDenied
 
-    # Get date range from request or default to last 12 months
-    months_back = int(request.GET.get("months", 12))
+    # Get date range from request with new period types
+    period_type = request.GET.get("period_type", "7_days")
     analysis_type = request.GET.get("type", "overview")
 
     now = timezone.now()
-    start_date = now - relativedelta(months=months_back)
+
+    # Handle custom date range
+    if period_type == "custom":
+        start_date_str = request.GET.get("start_date")
+        end_date_str = request.GET.get("end_date")
+
+        if start_date_str and end_date_str:
+            from datetime import datetime
+
+            start_date = datetime.strptime(start_date_str, "%Y-%m-%d").replace(
+                tzinfo=timezone.get_current_timezone()
+            )
+            end_date = datetime.strptime(end_date_str, "%Y-%m-%d").replace(
+                tzinfo=timezone.get_current_timezone()
+            )
+        else:
+            # Default to last 8 weeks if custom dates not provided
+            start_date = now - timedelta(days=7)
+            end_date = now
+    else:
+        # Handle predefined period types
+        end_date = now
+        if period_type == "7_days":
+            start_date = now - timedelta(days=7)
+        elif period_type == "2_weeks":
+            start_date = now - timedelta(weeks=2)
+        elif period_type == "4_weeks":
+            start_date = now - timedelta(weeks=4)
+        elif period_type == "8_weeks":
+            start_date = now - timedelta(weeks=8)
+        elif period_type == "3_months":
+            start_date = now - relativedelta(months=3)
+        elif period_type == "6_months":
+            start_date = now - relativedelta(months=6)
+        else:
+            # Default to 8 weeks
+            start_date = now - timedelta(weeks=8)
 
     # Calculate comprehensive business metrics
-    business_metrics = calculate_business_metrics(start_date, now)
-    revenue_analytics = calculate_revenue_analytics(start_date, now)
-    sales_analytics = calculate_sales_analytics(start_date, now)
-    visit_analytics = calculate_visit_analytics(start_date, now)
-    member_analytics = calculate_member_analytics(start_date, now)
-    repurchase_analytics = calculate_repurchase_analytics(start_date, now)
+    business_metrics = calculate_business_metrics(start_date, end_date)
+    revenue_analytics = calculate_revenue_analytics(start_date, end_date)
+    sales_analytics = calculate_sales_analytics(start_date, end_date)
+    visit_analytics = calculate_visit_analytics(start_date, end_date)
+    member_analytics = calculate_member_analytics(start_date, end_date)
+    repurchase_analytics = calculate_repurchase_analytics(start_date, end_date)
 
     context = {
         **admin_site.each_context(request),
@@ -589,10 +625,10 @@ def business_analytics_view(request):
         "visit_analytics": json.dumps(visit_analytics, cls=DecimalEncoder),
         "member_analytics": json.dumps(member_analytics, cls=DecimalEncoder),
         "repurchase_analytics": repurchase_analytics,
-        "months_back": months_back,
+        "period_type": period_type,
         "analysis_type": analysis_type,
         "start_date": start_date.strftime("%Y-%m-%d"),
-        "end_date": now.strftime("%Y-%m-%d"),
+        "end_date": end_date.strftime("%Y-%m-%d"),
     }
 
     return render(request, "admin/analytics/business_intelligence.html", context)
@@ -844,7 +880,7 @@ def calculate_visit_analytics(start_date, end_date):
         Visit.objects.filter(check_in_time__gte=start_date)
         .extra(select={"hour": "extract(hour from check_in_time)"})
         .values("hour")
-        .annotate(visit_count=Count("id"))
+        .annotate(total_visits=Count("id"))
         .order_by("hour")
     )
 
@@ -1076,15 +1112,47 @@ def revenue_data_view(request):
     if not request.user.is_staff:
         return JsonResponse({"error": "Permission denied"}, status=403)
 
-    months_back = int(request.GET.get("months", 12))
+    # Handle new period types
+    period_type = request.GET.get("period_type", "7_days")
     chart_type = request.GET.get("chart", "monthly")
-
     now = timezone.now()
-    start_date = now - relativedelta(months=months_back)
+
+    if period_type == "custom":
+        start_date_str = request.GET.get("start_date")
+        end_date_str = request.GET.get("end_date")
+
+        if start_date_str and end_date_str:
+            from datetime import datetime
+
+            start_date = datetime.strptime(start_date_str, "%Y-%m-%d").replace(
+                tzinfo=timezone.get_current_timezone()
+            )
+            end_date = datetime.strptime(end_date_str, "%Y-%m-%d").replace(
+                tzinfo=timezone.get_current_timezone()
+            )
+        else:
+            start_date = now - timedelta(days=7)
+            end_date = now
+    else:
+        end_date = now
+        if period_type == "7_days":
+            start_date = now - timedelta(days=7)
+        elif period_type == "2_weeks":
+            start_date = now - timedelta(weeks=2)
+        elif period_type == "4_weeks":
+            start_date = now - timedelta(weeks=4)
+        elif period_type == "8_weeks":
+            start_date = now - timedelta(weeks=8)
+        elif period_type == "3_months":
+            start_date = now - relativedelta(months=3)
+        elif period_type == "6_months":
+            start_date = now - relativedelta(months=6)
+        else:
+            start_date = now - timedelta(days=7)
 
     if chart_type == "monthly":
-        data = calculate_revenue_analytics(start_date, now)
-        return JsonResponse(data)
+        data = calculate_revenue_analytics(start_date, end_date)
+        return JsonResponse(data, cls=DecimalEncoder)
     elif chart_type == "weekly":
         # Calculate weekly data
         weekly_data = []
@@ -1120,11 +1188,44 @@ def sales_data_view(request):
     if not request.user.is_staff:
         return JsonResponse({"error": "Permission denied"}, status=403)
 
-    months_back = int(request.GET.get("months", 12))
+    # Handle new period types
+    period_type = request.GET.get("period_type", "7_days")
     now = timezone.now()
-    start_date = now - relativedelta(months=months_back)
 
-    data = calculate_sales_analytics(start_date, now)
+    if period_type == "custom":
+        start_date_str = request.GET.get("start_date")
+        end_date_str = request.GET.get("end_date")
+
+        if start_date_str and end_date_str:
+            from datetime import datetime
+
+            start_date = datetime.strptime(start_date_str, "%Y-%m-%d").replace(
+                tzinfo=timezone.get_current_timezone()
+            )
+            end_date = datetime.strptime(end_date_str, "%Y-%m-%d").replace(
+                tzinfo=timezone.get_current_timezone()
+            )
+        else:
+            start_date = now - timedelta(days=7)
+            end_date = now
+    else:
+        end_date = now
+        if period_type == "7_days":
+            start_date = now - timedelta(days=7)
+        elif period_type == "2_weeks":
+            start_date = now - timedelta(weeks=2)
+        elif period_type == "4_weeks":
+            start_date = now - timedelta(weeks=4)
+        elif period_type == "8_weeks":
+            start_date = now - timedelta(weeks=8)
+        elif period_type == "3_months":
+            start_date = now - relativedelta(months=3)
+        elif period_type == "6_months":
+            start_date = now - relativedelta(months=6)
+        else:
+            start_date = now - timedelta(days=7)
+
+    data = calculate_sales_analytics(start_date, end_date)
     return JsonResponse(data)
 
 
@@ -1133,11 +1234,44 @@ def visits_data_view(request):
     if not request.user.is_staff:
         return JsonResponse({"error": "Permission denied"}, status=403)
 
-    months_back = int(request.GET.get("months", 3))
+    # Handle new period types
+    period_type = request.GET.get("period_type", "7_days")
     now = timezone.now()
-    start_date = now - relativedelta(months=months_back)
 
-    data = calculate_visit_analytics(start_date, now)
+    if period_type == "custom":
+        start_date_str = request.GET.get("start_date")
+        end_date_str = request.GET.get("end_date")
+
+        if start_date_str and end_date_str:
+            from datetime import datetime
+
+            start_date = datetime.strptime(start_date_str, "%Y-%m-%d").replace(
+                tzinfo=timezone.get_current_timezone()
+            )
+            end_date = datetime.strptime(end_date_str, "%Y-%m-%d").replace(
+                tzinfo=timezone.get_current_timezone()
+            )
+        else:
+            start_date = now - timedelta(days=7)
+            end_date = now
+    else:
+        end_date = now
+        if period_type == "7_days":
+            start_date = now - timedelta(days=7)
+        elif period_type == "2_weeks":
+            start_date = now - timedelta(weeks=2)
+        elif period_type == "4_weeks":
+            start_date = now - timedelta(weeks=4)
+        elif period_type == "8_weeks":
+            start_date = now - timedelta(weeks=8)
+        elif period_type == "3_months":
+            start_date = now - relativedelta(months=3)
+        elif period_type == "6_months":
+            start_date = now - relativedelta(months=6)
+        else:
+            start_date = now - timedelta(days=7)
+
+    data = calculate_visit_analytics(start_date, end_date)
     return JsonResponse(data)
 
 
@@ -1147,10 +1281,44 @@ def export_business_data_view(request):
         raise PermissionDenied
 
     export_type = request.GET.get("type", "revenue")
-    months_back = int(request.GET.get("months", 12))
+    period_type = request.GET.get("period_type", "7_days")
 
     now = timezone.now()
-    start_date = now - relativedelta(months=months_back)
+
+    # Handle custom date range
+    if period_type == "custom":
+        start_date_str = request.GET.get("start_date")
+        end_date_str = request.GET.get("end_date")
+
+        if start_date_str and end_date_str:
+            from datetime import datetime
+
+            start_date = datetime.strptime(start_date_str, "%Y-%m-%d").replace(
+                tzinfo=timezone.get_current_timezone()
+            )
+            end_date = datetime.strptime(end_date_str, "%Y-%m-%d").replace(
+                tzinfo=timezone.get_current_timezone()
+            )
+        else:
+            start_date = now - timedelta(days=7)
+            end_date = now
+    else:
+        # Handle predefined period types
+        end_date = now
+        if period_type == "7_days":
+            start_date = now - timedelta(days=7)
+        elif period_type == "2_weeks":
+            start_date = now - timedelta(weeks=2)
+        elif period_type == "4_weeks":
+            start_date = now - timedelta(weeks=4)
+        elif period_type == "8_weeks":
+            start_date = now - timedelta(weeks=8)
+        elif period_type == "3_months":
+            start_date = now - relativedelta(months=3)
+        elif period_type == "6_months":
+            start_date = now - relativedelta(months=6)
+        else:
+            start_date = now - timedelta(days=7)
 
     response = HttpResponse(content_type="text/csv")
     filename = f"business_analytics_{export_type}_{start_date.strftime('%Y%m%d')}_{now.strftime('%Y%m%d')}.csv"
