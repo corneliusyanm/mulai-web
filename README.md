@@ -137,6 +137,14 @@ The account-related pages are accessible at the following URLs:
 - `check_in.html`: Updated to include email and phone number fields (with country code).
 - `signup.html`, `member_edit.html`: Include country code and phone number fields.
 
+### Automatic `is_pemula` Calculation
+During member registration, the `is_pemula` field is automatically calculated based on the `years_of_working_out` input:
+- **`is_pemula = True`**: If the input contains "belum" (case-insensitive).
+- **`is_pemula = False`**: If the input contains "tahun" (case-insensitive).
+- **`is_pemula = None`**: For all other cases.
+
+This helps in automatically segmenting new members based on their experience level right from signup.
+
 ## Reminders
 
 The reminder system is designed to help gym staff follow up with members at the right time. It automatically generates reminders based on member behavior and provides an admin interface for tracking and resolving them.

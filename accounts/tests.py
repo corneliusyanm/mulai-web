@@ -398,3 +398,168 @@ class ProspectTest(TestCase):
 
         # created_by should remain the original user
         self.assertEqual(updated_prospect.created_by, self.admin_user)
+
+
+class IsPemulaCalculationTest(TestCase):
+    """Test automatic calculation of is_pemula field during member signup."""
+
+    def test_is_pemula_set_to_true_when_belum(self):
+        """Test that is_pemula is True when years_of_working_out contains 'belum'."""
+        test_cases = [
+            "belum pernah",
+            "Belum pernah nge-gym",
+            "BELUM",
+            "belum ada",
+            "saya belum pernah",
+        ]
+
+        for i, years_text in enumerate(test_cases):
+            with self.subTest(years_text=years_text):
+                response = self.client.post(
+                    reverse("signup"),
+                    {
+                        "name": f"Test User {i}",
+                        "email": f"test{i}@example.com",
+                        "country_code": "+62",
+                        "phone_number_display": f"8123456789{i}",
+                        "gender": "M",
+                        "age": 25,
+                        "height": 170,
+                        "weight": 65,
+                        "address": "Test Address",
+                        "years_of_working_out": years_text,
+                        "goals": "To be healthy",
+                        "know_mulai_gym_from": "friends",
+                        "why_choose_mulai": "test",
+                    },
+                )
+                self.assertEqual(
+                    response.status_code, 302
+                )  # Should redirect on success
+                member = Member.objects.get(email=f"test{i}@example.com")
+                self.assertTrue(member.is_pemula, f"Failed for: {years_text}")
+
+    def test_is_pemula_set_to_false_when_tahun(self):
+        """Test that is_pemula is False when years_of_working_out contains 'tahun'."""
+        test_cases = [
+            "2 tahun",
+            "1 tahun setengah",
+            "3 TAHUN",
+            "sudah tahun",
+        ]
+
+        for i, years_text in enumerate(test_cases):
+            with self.subTest(years_text=years_text):
+                response = self.client.post(
+                    reverse("signup"),
+                    {
+                        "name": f"Test User {i}",
+                        "email": f"testfalse{i}@example.com",
+                        "country_code": "+62",
+                        "phone_number_display": f"8223456789{i}",
+                        "gender": "F",
+                        "age": 25,
+                        "height": 160,
+                        "weight": 55,
+                        "address": "Test Address",
+                        "years_of_working_out": years_text,
+                        "goals": "To be healthy",
+                        "know_mulai_gym_from": "friends",
+                        "why_choose_mulai": "test",
+                    },
+                )
+                self.assertEqual(
+                    response.status_code, 302
+                )  # Should redirect on success
+                member = Member.objects.get(email=f"testfalse{i}@example.com")
+                self.assertFalse(member.is_pemula, f"Failed for: {years_text}")
+
+    def test_is_pemula_set_to_null_for_other_values(self):
+        """Test that is_pemula is None for other values that don't match patterns."""
+        test_cases = [
+            "sudah 3 bulan",
+            "Sudah pernah nge-gym",
+            "SUDAH lama",
+            "3 bulan",
+            "6 minggu",
+            "baru mulai",
+            "on and off",
+            "kadang-kadang",
+        ]
+
+        for i, years_text in enumerate(test_cases):
+            with self.subTest(years_text=years_text):
+                response = self.client.post(
+                    reverse("signup"),
+                    {
+                        "name": f"Test User {i}",
+                        "email": f"testnull{i}@example.com",
+                        "country_code": "+62",
+                        "phone_number_display": f"8323456789{i}",
+                        "gender": "M",
+                        "age": 25,
+                        "height": 170,
+                        "weight": 65,
+                        "address": "Test Address",
+                        "years_of_working_out": years_text,
+                        "goals": "To be healthy",
+                        "know_mulai_gym_from": "friends",
+                        "why_choose_mulai": "test",
+                    },
+                )
+                self.assertEqual(
+                    response.status_code, 302
+                )  # Should redirect on success
+                member = Member.objects.get(email=f"testnull{i}@example.com")
+                self.assertIsNone(member.is_pemula, f"Failed for: {years_text}")
+
+    def test_is_pemula_edge_cases(self):
+        """Test edge cases for is_pemula calculation."""
+        # Test case where both 'belum' and 'sudah' appear - 'belum' should take precedence
+        response = self.client.post(
+            reverse("signup"),
+            {
+                "name": "Edge Case User",
+                "email": "edgecase@example.com",
+                "country_code": "+62",
+                "phone_number_display": "8423456789",
+                "gender": "F",
+                "age": 25,
+                "height": 160,
+                "weight": 55,
+                "address": "Test Address",
+                "years_of_working_out": "belum pernah tapi sudah pernah denger",
+                "goals": "To be healthy",
+                "know_mulai_gym_from": "friends",
+                "why_choose_mulai": "test",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        member = Member.objects.get(email="edgecase@example.com")
+        self.assertTrue(member.is_pemula)  # 'belum' should take precedence
+
+    def test_is_pemula_form_save_method_directly(self):
+        """Test the form save method directly without going through the view."""
+        from accounts.forms import MemberSignUpForm
+
+        # Test with 'belum'
+        form_data = {
+            "name": "Direct Test User",
+            "email": "directtest@example.com",
+            "country_code": "+62",
+            "phone_number_display": "8523456789",
+            "gender": "M",
+            "age": 25,
+            "height": 170,
+            "weight": 65,
+            "address": "Test Address",
+            "years_of_working_out": "belum pernah",
+            "goals": "To be healthy",
+            "know_mulai_gym_from": "friends",
+            "why_choose_mulai": "test",
+        }
+
+        form = MemberSignUpForm(data=form_data)
+        self.assertTrue(form.is_valid(), f"Form errors: {form.errors}")
+        member = form.save()
+        self.assertTrue(member.is_pemula)

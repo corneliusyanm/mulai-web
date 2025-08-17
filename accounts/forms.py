@@ -229,6 +229,21 @@ class MemberSignUpForm(forms.ModelForm):
         # Set the phone_number from our cleaned data
         if "phone_number" in self.cleaned_data:
             instance.phone_number = self.cleaned_data["phone_number"]
+
+        # Automatically calculate is_pemula based on years_of_working_out
+        years_of_working_out = (
+            instance.years_of_working_out.lower()
+            if instance.years_of_working_out
+            else ""
+        )
+
+        if "belum" in years_of_working_out:
+            instance.is_pemula = True
+        elif "tahun" in years_of_working_out:
+            instance.is_pemula = False
+        else:
+            instance.is_pemula = None
+
         if commit:
             instance.save()
         return instance
