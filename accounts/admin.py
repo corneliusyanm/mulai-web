@@ -54,6 +54,7 @@ class MemberAdmin(WhatsAppLinkMixin, admin.ModelAdmin):
         "name",
         "email",
         "whatsapp_link",
+        "is_pemula",
         "formatted_active_until",
         "formatted_pemula_active_until",
         "formatted_semi_private_active_until",
@@ -61,7 +62,7 @@ class MemberAdmin(WhatsAppLinkMixin, admin.ModelAdmin):
         "membership_status",
         "created_at",
     )
-    list_filter = ("gender", "created_at")
+    list_filter = ("gender", "is_pemula", "created_at")
     search_fields = ("name", "email", "phone_number")
     readonly_fields = ("created_at",)
     fieldsets = (
@@ -89,6 +90,7 @@ class MemberAdmin(WhatsAppLinkMixin, admin.ModelAdmin):
                     "pemula_active_until",
                     "semi_private_active_until",
                     "pt_session_count",
+                    "is_pemula",
                 )
             },
         ),

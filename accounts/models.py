@@ -70,6 +70,11 @@ class Member(models.Model):
     pt_session_count = models.IntegerField(
         default=0, help_text="Jumlah sesi personal training yang tersisa"
     )
+    is_pemula = models.BooleanField(
+        null=True,
+        blank=True,
+        help_text="Status pemula member - bisa true, false, atau kosong",
+    )
 
     def __str__(self):
         return f"{self.name} ({self.email})"
