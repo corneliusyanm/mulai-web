@@ -135,11 +135,12 @@ class TamuAdmin(WhatsAppLinkMixin, admin.ModelAdmin):
     list_display = (
         "name",
         "whatsapp_link",
+        "is_pemula",
         "has_worked_out_before",
         "social_media_username",
         "created_at",
     )
-    list_filter = ("has_worked_out_before", "created_at")
+    list_filter = ("is_pemula", "has_worked_out_before", "created_at")
     search_fields = ("name", "phone_number", "social_media_username")
     readonly_fields = ("created_at",)
 

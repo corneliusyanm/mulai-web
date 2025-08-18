@@ -563,3 +563,156 @@ class IsPemulaCalculationTest(TestCase):
         self.assertTrue(form.is_valid(), f"Form errors: {form.errors}")
         member = form.save()
         self.assertTrue(member.is_pemula)
+
+
+class TamuIsPemulaCalculationTest(TestCase):
+    """Test automatic calculation of is_pemula field for Tamu during signup."""
+
+    def test_tamu_is_pemula_set_to_true_when_belum_variations(self):
+        """Test that is_pemula is True when has_worked_out_before contains 'belum' variations."""
+        test_cases = [
+            "belum pernah",
+            "Belum pernah nge-gym",
+            "BELUM",
+            "belom tau",
+            "blm pernah",
+            "blum ada",
+            "belm pernah coba",
+            "blon pernah",
+            "belon mulai",
+        ]
+
+        for i, has_worked_out_text in enumerate(test_cases):
+            with self.subTest(has_worked_out_text=has_worked_out_text):
+                response = self.client.post(
+                    reverse("tamu_signup"),
+                    {
+                        "name": f"Test Tamu {i}",
+                        "phone_number": f"0812345678{i:02d}",
+                        "has_worked_out_before": has_worked_out_text,
+                        "social_media_username": f"@testtamu{i}",
+                    },
+                )
+                self.assertEqual(
+                    response.status_code, 302
+                )  # Should redirect on success
+                tamu = Tamu.objects.get(name=f"Test Tamu {i}")
+                self.assertTrue(tamu.is_pemula, f"Failed for: {has_worked_out_text}")
+
+    def test_tamu_is_pemula_set_to_false_when_tahun_variations(self):
+        """Test that is_pemula is False when has_worked_out_before contains 'tahun' variations."""
+        test_cases = [
+            "2 tahun",
+            "1 tahun setengah",
+            "3 TAHUN",
+            "sudah tahun",
+            "1 thn",
+            "5 year",
+        ]
+
+        for i, has_worked_out_text in enumerate(test_cases):
+            with self.subTest(has_worked_out_text=has_worked_out_text):
+                response = self.client.post(
+                    reverse("tamu_signup"),
+                    {
+                        "name": f"Test Tamu False {i}",
+                        "phone_number": f"0822345678{i:02d}",
+                        "has_worked_out_before": has_worked_out_text,
+                        "social_media_username": f"@testtamufalse{i}",
+                    },
+                )
+                self.assertEqual(
+                    response.status_code, 302
+                )  # Should redirect on success
+                tamu = Tamu.objects.get(name=f"Test Tamu False {i}")
+                self.assertFalse(tamu.is_pemula, f"Failed for: {has_worked_out_text}")
+
+    def test_tamu_is_pemula_set_to_null_for_other_values(self):
+        """Test that is_pemula is None for other values that don't match patterns."""
+        test_cases = [
+            "sudah 3 bulan",
+            "Sudah pernah nge-gym",
+            "SUDAH lama",
+            "3 bulan",
+            "6 minggu",
+            "baru mulai",
+            "on and off",
+            "kadang-kadang",
+            "jarang",
+        ]
+
+        for i, has_worked_out_text in enumerate(test_cases):
+            with self.subTest(has_worked_out_text=has_worked_out_text):
+                response = self.client.post(
+                    reverse("tamu_signup"),
+                    {
+                        "name": f"Test Tamu Null {i}",
+                        "phone_number": f"0832345678{i:02d}",
+                        "has_worked_out_before": has_worked_out_text,
+                        "social_media_username": f"@testtamunull{i}",
+                    },
+                )
+                self.assertEqual(
+                    response.status_code, 302
+                )  # Should redirect on success
+                tamu = Tamu.objects.get(name=f"Test Tamu Null {i}")
+                self.assertIsNone(tamu.is_pemula, f"Failed for: {has_worked_out_text}")
+
+    def test_tamu_is_pemula_edge_cases(self):
+        """Test edge cases for Tamu is_pemula calculation."""
+        # Test case where both 'belum' and 'tahun' appear - 'belum' should take precedence
+        response = self.client.post(
+            reverse("tamu_signup"),
+            {
+                "name": "Edge Case Tamu",
+                "phone_number": "0842345678",
+                "has_worked_out_before": "belum pernah tapi sudah tahun",
+                "social_media_username": "@edgecasetamu",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        tamu = Tamu.objects.get(name="Edge Case Tamu")
+        self.assertTrue(tamu.is_pemula)  # 'belum' should take precedence
+
+    def test_tamu_form_save_method_directly(self):
+        """Test the TamuForm save method directly without going through the view."""
+        from accounts.forms import TamuForm
+
+        # Test with 'belum'
+        form_data = {
+            "name": "Direct Test Tamu",
+            "phone_number": "0852345678",
+            "has_worked_out_before": "belum pernah",
+            "social_media_username": "@directtesttamu",
+        }
+
+        form = TamuForm(data=form_data)
+        self.assertTrue(form.is_valid(), f"Form errors: {form.errors}")
+        tamu = form.save()
+        self.assertTrue(tamu.is_pemula)
+
+        # Test with 'tahun'
+        form_data_2 = {
+            "name": "Direct Test Tamu 2",
+            "phone_number": "0862345678",
+            "has_worked_out_before": "2 tahun",
+            "social_media_username": "@directtesttamu2",
+        }
+
+        form_2 = TamuForm(data=form_data_2)
+        self.assertTrue(form_2.is_valid(), f"Form errors: {form_2.errors}")
+        tamu_2 = form_2.save()
+        self.assertFalse(tamu_2.is_pemula)
+
+        # Test with other value
+        form_data_3 = {
+            "name": "Direct Test Tamu 3",
+            "phone_number": "0872345678",
+            "has_worked_out_before": "kadang-kadang",
+            "social_media_username": "@directtesttamu3",
+        }
+
+        form_3 = TamuForm(data=form_data_3)
+        self.assertTrue(form_3.is_valid(), f"Form errors: {form_3.errors}")
+        tamu_3 = form_3.save()
+        self.assertIsNone(tamu_3.is_pemula)

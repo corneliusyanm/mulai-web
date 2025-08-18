@@ -115,12 +115,18 @@ class Tamu(models.Model):
     name = models.CharField(max_length=100, verbose_name="Nama")
     phone_number = models.CharField(max_length=20, verbose_name="No. HP")
     has_worked_out_before = models.CharField(
-        max_length=100, verbose_name="Udah pernah rutin nge-Gym atau belum?"
+        max_length=100,
+        verbose_name="Sudah pernah rutin nge-Gym? Kalau sudah, berapa lama?",
     )
     social_media_username = models.CharField(
         max_length=100,
         blank=True,
         verbose_name="Username akun Instagram/TikTok/Facebook",
+    )
+    is_pemula = models.BooleanField(
+        null=True,
+        blank=True,
+        help_text="Status pemula tamu - bisa true, false, atau null",
     )
     created_at = models.DateTimeField(auto_now_add=True)
 

@@ -415,16 +415,27 @@ The `Package` code is structured as `TYPE-LEVEL-DURATION`, which dictates how a 
   - `phone_number`: CharField (Contact number)
   - `has_worked_out_before`: CharField (Guest's previous gym experience)
   - `social_media_username`: CharField (Optional social media handle)
+  - `is_pemula`: BooleanField (Automatically calculated based on gym experience)
+
+### Automatic `is_pemula` Calculation for Guests
+During guest registration via `/tamu/`, the `is_pemula` field is automatically calculated based on the `has_worked_out_before` input using the same logic as member registration:
+- **`is_pemula = True`**: If the input contains any variation of "belum" (belum, belom, blm, blum, belm, blon, belon).
+- **`is_pemula = False`**: If the input contains any variation of "tahun" (tahun, thn, year).
+- **`is_pemula = None`**: For all other cases.
+
+This provides consistent experience level classification across both members and guests.
 
 ### Admin (`accounts/admin.py`)
 - **`TamuAdmin`**:
-  - Displays guest details in the admin panel.
+  - Displays guest details in the admin panel including `is_pemula` status.
+  - Includes filtering by `is_pemula` and `has_worked_out_before`.
   - Includes a clickable `whatsapp_link` for easy contact.
 
 ### Views (`accounts/views.py`)
 - **`tamu_signup_view`** (`/tamu`):
   - Renders a simple form for guests to fill out.
   - On submission, saves the data and shows a success page.
+  - Automatically calculates `is_pemula` based on form input.
 
 ---
 

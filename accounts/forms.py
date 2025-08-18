@@ -3,6 +3,10 @@ from django.core.exceptions import ValidationError
 
 from .models import Member, Tamu, Masukkan
 
+# Constants for is_pemula calculation
+BELUM_VARIATIONS = ["belum", "belom", "blm", "blum", "belm", "blon", "belon"]
+TAHUN_VARIATIONS = ["tahun", "thn", "year"]
+
 
 class MasukkanForm(forms.ModelForm):
     class Meta:
@@ -42,9 +46,30 @@ class TamuForm(forms.ModelForm):
         labels = {
             "name": "Nama",
             "phone_number": "No. HP",
-            "has_worked_out_before": "Udah pernah rutin nge-Gym atau belum?",
+            "has_worked_out_before": "Sudah pernah rutin nge-Gym? Kalau sudah, berapa lama?",
             "social_media_username": "Username akun Instagram/TikTok/Facebook (Opsional)",
         }
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+
+        # Automatically calculate is_pemula based on has_worked_out_before
+        has_worked_out_before = (
+            instance.has_worked_out_before.lower()
+            if instance.has_worked_out_before
+            else ""
+        )
+
+        if any(sub in has_worked_out_before for sub in BELUM_VARIATIONS):
+            instance.is_pemula = True
+        elif any(sub in has_worked_out_before for sub in TAHUN_VARIATIONS):
+            instance.is_pemula = False
+        else:
+            instance.is_pemula = None
+
+        if commit:
+            instance.save()
+        return instance
 
 
 class MemberSignUpForm(forms.ModelForm):
@@ -237,12 +262,9 @@ class MemberSignUpForm(forms.ModelForm):
             else ""
         )
 
-        if any(
-            sub in years_of_working_out
-            for sub in ["belum", "belom", "blm", "blum", "belm", "blon", "belon"]
-        ):
+        if any(sub in years_of_working_out for sub in BELUM_VARIATIONS):
             instance.is_pemula = True
-        elif any(sub in years_of_working_out for sub in ["tahun", "thn", "year"]):
+        elif any(sub in years_of_working_out for sub in TAHUN_VARIATIONS):
             instance.is_pemula = False
         else:
             instance.is_pemula = None
