@@ -617,14 +617,14 @@ class BusinessIntelligenceViewsTest(TestCase):
             member=self.member1,
             package=self.package,
             amount=500000,
-            payment_date=timezone.now() - timedelta(days=30),
+            payment_date=timezone.now() - timedelta(days=2),
         )
 
         Payment.objects.create(
             member=self.member1,
             package=self.package,
             amount=500000,
-            payment_date=timezone.now() - timedelta(days=10),
+            payment_date=timezone.now() - timedelta(days=1),
         )
 
         # Create visits
@@ -642,7 +642,10 @@ class BusinessIntelligenceViewsTest(TestCase):
         self.product = Product.objects.create(name="Protein Powder", price=200000)
 
         self.sale = Sale.objects.create(
-            member=self.member1, payment_method="CASH", created_by=self.superuser
+            member=self.member1,
+            payment_method="CASH",
+            created_by=self.superuser,
+            created_at=timezone.now() - timedelta(days=1),
         )
 
         SaleItem.objects.create(
@@ -794,13 +797,14 @@ class BusinessIntelligenceViewsTest(TestCase):
     def test_business_analytics_custom_timeframe(self):
         """Test business analytics with custom timeframe"""
         response = self.client.get(
-            reverse("admin:business-analytics"), {"months": 6, "type": "revenue"}
+            reverse("admin:business-analytics"),
+            {"period_type": "6_months", "type": "revenue"},
         )
 
         self.assertEqual(response.status_code, 200)
         context = response.context
 
-        self.assertEqual(context["months_back"], 6)
+        self.assertEqual(context["period_type"], "6_months")
         self.assertEqual(context["analysis_type"], "revenue")
 
     def test_ajax_endpoints_permission_denied(self):

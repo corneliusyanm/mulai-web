@@ -1152,7 +1152,9 @@ def revenue_data_view(request):
 
     if chart_type == "monthly":
         data = calculate_revenue_analytics(start_date, end_date)
-        return JsonResponse(data, cls=DecimalEncoder)
+        return JsonResponse(
+            json.loads(json.dumps(data, cls=DecimalEncoder)), safe=False
+        )
     elif chart_type == "weekly":
         # Calculate weekly data
         weekly_data = []
