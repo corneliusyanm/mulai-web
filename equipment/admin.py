@@ -18,7 +18,7 @@ class EquipmentAdmin(admin.ModelAdmin):
     list_filter = ("muscle_group", "created_at")
     prepopulated_fields = {"slug": ("name",)}
     ordering = ("-total_views", "name")  # Order by most viewed first
-    readonly_fields = ("total_views", "authenticated_views", "anonymous_views", "slug")
+    readonly_fields = ("total_views", "authenticated_views", "anonymous_views")
 
     fieldsets = (
         (None, {"fields": ("name", "slug", "muscle_group", "detailed_muscle_group")}),
