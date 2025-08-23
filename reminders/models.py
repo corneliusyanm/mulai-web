@@ -9,6 +9,8 @@ class Reminder(models.Model):
         ("PAYMENT_DUE", "Bayar Cicilan"),
         ("NO_VISIT", "Lama Tidak Visit"),
         ("MEMBERSHIP_EXPIRING", "Membership Berakhir"),
+        ("LOKER", "Loker"),
+        ("LAINNYA", "Lainnya"),
     ]
 
     member = models.ForeignKey(Member, on_delete=models.CASCADE)

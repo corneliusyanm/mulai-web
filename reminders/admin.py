@@ -60,9 +60,12 @@ class ReminderAdmin(admin.ModelAdmin):
         return redirect("admin:current-reminders")
 
     def current_reminders_view(self, request):
-        reminders = Reminder.objects.filter(is_resolved=False).order_by(
-            "due_date", "-created_date"
-        )
+        from django.utils import timezone
+
+        today = timezone.now().date()
+        reminders = Reminder.objects.filter(
+            is_resolved=False, due_date__lte=today
+        ).order_by("due_date", "-created_date")
 
         context = {
             **self.admin_site.each_context(request),
