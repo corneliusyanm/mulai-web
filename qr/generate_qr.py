@@ -101,10 +101,12 @@ def generate_styled_qr(
     title_bbox = draw.textbbox((0, 0), title, font=title_font)
     title_width = title_bbox[2] - title_bbox[0]
     title_x = (canvas_width - title_width) // 2
-    draw.text((title_x, 8), title, fill=text_rgb, font=title_font)  # Ultra close to top
+    draw.text(
+        (title_x, 12), title, fill=text_rgb, font=title_font
+    )  # Ultra close to top
 
     # Add subtitle with very tight spacing
-    subtitle = "Scan untuk info alat"
+    subtitle = "Scan untuk cara penggunaan & info detail"
     subtitle_bbox = draw.textbbox((0, 0), subtitle, font=subtitle_font)
     subtitle_width = subtitle_bbox[2] - subtitle_bbox[0]
     subtitle_x = (canvas_width - subtitle_width) // 2
@@ -127,7 +129,7 @@ def generate_styled_qr(
     )
 
     # Add bold Mulai Gym accent elements
-    accent_height = 4  # Thicker neon borders
+    accent_height = 10  # Thicker neon borders
 
     # Top bold neon accent bar
     draw.rectangle([0, 0, canvas_width, accent_height], fill=secondary_rgb)
@@ -138,8 +140,20 @@ def generate_styled_qr(
         fill=secondary_rgb,
     )
 
+    # Left bold neon accent bar
+    draw.rectangle(
+        [0, 0, accent_height, canvas_height],
+        fill=secondary_rgb,
+    )
+
+    # Right bold neon accent bar
+    draw.rectangle(
+        [canvas_width - accent_height, 0, canvas_width, canvas_height],
+        fill=secondary_rgb,
+    )
+
     # Larger corner accents in purple
-    corner_size = 12  # Bigger corner rectangles
+    corner_size = 10  # Bigger corner rectangles
     # Top corners
     draw.rectangle([0, 0, corner_size, corner_size], fill=primary_rgb)
     draw.rectangle(
