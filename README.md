@@ -4,6 +4,13 @@ It's a Django project, for Gym Management System. The Gym name is called Mulai G
 https://www.instagram.com/mulaigym.id
 https://mulaigym.id
 
+Insights:
+1. Around 80% of the members are still newbies, Mulai Gym being their first ever gym. Which is really good, truly according to my expectation, my initial goal why I wanted to build this gym: To make as many people to start working out in a Gym regurlarly.
+2. However, since it's their first time, they also mostly only want to take the 1 month membership plan, instead of 3/6/12 months, even though it's more expensive per month. This makes us challenging to predict, and need to put a lot of effort / care to make them repurchase.
+3. Around 50% of them takes classes, either Kelas Pemula (Silver) or Semi Private (Gold).
+
+Mulai Gym was opened since June 28, 2025.
+
 ## Infrastructure & Deployment
 
 ### DNS & SSL Setup

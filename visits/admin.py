@@ -115,6 +115,13 @@ class CustomAdminSite(admin.AdminSite):
                         "view_only": True,
                         "perms": {"view": True},
                     },
+                    {
+                        "name": "Weekly Metrics Tracker",
+                        "object_name": "Weekly Metrics Tracker",
+                        "admin_url": reverse("admin:weekly-metrics"),
+                        "view_only": True,
+                        "perms": {"view": True},
+                    },
                 ],
             }
             app_list.append(analytics_app)
@@ -138,6 +145,11 @@ def get_custom_admin_urls():
             "analytics/business/",
             business_analytics_view,
             name="business-analytics",
+        ),
+        path(
+            "analytics/weekly-metrics/",
+            weekly_metrics_view,
+            name="weekly-metrics",
         ),
         path(
             "analytics/members-by-date/",
@@ -632,6 +644,78 @@ def business_analytics_view(request):
     }
 
     return render(request, "admin/analytics/business_intelligence.html", context)
+
+
+def weekly_metrics_view(request):
+    """Weekly metrics dashboard for repurchase rates"""
+    if not request.user.is_staff:
+        raise PermissionDenied
+
+    today = timezone.now().date()
+    end_date_str = request.GET.get("end_date", today.strftime("%Y-%m-%d"))
+    start_date_str = request.GET.get(
+        "start_date", (today - timedelta(days=6)).strftime("%Y-%m-%d")
+    )
+
+    try:
+        start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+        end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+    except ValueError:
+        # Handle invalid date format
+        start_date = today - timedelta(days=6)
+        end_date = today
+
+    # Logic to get repurchase data
+    expiring_members = Member.objects.filter(
+        active_until__date__gte=start_date, active_until__date__lte=end_date
+    )
+
+    repurchased_members_info = []
+    did_not_repurchase_members = []
+
+    expiring_member_ids = expiring_members.values_list("id", flat=True)
+
+    payments_in_range = Payment.objects.filter(
+        member_id__in=expiring_member_ids,
+        payment_date__date__gte=start_date,
+        payment_date__date__lte=end_date,
+    ).select_related("member", "package")
+
+    repurchased_member_ids = payments_in_range.values_list("member_id", flat=True)
+
+    for payment in payments_in_range:
+        repurchased_members_info.append(
+            {
+                "member": payment.member,
+                "payment_date": payment.payment_date,
+                "amount": payment.amount,
+                "package_code": payment.package.code if payment.package else "N/A",
+                "notes": payment.notes,
+            }
+        )
+
+    did_not_repurchase_members = expiring_members.exclude(id__in=repurchased_member_ids)
+
+    total_expiring = expiring_members.count()
+    total_repurchased = len(repurchased_member_ids)
+
+    repurchase_rate = (
+        (total_repurchased / total_expiring) * 100 if total_expiring > 0 else 0
+    )
+
+    context = {
+        **admin_site.each_context(request),
+        "title": "Weekly Metrics Tracker",
+        "start_date": start_date,
+        "end_date": end_date,
+        "repurchase_rate": repurchase_rate,
+        "total_expiring": total_expiring,
+        "total_repurchased": total_repurchased,
+        "repurchased_members": repurchased_members_info,
+        "did_not_repurchase_members": did_not_repurchase_members,
+    }
+
+    return render(request, "admin/analytics/weekly_metrics.html", context)
 
 
 def calculate_business_metrics(start_date, end_date):
