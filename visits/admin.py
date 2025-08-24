@@ -666,37 +666,59 @@ def weekly_metrics_view(request):
         end_date = today
 
     # Logic to get repurchase data
+    # Step 1: Find members whose membership expires in the selected week
     expiring_members = Member.objects.filter(
         active_until__date__gte=start_date, active_until__date__lte=end_date
+    ).distinct()
+
+    # Step 1.5: Filter to only include members who have EVER purchased actual membership packages (non-"-0")
+    # This excludes members who only ever bought single-visit passes
+    actual_members = (
+        expiring_members.filter(payment__package__code__isnull=False)
+        .exclude(payment__package__code__endswith="-0")
+        .distinct()
     )
 
     repurchased_members_info = []
     did_not_repurchase_members = []
 
-    expiring_member_ids = expiring_members.values_list("id", flat=True)
+    # Step 2: For each actual member (who had real memberships), check if they made any payment in the same week
+    repurchased_member_ids = set()
 
-    payments_in_range = Payment.objects.filter(
-        member_id__in=expiring_member_ids,
-        payment_date__date__gte=start_date,
-        payment_date__date__lte=end_date,
-    ).select_related("member", "package")
+    for member in actual_members:
+        # Check if this member made any payment during the week
+        # EXCLUDE *-0 packages (per visit only, not membership renewals)
+        member_payments = Payment.objects.filter(
+            member=member,
+            payment_date__date__gte=start_date,
+            payment_date__date__lte=end_date,
+        ).select_related("package")
 
-    repurchased_member_ids = payments_in_range.values_list("member_id", flat=True)
+        # Filter out *-0 packages (per visit packages)
+        membership_payments = member_payments.exclude(package__code__endswith="-0")
 
-    for payment in payments_in_range:
-        repurchased_members_info.append(
-            {
-                "member": payment.member,
-                "payment_date": payment.payment_date,
-                "amount": payment.amount,
-                "package_code": payment.package.code if payment.package else "N/A",
-                "notes": payment.notes,
-            }
-        )
+        if membership_payments.exists():
+            # Member repurchased - add to repurchased list
+            repurchased_member_ids.add(member.id)
 
-    did_not_repurchase_members = expiring_members.exclude(id__in=repurchased_member_ids)
+            # Add all their MEMBERSHIP payments in this period to the info list
+            for payment in membership_payments:
+                repurchased_members_info.append(
+                    {
+                        "member": payment.member,
+                        "payment_date": payment.payment_date,
+                        "amount": payment.amount,
+                        "package_code": (
+                            payment.package.code if payment.package else "N/A"
+                        ),
+                        "notes": payment.notes,
+                    }
+                )
 
-    total_expiring = expiring_members.count()
+    # Step 3: Members who didn't repurchase
+    did_not_repurchase_members = actual_members.exclude(id__in=repurchased_member_ids)
+
+    total_expiring = actual_members.count()
     total_repurchased = len(repurchased_member_ids)
 
     repurchase_rate = (

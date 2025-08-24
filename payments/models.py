@@ -9,7 +9,11 @@ from accounts.models import Member
 
 
 class Package(models.Model):
-    code = models.CharField(max_length=20, unique=True)
+    code = models.CharField(
+        max_length=30,
+        unique=True,
+        help_text='Code format: TYPE-LEVEL-DURATION. A DURATION of "0" signifies a single-visit pass.',
+    )
     default_price = models.DecimalField(max_digits=12, decimal_places=0)
     description = models.CharField(max_length=255, blank=True)
 

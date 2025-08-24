@@ -384,7 +384,7 @@ The `Package` code is structured as `TYPE-LEVEL-DURATION`, which dictates how a 
 
 - **`TYPE`**: A number that determines which membership fields to update.
 - **`LEVEL`**: A string that provides more detail about the package (e.g., `BRONZE`, `SILVER`, `ADD-GOLD`).
-- **`DURATION`**: A number representing the duration in months (`0` for a 1-day pass).
+- **`DURATION`**: A number representing the duration in months. A `DURATION` of `0` signifies a single-visit or per-session pass (e.g., `0-BRONZE-0` for a 1-day pass) and is not considered a renewable membership.
 
 #### Package Type Behaviors
 
@@ -623,6 +623,19 @@ The analytics system draws data from multiple models:
 - **Purpose**: CSV export for member lists
 - **Parameters**: `date`, `type` for filtering
 - **Returns**: CSV file with member data
+
+#### **`weekly_metrics_view`**
+- **URL**: `/admin/analytics/weekly-metrics/`
+- **Purpose**: Tracks weekly repurchase rates for membership retention analysis.
+- **Features**:
+  - **Date Range Picker**: Allows selection of any weekly period for analysis.
+  - **Repurchase Rate**: Calculates the percentage of members who renewed their membership within the week their old one expired.
+  - **Detailed Lists**: Provides two distinct lists:
+    1.  **Repurchased Members**: Shows members who expired and renewed, along with their new payment details.
+    2.  **Did Not Repurchase**: Shows members who expired and did not renew.
+- **Business Logic**:
+  - **Excludes Single-Visit Packages**: Payments for packages ending in `"-0"` (e.g., `0-BRONZE-0`) are ignored, as they are not considered membership renewals.
+  - **Excludes Single-Visit Members**: The analysis only includes members who have previously purchased a renewable membership (i.e., any package not ending in `"-0"`). This provides a true retention rate for actual members, ignoring casual single-visit customers.
 
 ### Business Intelligence Calculations
 
