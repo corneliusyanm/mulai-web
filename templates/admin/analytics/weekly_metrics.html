@@ -129,6 +129,18 @@
             <div class="stat-number">{{ total_repurchased }}</div>
             <div class="stat-label">Total Members Repurchased</div>
         </div>
+        <div class="stat-card">
+            <div class="stat-number">Rp {{ total_weekly_revenue|floatformat:0 }}</div>
+            <div class="stat-label">Total Revenue</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ total_weekly_visits }}</div>
+            <div class="stat-label">Total Visits</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ total_weekly_tamu }}</div>
+            <div class="stat-label">Total Tamu (Guests)</div>
+        </div>
     </div>
 
     <!-- Repurchased Members Table -->
@@ -185,6 +197,78 @@
                 {% empty %}
                 <tr>
                     <td colspan="4">All expiring members repurchased.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- All Weekly Payments Table -->
+    <div class="table-container">
+        <h2>All Weekly Payments</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Member Name</th>
+                    <th>Know Mulai From</th>
+                    <th>Package Code</th>
+                    <th>Payment Date</th>
+                    <th>Amount</th>
+                    <th>Years Working Out</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for payment in weekly_payments %}
+                <tr>
+                    <td><a href="{% url 'admin:accounts_member_change' payment.member.id %}">{{ payment.member.name }}</a></td>
+                    <td>{{ payment.member.know_mulai_gym_from|default:"N/A" }}</td>
+                    <td>{{ payment.package.code|default:"N/A" }}</td>
+                    <td>{{ payment.payment_date|date:"d M Y H:i" }}</td>
+                    <td>Rp {{ payment.amount|floatformat:0 }}</td>
+                    <td>{{ payment.member.years_of_working_out|default:"N/A" }}</td>
+                    <td>{{ payment.notes|default:"-" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7">No payments in this period.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Weekly Tamu (Guests) Table -->
+    <div class="table-container">
+        <h2>Weekly Tamu (Guests)</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Phone Number</th>
+                    <th>Email</th>
+                    <th>Age</th>
+                    <th>Gender</th>
+                    <th>Years Working Out</th>
+                    <th>Is Pemula</th>
+                    <th>Created At</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tamu in weekly_tamu_details %}
+                <tr>
+                    <td><a href="{% url 'admin:accounts_tamu_change' tamu.id %}">{{ tamu.name }}</a></td>
+                    <td>{{ tamu.phone_number }}</td>
+                    <td>{{ tamu.email|default:"-" }}</td>
+                    <td>{{ tamu.age|default:"N/A" }}</td>
+                    <td>{{ tamu.get_gender_display|default:"N/A" }}</td>
+                    <td>{{ tamu.years_of_working_out|default:"N/A" }}</td>
+                    <td>{{ tamu.is_pemula|yesno:"Yes,No,Unknown" }}</td>
+                    <td>{{ tamu.created_at|date:"d M Y H:i" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8">No tamu (guests) in this period.</td>
                 </tr>
                 {% endfor %}
             </tbody>

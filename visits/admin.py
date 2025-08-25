@@ -14,7 +14,7 @@ import csv
 from decimal import Decimal
 
 from .models import Visit
-from accounts.models import Member
+from accounts.models import Member, Tamu
 from payments.models import Payment, Package
 from purchases.models import Sale, Product, SaleItem
 
@@ -725,6 +725,44 @@ def weekly_metrics_view(request):
         (total_repurchased / total_expiring) * 100 if total_expiring > 0 else 0
     )
 
+    # Additional weekly queries
+    # 1. All payments for the week with member details (equivalent to first SQL query)
+    weekly_payments = (
+        Payment.objects.filter(
+            payment_date__date__gte=start_date,
+            payment_date__date__lte=end_date,
+        )
+        .select_related("member", "package")
+        .order_by("id")
+    )
+
+    # 2. Total revenue for the week
+    total_weekly_revenue = (
+        Payment.objects.filter(
+            payment_date__date__gte=start_date,
+            payment_date__date__lte=end_date,
+        ).aggregate(total=Sum("amount"))["total"]
+        or 0
+    )
+
+    # 3. Total visits for the week
+    total_weekly_visits = Visit.objects.filter(
+        check_in_time__date__gte=start_date,
+        check_in_time__date__lte=end_date,
+    ).count()
+
+    # 4. Total tamu (guests) for the week
+    total_weekly_tamu = Tamu.objects.filter(
+        created_at__date__gte=start_date,
+        created_at__date__lte=end_date,
+    ).count()
+
+    # 5. Detailed tamu list for the week
+    weekly_tamu_details = Tamu.objects.filter(
+        created_at__date__gte=start_date,
+        created_at__date__lte=end_date,
+    ).order_by("created_at")
+
     context = {
         **admin_site.each_context(request),
         "title": "Weekly Metrics Tracker",
@@ -735,6 +773,12 @@ def weekly_metrics_view(request):
         "total_repurchased": total_repurchased,
         "repurchased_members": repurchased_members_info,
         "did_not_repurchase_members": did_not_repurchase_members,
+        # Weekly overview metrics
+        "weekly_payments": weekly_payments,
+        "total_weekly_revenue": total_weekly_revenue,
+        "total_weekly_visits": total_weekly_visits,
+        "total_weekly_tamu": total_weekly_tamu,
+        "weekly_tamu_details": weekly_tamu_details,
     }
 
     return render(request, "admin/analytics/weekly_metrics.html", context)
