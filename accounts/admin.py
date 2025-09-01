@@ -5,6 +5,8 @@ from django.utils.html import format_html
 
 from visits.admin import admin_site
 from .models import Member, User, Tamu, Masukkan, Prospect
+from payments.models import Payment
+from purchases.models import Sale, SaleItem
 
 
 class CustomUserAdmin(UserAdmin):
@@ -49,7 +51,106 @@ class WhatsAppLinkMixin:
     whatsapp_link.admin_order_field = "phone_number"
 
 
+class PaymentInline(admin.TabularInline):
+    model = Payment
+    extra = 0
+    can_delete = False
+    readonly_fields = (
+        "package",
+        "amount",
+        "formatted_amount",
+        "payment_date",
+        "membership_end_date",
+        "payment_method",
+        "apakah_nyicil",
+        "notes",
+        "created_by",
+    )
+    fields = (
+        "payment_date",
+        "package",
+        "formatted_amount",
+        "payment_method",
+        "apakah_nyicil",
+        "membership_end_date",
+        "notes",
+        "created_by",
+    )
+    ordering = ["-payment_date"]
+
+    def formatted_amount(self, obj):
+        if obj.amount:
+            return f"Rp {obj.amount:,.0f}"
+        return "-"
+
+    formatted_amount.short_description = "Amount"
+
+    def has_add_permission(self, request, obj=None):
+        return False  # Prevent adding payments from member detail page
+
+
+class SaleInline(admin.TabularInline):
+    model = Sale
+    extra = 0
+    can_delete = False
+    readonly_fields = (
+        "created_at",
+        "total_amount",
+        "formatted_total_amount",
+        "items_list",
+        "payment_method",
+        "notes",
+        "created_by",
+    )
+    fields = (
+        "created_at",
+        "items_list",
+        "formatted_total_amount",
+        "payment_method",
+        "notes",
+        "created_by",
+    )
+    ordering = ["-created_at"]
+
+    def formatted_total_amount(self, obj):
+        if obj.total_amount:
+            return f"Rp {obj.total_amount:,.0f}"
+        return "-"
+
+    formatted_total_amount.short_description = "Total Amount"
+
+    def items_list(self, obj):
+        """Show detailed list of items purchased in this sale"""
+        items = obj.items.all()
+        if not items:
+            return "No items"
+
+        item_details = []
+        for item in items:
+            unit_price = (
+                f"Rp {item.price_at_purchase:,.0f}"
+                if item.price_at_purchase
+                else "Rp 0"
+            )
+            total_price = (
+                f"Rp {item.price_at_purchase * item.quantity:,.0f}"
+                if item.price_at_purchase
+                else "Rp 0"
+            )
+            item_details.append(
+                f"{item.quantity}x {item.product.name} @ {unit_price} = {total_price}"
+            )
+
+        return format_html("<br/>".join(item_details))
+
+    items_list.short_description = "Items Purchased"
+
+    def has_add_permission(self, request, obj=None):
+        return False  # Prevent adding sales from member detail page
+
+
 class MemberAdmin(WhatsAppLinkMixin, admin.ModelAdmin):
+    inlines = [PaymentInline, SaleInline]
     list_display = (
         "name",
         "email",

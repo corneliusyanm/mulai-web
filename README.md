@@ -765,6 +765,12 @@ autocomplete_fields = ["member"]
 search_fields = ("member__name", "member__email", "member__phone_number")
 ```
 
+#### **Member Detail Page Enhancements**
+The member detail page in the admin panel now provides a comprehensive overview of each member's history:
+- **Payment History**: A complete list of all membership payments made by the member, including package details, amount, and payment method.
+- **Purchase History**: A detailed breakdown of all product purchases, showing each item, quantity, unit price, and total price for every transaction.
+- **Read-Only View**: Both history sections are read-only to prevent accidental data modification, providing a safe and reliable audit trail.
+
 #### **Admin Site Architecture**
 - **Custom Admin Site**: All models registered to `CustomAdminSite` for consistency
 - **Unified Registration**: Ensures autocomplete functionality works across all admin forms
@@ -788,6 +794,15 @@ search_fields = ("member__name", "member__email", "member__phone_number")
 ## Testing
 
 This project uses Django's built-in `TestCase` for unit testing. The tests are located in the `tests.py` file within each application directory (`accounts`, `visits`, `payments`, `equipment`, `purchases`, and `reminders`).
+
+### Accounts Tests
+The `accounts` app includes tests for:
+- **Model Tests**: Member creation, status properties (`is_active_member`, `is_pemula_active_member`), and automatic `is_pemula` calculation.
+- **View Tests**: Member signup, login (email and phone), logout, detail, and edit views.
+- **Guest and Feedback Tests**: Form submissions for guests and feedback.
+- **Prospect Admin Tests**: Automatic `created_by` assignment on save.
+- **Admin Inline Tests**: Verification of `PaymentInline` and `SaleInline` registration within `MemberAdmin`.
+- **SaleInline Display Logic**: Ensures the `items_list` method correctly formats and displays product purchase details in the admin.
 
 ### Reminder Tests
 The `reminders` app includes comprehensive tests for:

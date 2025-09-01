@@ -1,14 +1,16 @@
 from datetime import timedelta
 
-from django.test import TestCase
+from django.test import TestCase, RequestFactory
 from django.utils import timezone
 from django.urls import reverse
 from unittest.mock import Mock
 
 from .models import Member, Tamu, Masukkan, Prospect
-from .admin import ProspectAdmin
+from .admin import ProspectAdmin, MemberAdmin, SaleInline
 from .models import User
 from visits.admin import admin_site
+from payments.models import Payment
+from purchases.models import Product, Sale, SaleItem
 
 
 class MemberModelTest(TestCase):
@@ -716,3 +718,76 @@ class TamuIsPemulaCalculationTest(TestCase):
         self.assertTrue(form_3.is_valid(), f"Form errors: {form_3.errors}")
         tamu_3 = form_3.save()
         self.assertIsNone(tamu_3.is_pemula)
+
+
+class MemberAdminTest(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.admin_user = User.objects.create_superuser(
+            "admin", "admin@example.com", "password"
+        )
+        self.member = Member.objects.create(
+            name="Test Member",
+            email="member@example.com",
+            phone_number="1234567890",
+            gender="M",
+            age=30,
+            height=180,
+            weight=80,
+            years_of_working_out="2 tahun",
+            goals="Get fit",
+            know_mulai_gym_from="internet",
+        )
+        self.product1 = Product.objects.create(name="Protein Shake", price=50000)
+        self.product2 = Product.objects.create(name="Energy Bar", price=25000)
+
+    def test_member_admin_inlines_registration(self):
+        """
+        Test that PaymentInline and SaleInline are registered with MemberAdmin.
+        """
+        self.assertIn(
+            "PaymentInline", [inline.__name__ for inline in MemberAdmin.inlines]
+        )
+        self.assertIn("SaleInline", [inline.__name__ for inline in MemberAdmin.inlines])
+
+    def test_sale_inline_items_list_display(self):
+        """
+        Test the items_list method in SaleInline for correct HTML output.
+        """
+        sale = Sale.objects.create(
+            member=self.member,
+            payment_method="CASH",
+            created_by=self.admin_user,
+        )
+        SaleItem.objects.create(
+            sale=sale,
+            product=self.product1,
+            quantity=2,
+            price_at_purchase=self.product1.price,
+        )
+        SaleItem.objects.create(
+            sale=sale,
+            product=self.product2,
+            quantity=3,
+            price_at_purchase=self.product2.price,
+        )
+
+        sale_inline = SaleInline(Sale, admin_site)
+        items_html = sale_inline.items_list(sale)
+
+        self.assertIn("2x Protein Shake @ Rp 50,000 = Rp 100,000", items_html)
+        self.assertIn("3x Energy Bar @ Rp 25,000 = Rp 75,000", items_html)
+        self.assertIn("<br/>", items_html)
+
+    def test_sale_inline_empty_items_list(self):
+        """
+        Test the items_list method when a sale has no items.
+        """
+        sale = Sale.objects.create(
+            member=self.member,
+            payment_method="CASH",
+            created_by=self.admin_user,
+        )
+        sale_inline = SaleInline(Sale, admin_site)
+        items_html = sale_inline.items_list(sale)
+        self.assertEqual(items_html, "No items")
