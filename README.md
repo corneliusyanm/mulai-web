@@ -769,7 +769,10 @@ search_fields = ("member__name", "member__email", "member__phone_number")
 The member detail page in the admin panel now provides a comprehensive overview of each member's history:
 - **Payment History**: A complete list of all membership payments made by the member, including package details, amount, and payment method.
 - **Purchase History**: A detailed breakdown of all product purchases, showing each item, quantity, unit price, and total price for every transaction.
-- **Read-Only View**: Both history sections are read-only to prevent accidental data modification, providing a safe and reliable audit trail.
+- **Transaction Summary**: A dedicated section displaying the total amount of all payments and sales for easy financial overview:
+  - **Total Payments**: Sum of all membership payments made by the member
+  - **Total Sales**: Sum of all product purchases made by the member
+- **Read-Only View**: All history sections are read-only to prevent accidental data modification, providing a safe and reliable audit trail.
 
 #### **Admin Site Architecture**
 - **Custom Admin Site**: All models registered to `CustomAdminSite` for consistency
@@ -803,6 +806,7 @@ The `accounts` app includes tests for:
 - **Prospect Admin Tests**: Automatic `created_by` assignment on save.
 - **Admin Inline Tests**: Verification of `PaymentInline` and `SaleInline` registration within `MemberAdmin`.
 - **SaleInline Display Logic**: Ensures the `items_list` method correctly formats and displays product purchase details in the admin.
+- **Total Calculations**: Tests for `total_payments` and `total_sales` methods in `MemberAdmin`, including zero balance scenarios and proper Rupiah formatting.
 
 ### Reminder Tests
 The `reminders` app includes comprehensive tests for:

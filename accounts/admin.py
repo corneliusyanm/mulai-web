@@ -85,6 +85,20 @@ class PaymentInline(admin.TabularInline):
 
     formatted_amount.short_description = "Amount"
 
+    def get_total_payments(self, member):
+        """Calculate total payments for the member"""
+        from django.db.models import Sum
+
+        total = (
+            Payment.objects.filter(member=member).aggregate(total=Sum("amount"))[
+                "total"
+            ]
+            or 0
+        )
+        return f"Total Payments: Rp {total:,.0f}"
+
+    get_total_payments.short_description = "Total Payments"
+
     def has_add_permission(self, request, obj=None):
         return False  # Prevent adding payments from member detail page
 
@@ -145,6 +159,20 @@ class SaleInline(admin.TabularInline):
 
     items_list.short_description = "Items Purchased"
 
+    def get_total_sales(self, member):
+        """Calculate total sales for the member"""
+        from django.db.models import Sum
+
+        total = (
+            Sale.objects.filter(member=member).aggregate(total=Sum("total_amount"))[
+                "total"
+            ]
+            or 0
+        )
+        return f"Total Sales: Rp {total:,.0f}"
+
+    get_total_sales.short_description = "Total Sales"
+
     def has_add_permission(self, request, obj=None):
         return False  # Prevent adding sales from member detail page
 
@@ -165,7 +193,7 @@ class MemberAdmin(WhatsAppLinkMixin, admin.ModelAdmin):
     )
     list_filter = ("gender", "is_pemula", "created_at")
     search_fields = ("name", "email", "phone_number")
-    readonly_fields = ("created_at",)
+    readonly_fields = ("created_at", "total_payments", "total_sales")
     fieldsets = (
         (
             "Basic Information",
@@ -192,6 +220,15 @@ class MemberAdmin(WhatsAppLinkMixin, admin.ModelAdmin):
                     "semi_private_active_until",
                     "pt_session_count",
                     "is_pemula",
+                )
+            },
+        ),
+        (
+            "Transaction Summary",
+            {
+                "fields": (
+                    "total_payments",
+                    "total_sales",
                 )
             },
         ),
@@ -230,6 +267,32 @@ class MemberAdmin(WhatsAppLinkMixin, admin.ModelAdmin):
         return "Expired"
 
     membership_status.short_description = "Status"
+
+    def total_payments(self, obj):
+        """Calculate total payments for this member"""
+        from django.db.models import Sum
+
+        total = (
+            Payment.objects.filter(member=obj).aggregate(total=Sum("amount"))["total"]
+            or 0
+        )
+        return f"Rp {total:,.0f}"
+
+    total_payments.short_description = "Total Payments"
+
+    def total_sales(self, obj):
+        """Calculate total sales for this member"""
+        from django.db.models import Sum
+
+        total = (
+            Sale.objects.filter(member=obj).aggregate(total=Sum("total_amount"))[
+                "total"
+            ]
+            or 0
+        )
+        return f"Rp {total:,.0f}"
+
+    total_sales.short_description = "Total Sales"
 
 
 class TamuAdmin(WhatsAppLinkMixin, admin.ModelAdmin):

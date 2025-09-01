@@ -791,3 +791,77 @@ class MemberAdminTest(TestCase):
         sale_inline = SaleInline(Sale, admin_site)
         items_html = sale_inline.items_list(sale)
         self.assertEqual(items_html, "No items")
+
+    def test_member_admin_total_payments(self):
+        """
+        Test the total_payments method in MemberAdmin.
+        """
+        from payments.models import Package
+
+        # Create some payments for the member
+        package = Package.objects.create(
+            code="TEST-1", default_price=100000, description="Test Package"
+        )
+        Payment.objects.create(
+            member=self.member,
+            package=package,
+            amount=100000,
+            created_by=self.admin_user,
+        )
+        Payment.objects.create(
+            member=self.member,
+            package=package,
+            amount=150000,
+            created_by=self.admin_user,
+        )
+
+        member_admin = MemberAdmin(Member, admin_site)
+        total_display = member_admin.total_payments(self.member)
+        self.assertEqual(total_display, "Rp 250,000")
+
+    def test_member_admin_total_sales(self):
+        """
+        Test the total_sales method in MemberAdmin.
+        """
+        # Create some sales for the member
+        sale1 = Sale.objects.create(
+            member=self.member,
+            payment_method="CASH",
+            created_by=self.admin_user,
+        )
+        SaleItem.objects.create(
+            sale=sale1,
+            product=self.product1,
+            quantity=2,
+            price_at_purchase=50000,
+        )
+        sale1.update_total_amount()
+
+        sale2 = Sale.objects.create(
+            member=self.member,
+            payment_method="QRIS",
+            created_by=self.admin_user,
+        )
+        SaleItem.objects.create(
+            sale=sale2,
+            product=self.product2,
+            quantity=3,
+            price_at_purchase=25000,
+        )
+        sale2.update_total_amount()
+
+        member_admin = MemberAdmin(Member, admin_site)
+        total_display = member_admin.total_sales(self.member)
+        self.assertEqual(total_display, "Rp 175,000")
+
+    def test_member_admin_zero_totals(self):
+        """
+        Test that totals show zero when member has no payments or sales.
+        """
+        member_admin = MemberAdmin(Member, admin_site)
+
+        total_payments = member_admin.total_payments(self.member)
+        self.assertEqual(total_payments, "Rp 0")
+
+        total_sales = member_admin.total_sales(self.member)
+        self.assertEqual(total_sales, "Rp 0")
