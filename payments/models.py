@@ -31,7 +31,7 @@ class Payment(models.Model):
         ("CASH", "Cash"),
     ]
 
-    member = models.ForeignKey(Member, on_delete=models.CASCADE)
+    member = models.ForeignKey(Member, on_delete=models.CASCADE, db_index=True)
     package = models.ForeignKey(
         Package, on_delete=models.SET_NULL, null=True, blank=True
     )
@@ -264,3 +264,9 @@ class Payment(models.Model):
 
     class Meta:
         ordering = ["-payment_date"]
+        indexes = [
+            models.Index(
+                fields=["member", "payment_date"], name="payment_member_date_idx"
+            ),
+            models.Index(fields=["payment_date"], name="payment_date_idx"),
+        ]

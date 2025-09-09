@@ -39,6 +39,7 @@ class Sale(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
+        db_index=True,
         help_text="Optional: Link this sale to a gym member.",
     )
     payment_method = models.CharField(
@@ -69,6 +70,10 @@ class Sale(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["member", "created_at"], name="sale_member_date_idx"),
+            models.Index(fields=["created_at"], name="sale_date_idx"),
+        ]
 
 
 class SaleItem(models.Model):

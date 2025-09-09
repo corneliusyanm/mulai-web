@@ -122,3 +122,7 @@ class ClassInstance(models.Model):
     class Meta:
         ordering = ["date", "start_time"]
         unique_together = ("class_schedule", "date")
+        indexes = [
+            models.Index(fields=["date", "start_time"], name="class_date_time_idx"),
+            models.Index(fields=["status"], name="class_status_idx"),
+        ]
