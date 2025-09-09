@@ -66,6 +66,7 @@ jobs:
           host: ${{ secrets.DROPLET_IP }}
           username: ${{ secrets.DROPLET_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 30m
           envs: DJANGO_SECRET_KEY,DJANGO_DEBUG,GH_TOKEN,DB_NAME,DB_USER,DB_PASSWORD,DB_HOST,DB_PORT
           script: |
             cd /root/mulai_web
