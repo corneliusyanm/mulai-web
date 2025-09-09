@@ -7,6 +7,8 @@ from visits.admin import admin_site
 from .models import Member, User, Tamu, Masukkan, Prospect
 from payments.models import Payment
 from purchases.models import Sale, SaleItem
+from visits.models import Visit
+from classes.models import ClassInstance
 
 
 class CustomUserAdmin(UserAdmin):
@@ -193,7 +195,13 @@ class MemberAdmin(WhatsAppLinkMixin, admin.ModelAdmin):
     )
     list_filter = ("gender", "is_pemula", "created_at")
     search_fields = ("name", "email", "phone_number")
-    readonly_fields = ("created_at", "total_payments", "total_sales")
+    readonly_fields = (
+        "created_at",
+        "total_payments",
+        "total_sales",
+        "visit_history_panel",
+        "class_booking_history_panel",
+    )
     fieldsets = (
         (
             "Basic Information",
@@ -235,6 +243,14 @@ class MemberAdmin(WhatsAppLinkMixin, admin.ModelAdmin):
         (
             "Additional Information",
             {"fields": ("address", "goals", "know_mulai_gym_from", "why_choose_mulai")},
+        ),
+        (
+            "Visit History",
+            {"fields": ("visit_history_panel",)},
+        ),
+        (
+            "Class Booking History",
+            {"fields": ("class_booking_history_panel",)},
         ),
     )
 
@@ -293,6 +309,146 @@ class MemberAdmin(WhatsAppLinkMixin, admin.ModelAdmin):
         return f"Rp {total:,.0f}"
 
     total_sales.short_description = "Total Sales"
+
+    def visit_history_panel(self, obj):
+        """Render recent visit history with a summary at the top (limited list)."""
+        if not obj:
+            return "-"
+
+        # Totals
+        total_visits = Visit.objects.filter(member=obj).count()
+
+        # Average duration across visits that have a checkout
+        visits_with_duration = Visit.objects.filter(
+            member=obj, check_out_time__isnull=False
+        )
+        if visits_with_duration.exists():
+            total_seconds = sum(
+                [
+                    (v.check_out_time - v.check_in_time).total_seconds()
+                    for v in visits_with_duration
+                ]
+            )
+            avg_seconds = int(total_seconds / visits_with_duration.count())
+            avg_hours = avg_seconds // 3600
+            avg_minutes = (avg_seconds % 3600) // 60
+            avg_str = (
+                f"{avg_hours}h {avg_minutes}m" if avg_hours > 0 else f"{avg_minutes}m"
+            )
+        else:
+            avg_str = "N/A"
+
+        # Recent visits (pagination-lite)
+        recent_visits = Visit.objects.filter(member=obj).order_by("-check_in_time")[:20]
+
+        rows = []
+        rows.append(
+            f'<div style="margin-bottom:6px;">'
+            f'<strong style="color:#28a745;">🏋️ TOTAL: {total_visits} visits (Avg: {avg_str})</strong>'
+            f"</div>"
+        )
+
+        if not recent_visits:
+            rows.append("No visits found.")
+        else:
+            for v in recent_visits:
+                check_in = (
+                    timezone.localtime(v.check_in_time).strftime("%d %b %Y %H:%M")
+                    if v.check_in_time
+                    else "-"
+                )
+                if v.check_out_time:
+                    check_out = timezone.localtime(v.check_out_time).strftime(
+                        "%d %b %Y %H:%M"
+                    )
+                    duration_td = (
+                        v.check_out_time - v.check_in_time if v.check_in_time else None
+                    )
+                    if duration_td:
+                        total_min = int(duration_td.total_seconds() // 60)
+                        hours = total_min // 60
+                        minutes = total_min % 60
+                        duration_str = (
+                            f"{hours}h {minutes}m" if hours > 0 else f"{minutes}m"
+                        )
+                    else:
+                        duration_str = "-"
+                else:
+                    check_out = "Still in gym"
+                    duration_str = "-"
+
+                rows.append(
+                    f"<div>"
+                    f"<strong>Check-in:</strong> {check_in} &nbsp; | &nbsp; "
+                    f"<strong>Check-out:</strong> {check_out} &nbsp; | &nbsp; "
+                    f"<strong>Duration:</strong> {duration_str}"
+                    f"</div>"
+                )
+
+        return format_html("".join(rows))
+
+    visit_history_panel.short_description = "Visit History (Recent 20)"
+
+    def class_booking_history_panel(self, obj):
+        """Render class booking history with a summary at the top (limited list)."""
+        if not obj:
+            return "-"
+
+        # Booked and waitlisted classes
+        booked_qs = (
+            ClassInstance.objects.filter(booked_members=obj)
+            .select_related("class_schedule__class_obj")
+            .order_by("-date", "-start_time")[:10]
+        )
+        waitlisted_qs = (
+            ClassInstance.objects.filter(waitlisted_members=obj)
+            .select_related("class_schedule__class_obj")
+            .order_by("-date", "-start_time")[:5]
+        )
+
+        total_booked = ClassInstance.objects.filter(booked_members=obj).count()
+        total_waitlisted = ClassInstance.objects.filter(waitlisted_members=obj).count()
+
+        rows = []
+        rows.append(
+            f'<div style="margin-bottom:6px;">'
+            f'<strong style="color:#0066cc;">📚 TOTAL: {total_booked} booked, {total_waitlisted} waitlisted</strong>'
+            f"</div>"
+        )
+
+        if booked_qs:
+            rows.append("<div><strong>Recent Booked Classes:</strong></div>")
+            for ci in booked_qs:
+                status_color = "green" if ci.status == "COMPLETED" else "orange"
+                rows.append(
+                    f'<div style="color:{status_color}">'
+                    f"✓ {ci.class_schedule.class_obj.name} - "
+                    f"{ci.date.strftime('%d %b %Y')} {ci.start_time.strftime('%H:%M')} "
+                    f"({ci.status})"
+                    f"</div>"
+                )
+
+        if waitlisted_qs:
+            rows.append(
+                '<div style="margin-top:6px;"><strong>Current Waitlist:</strong></div>'
+            )
+            for ci in waitlisted_qs:
+                rows.append(
+                    f'<div style="color:gray">'
+                    f"⏳ {ci.class_schedule.class_obj.name} - "
+                    f"{ci.date.strftime('%d %b %Y')} {ci.start_time.strftime('%H:%M')} "
+                    f"(WAITLISTED)"
+                    f"</div>"
+                )
+
+        if len(rows) == 1:  # Only summary added, no details
+            rows.append("No class bookings found.")
+
+        return format_html("".join(rows))
+
+    class_booking_history_panel.short_description = (
+        "Class Booking History (Recent 10 + Waitlist)"
+    )
 
 
 class TamuAdmin(WhatsAppLinkMixin, admin.ModelAdmin):
