@@ -665,7 +665,7 @@ def weekly_metrics_view(request):
         start_date = today - timedelta(days=6)
         end_date = today
 
-    # Logic to get repurchase data
+    # IMPROVED Logic to get repurchase data
     # Step 1: Find members whose membership expires in the selected week
     expiring_members = Member.objects.filter(
         active_until__date__gte=start_date, active_until__date__lte=end_date
@@ -673,56 +673,137 @@ def weekly_metrics_view(request):
 
     # Step 1.5: Filter to only include members who have EVER purchased actual membership packages (non-"-0")
     # This excludes members who only ever bought single-visit passes
-    actual_members = (
+    actual_expiring_members = (
         expiring_members.filter(payment__package__code__isnull=False)
         .exclude(payment__package__code__endswith="-0")
         .distinct()
     )
 
-    repurchased_members_info = []
-    did_not_repurchase_members = []
-
-    # Step 2: For each actual member (who had real memberships), check if they made any payment in the same week
-    repurchased_member_ids = set()
-
-    for member in actual_members:
-        # Check if this member made any payment during the week
-        # EXCLUDE *-0 packages (per visit only, not membership renewals)
-        member_payments = Payment.objects.filter(
-            member=member,
+    # Step 2: Get ALL membership payments made during the week (regardless of member expiry status)
+    # BUT only for existing members who had previous payments (exclude new member first-time purchases)
+    all_weekly_membership_payments = (
+        Payment.objects.filter(
             payment_date__date__gte=start_date,
             payment_date__date__lte=end_date,
-        ).select_related("package")
+            package__code__isnull=False,
+        )
+        .exclude(package__code__endswith="-0")
+        .select_related("member", "package")
+        .order_by("payment_date")
+    )
 
-        # Filter out *-0 packages (per visit packages)
-        membership_payments = member_payments.exclude(package__code__endswith="-0")
+    # Filter to only include members who had PREVIOUS payments before this week
+    # (This excludes new members making their first purchase)
+    existing_member_ids = set(
+        Payment.objects.filter(
+            payment_date__date__lt=start_date,  # Before this week
+            package__code__isnull=False,
+        )
+        .exclude(package__code__endswith="-0")
+        .values_list("member_id", flat=True)
+        .distinct()
+    )
 
-        if membership_payments.exists():
-            # Member repurchased - add to repurchased list
-            repurchased_member_ids.add(member.id)
+    # Separate installment payments from renewals
+    installment_payments = all_weekly_membership_payments.filter(
+        member_id__in=existing_member_ids
+    ).filter(Q(apakah_nyicil=True) | Q(notes__icontains="CICILAN"))
 
-            # Add all their MEMBERSHIP payments in this period to the info list
-            for payment in membership_payments:
-                repurchased_members_info.append(
-                    {
-                        "member": payment.member,
-                        "payment_date": payment.payment_date,
-                        "amount": payment.amount,
-                        "package_code": (
-                            payment.package.code if payment.package else "N/A"
-                        ),
-                        "notes": payment.notes,
-                    }
-                )
+    # Only analyze non-installment payments by existing members for renewals
+    renewal_payments = all_weekly_membership_payments.filter(
+        member_id__in=existing_member_ids
+    ).exclude(Q(apakah_nyicil=True) | Q(notes__icontains="CICILAN"))
 
-    # Step 3: Members who didn't repurchase
-    did_not_repurchase_members = actual_members.exclude(id__in=repurchased_member_ids)
+    # Step 3: Categorize payments into expiring renewals vs early renewals
+    expiring_renewals_info = []
+    early_renewals_info = []
+    installment_payments_info = []
+    expiring_renewed_member_ids = set()
 
-    total_expiring = actual_members.count()
-    total_repurchased = len(repurchased_member_ids)
+    for payment in renewal_payments:
+        member = payment.member
 
+        # Calculate what the member's original expiry date was BEFORE this payment
+        original_expiry_date = None
+        package_duration_months = payment.get_duration_from_package()
+
+        if package_duration_months is not None and payment.membership_end_date:
+            # Work backwards: original_expiry = new_expiry - package_duration
+            from dateutil.relativedelta import relativedelta
+
+            original_expiry_date = payment.membership_end_date - relativedelta(
+                months=package_duration_months
+            )
+            original_expiry_date = original_expiry_date.date()
+
+        # Determine if this member's original membership was expiring during target week
+        if original_expiry_date and start_date <= original_expiry_date <= end_date:
+            # This is an expiring member renewal (membership was going to expire this week)
+            expiring_renewals_info.append(
+                {
+                    "member": member,
+                    "payment_date": payment.payment_date,
+                    "amount": payment.amount,
+                    "package_code": payment.package.code if payment.package else "N/A",
+                    "notes": payment.notes,
+                    "renewal_type": "expiring",
+                    "original_expiry": original_expiry_date,
+                }
+            )
+            expiring_renewed_member_ids.add(member.id)
+        else:
+            # This is an early renewal (membership was not expiring this week)
+            early_renewals_info.append(
+                {
+                    "member": member,
+                    "payment_date": payment.payment_date,
+                    "amount": payment.amount,
+                    "package_code": payment.package.code if payment.package else "N/A",
+                    "notes": payment.notes,
+                    "renewal_type": "early",
+                    "current_expiry": (
+                        member.active_until.date()
+                        if member.active_until
+                        else "No expiry set"
+                    ),
+                    "original_expiry": original_expiry_date,
+                }
+            )
+
+    # Step 3.5: Process installment payments
+    for payment in installment_payments:
+        installment_payments_info.append(
+            {
+                "member": payment.member,
+                "payment_date": payment.payment_date,
+                "amount": payment.amount,
+                "package_code": payment.package.code if payment.package else "N/A",
+                "notes": payment.notes,
+                "payment_type": "installment",
+            }
+        )
+
+    # Step 4: Members who didn't repurchase (expired but no renewal)
+    did_not_repurchase_members = actual_expiring_members.exclude(
+        id__in=expiring_renewed_member_ids
+    )
+
+    # Step 5: Calculate statistics
+    total_expiring = actual_expiring_members.count()
+    total_expiring_renewed = len(expiring_renewed_member_ids)
+    total_early_renewals = len(early_renewals_info)
+    total_installment_payments = len(installment_payments_info)
+    total_all_renewals = total_expiring_renewed + total_early_renewals
+
+    expiring_repurchase_rate = (
+        (total_expiring_renewed / total_expiring) * 100 if total_expiring > 0 else 0
+    )
+
+    # Combine all renewals for backward compatibility
+    repurchased_members_info = expiring_renewals_info + early_renewals_info
+    total_repurchased = total_all_renewals
     repurchase_rate = (
-        (total_repurchased / total_expiring) * 100 if total_expiring > 0 else 0
+        expiring_repurchase_rate  # Keep original meaning: expiring renewal rate
     )
 
     # Additional weekly queries
@@ -769,9 +850,18 @@ def weekly_metrics_view(request):
         "start_date": start_date,
         "end_date": end_date,
         "repurchase_rate": repurchase_rate,
+        "expiring_repurchase_rate": expiring_repurchase_rate,
         "total_expiring": total_expiring,
         "total_repurchased": total_repurchased,
-        "repurchased_members": repurchased_members_info,
+        "total_expiring_renewed": total_expiring_renewed,
+        "total_early_renewals": total_early_renewals,
+        "total_installment_payments": total_installment_payments,
+        "total_all_renewals": total_all_renewals,
+        # Individual renewal lists
+        "repurchased_members": repurchased_members_info,  # All renewals combined (backward compatibility)
+        "expiring_renewals": expiring_renewals_info,
+        "early_renewals": early_renewals_info,
+        "installment_payments": installment_payments_info,
         "did_not_repurchase_members": did_not_repurchase_members,
         # Weekly overview metrics
         "weekly_payments": weekly_payments,

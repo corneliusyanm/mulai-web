@@ -626,16 +626,25 @@ The analytics system draws data from multiple models:
 
 #### **`weekly_metrics_view`**
 - **URL**: `/admin/analytics/weekly-metrics/`
-- **Purpose**: Tracks weekly repurchase rates for membership retention analysis.
+- **Purpose**: Comprehensive weekly membership retention and renewal analysis with intelligent categorization.
 - **Features**:
   - **Date Range Picker**: Allows selection of any weekly period for analysis.
-  - **Repurchase Rate**: Calculates the percentage of members who renewed their membership within the week their old one expired.
-  - **Detailed Lists**: Provides two distinct lists:
-    1.  **Repurchased Members**: Shows members who expired and renewed, along with their new payment details.
-    2.  **Did Not Repurchase**: Shows members who expired and did not renew.
-- **Business Logic**:
-  - **Excludes Single-Visit Packages**: Payments for packages ending in `"-0"` (e.g., `0-BRONZE-0`) are ignored, as they are not considered membership renewals.
-  - **Excludes Single-Visit Members**: The analysis only includes members who have previously purchased a renewable membership (i.e., any package not ending in `"-0"`). This provides a true retention rate for actual members, ignoring casual single-visit customers.
+  - **Smart Statistics Dashboard**: 8 key metrics including renewal rates, payment counts, and revenue.
+  - **Intelligent Categorization**: Separates different types of member activity:
+    1. **Expiring Member Renewals**: Members whose membership expired during the target week AND who renewed
+    2. **Early Renewals**: Members who renewed before their membership expired
+    3. **Installment Payments**: Members making monthly installment payments (tracked separately)
+    4. **Did Not Repurchase**: Members whose membership expired but did not renew
+- **Advanced Logic**:
+  - **Original Expiry Date Calculation**: Uses payment duration to calculate what a member's expiry date was BEFORE their renewal payment, ensuring accurate categorization
+  - **Existing Member Filter**: Only analyzes existing members (those with previous payments), excluding new member first-time purchases
+  - **Installment Payment Detection**: Identifies and separately tracks installment payments via `apakah_nyicil` flag or "CICILAN" in notes
+  - **Package Intelligence**: Excludes single-visit packages (ending in `"-0"`) from renewal analysis
+- **Business Intelligence**:
+  - **Retention Rate**: Percentage of expiring members who actually renewed
+  - **Early Renewal Tracking**: Identifies proactive members renewing before expiry
+  - **Revenue Attribution**: Separates new member revenue from retention revenue
+  - **Installment Monitoring**: Tracks ongoing payment plans separately from renewals
 
 ### Business Intelligence Calculations
 
@@ -834,6 +843,18 @@ The `visits` app includes comprehensive analytics tests for:
 - **Revenue Projections**: Financial forecasting and package-based calculations
 - **Export Features**: CSV generation and data integrity validation
 - **Error Handling**: Invalid date formats and permission-denied scenarios
+
+#### **Weekly Metrics Tests** (`visits/test_weekly_metrics.py`)
+Comprehensive test suite (9 test cases) covering all aspects of weekly membership retention analysis:
+- **Expiring Member Renewals**: Tests members whose membership expires during target week and renews
+- **Early Renewals**: Tests members who renew before their membership expires
+- **Installment Payments**: Tests identification and separate tracking of installment payments
+- **New Member Exclusion**: Tests that first-time purchasers are excluded from renewal analysis
+- **Did Not Repurchase**: Tests members whose membership expired but didn't renew
+- **Statistics Calculation**: Tests accuracy of all renewal metrics and percentages
+- **Permission Control**: Tests staff-only access restrictions
+- **Date Handling**: Tests parameter processing and invalid date fallbacks
+- **Original Expiry Logic**: Tests calculation of pre-payment expiry dates for accurate categorization
 
 ### Business Intelligence Tests
 The `visits` app includes comprehensive business intelligence tests for:

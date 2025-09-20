@@ -119,15 +119,27 @@
     <div class="stats-grid">
         <div class="stat-card">
             <div class="stat-number">{{ repurchase_rate|floatformat:2 }}%</div>
-            <div class="stat-label">Repurchase Rate</div>
+            <div class="stat-label">Expiring Members Renewal Rate</div>
         </div>
         <div class="stat-card">
             <div class="stat-number">{{ total_expiring }}</div>
-            <div class="stat-label">Total Memberships Expired</div>
+            <div class="stat-label">Memberships Expired This Week</div>
         </div>
         <div class="stat-card">
-            <div class="stat-number">{{ total_repurchased }}</div>
-            <div class="stat-label">Total Members Repurchased</div>
+            <div class="stat-number">{{ total_expiring_renewed }}</div>
+            <div class="stat-label">Expiring Members Who Renewed</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ total_early_renewals }}</div>
+            <div class="stat-label">Early Renewals</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ total_installment_payments }}</div>
+            <div class="stat-label">Installment Payments</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ total_all_renewals }}</div>
+            <div class="stat-label">Total Weekly Renewals</div>
         </div>
         <div class="stat-card">
             <div class="stat-number">Rp {{ total_weekly_revenue|floatformat:0 }}</div>
@@ -143,9 +155,9 @@
         </div>
     </div>
 
-    <!-- Repurchased Members Table -->
+    <!-- Expiring Members Who Renewed Table -->
     <div class="table-container">
-        <h2>Repurchased Members</h2>
+        <h2>Expiring Members Who Renewed ({{ total_expiring_renewed }})</h2>
         <table>
             <thead>
                 <tr>
@@ -157,7 +169,7 @@
                 </tr>
             </thead>
             <tbody>
-                {% for item in repurchased_members %}
+                {% for item in expiring_renewals %}
                 <tr>
                     <td><a href="{% url 'admin:accounts_member_change' item.member.id %}">{{ item.member.name }}</a></td>
                     <td>{{ item.payment_date|date:"d M Y H:i" }}</td>
@@ -167,7 +179,73 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="5">No members repurchased in this period.</td>
+                    <td colspan="5">No expiring members renewed in this period.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Early Renewals Table -->
+    <div class="table-container">
+        <h2>Early Renewals ({{ total_early_renewals }})</h2>
+        <p style="color: #666; font-style: italic; margin-bottom: 15px;">Members who renewed before their membership expired</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Member Name</th>
+                    <th>Payment Date</th>
+                    <th>Amount</th>
+                    <th>Package Code</th>
+                    <th>Current Expiry Date</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in early_renewals %}
+                <tr>
+                    <td><a href="{% url 'admin:accounts_member_change' item.member.id %}">{{ item.member.name }}</a></td>
+                    <td>{{ item.payment_date|date:"d M Y H:i" }}</td>
+                    <td>Rp {{ item.amount|floatformat:0 }}</td>
+                    <td>{{ item.package_code }}</td>
+                    <td>{{ item.current_expiry|date:"d M Y"|default:"No expiry set" }}</td>
+                    <td>{{ item.notes }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6">No early renewals in this period.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Installment Payments Table -->
+    <div class="table-container">
+        <h2>Installment Payments ({{ total_installment_payments }})</h2>
+        <p style="color: #666; font-style: italic; margin-bottom: 15px;">Members making monthly installment payments</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Member Name</th>
+                    <th>Payment Date</th>
+                    <th>Amount</th>
+                    <th>Package Code</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in installment_payments %}
+                <tr>
+                    <td><a href="{% url 'admin:accounts_member_change' item.member.id %}">{{ item.member.name }}</a></td>
+                    <td>{{ item.payment_date|date:"d M Y H:i" }}</td>
+                    <td>Rp {{ item.amount|floatformat:0 }}</td>
+                    <td>{{ item.package_code }}</td>
+                    <td>{{ item.notes }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5">No installment payments in this period.</td>
                 </tr>
                 {% endfor %}
             </tbody>
