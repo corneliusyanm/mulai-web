@@ -856,6 +856,71 @@ Comprehensive test suite (9 test cases) covering all aspects of weekly membershi
 - **Date Handling**: Tests parameter processing and invalid date fallbacks
 - **Original Expiry Logic**: Tests calculation of pre-payment expiry dates for accurate categorization
 
+### **📅 Timezone Handling**
+
+**All analytics calculations use Indonesia local time (GMT+7 - Asia/Jakarta timezone):**
+
+#### **Business Intelligence Analytics** 📊
+- **Interactive Chart System** 🖱️:
+  - **Click any chart element** to see detailed data in popup modals
+  - **Pointer cursor on hover** indicates clickable elements
+  - **Real-time AJAX data fetching** when charts are clicked
+  - **Mobile-responsive modals** with scrollable content
+- **Hourly Visit Patterns**: 
+  - Uses `extract(hour from (check_in_time + INTERVAL '7 hours'))` for GMT+7 local time
+  - Filtered to operating hours (07:00-21:00)
+  - **Click any hour** → See all visits during that specific hour
+- **Daily Visit Patterns**: 
+  - Converts UTC stored timestamps to local date for accurate daily aggregation
+  - **Click any day** → See all visits on that day of week
+- **Weekly Patterns**: 
+  - Day-of-week analysis showing busiest days and member engagement patterns
+  - **Click any day bar** → See detailed visits for that specific day
+- **Session Duration Buckets**: 
+  - **15-minute interval breakdown**: <30m, 30-45m, 45-60m, 60-75m, 75-90m, 90-105m, 105-120m, 120-135m, 135-150m, 150-165m, 165-180m, >3h
+  - **Click any duration bar** → See all sessions in that duration range (member names, times, duration)
+- **Member Visit Frequency Distribution**: 
+  - Clear visualization showing how many members visited X times (e.g., 10 members once, 5 twice)
+  - **Click any frequency bar** → See specific members with that visit count (contact info, recent visits)
+- **Sales Analytics**: Daily sales trends calculated in local timezone for proper business day alignment
+- **Member Analytics**: Monthly member signup trends use local timezone for accurate monthly reporting
+
+#### **Interactive AJAX Endpoints** 🔗
+- `/admin/analytics/visits-by-duration/?bucket=<bucket>&period_type=<period>` - Sessions by duration
+- `/admin/analytics/visits-by-frequency/?visit_count=<count>&period_type=<period>` - Members by frequency
+- `/admin/analytics/visits-by-day/?day=<day_num>&period_type=<period>` - Visits by day of week
+- `/admin/analytics/visits-by-hour/?hour=<hour_num>&period_type=<period>` - Visits by specific hour
+
+#### **Business Value of Interactive Features** 💡
+- **Member Retention**: Click "1 visit" frequency → Contact members for follow-up campaigns
+- **Loyalty Recognition**: Click high frequency bars → Identify and reward your most loyal members
+- **Staffing Optimization**: Click peak hours → See exact member traffic for better scheduling
+- **Session Insights**: Click long duration buckets → Identify members with exceptional workout commitment
+- **Revenue Opportunities**: Click quiet hours/days → Plan targeted promotions or special classes
+
+#### **Why This Matters**
+Without timezone conversion, analytics would show:
+- **Wrong peak hours**: 6 AM UTC = 1 PM local time (business hours misaligned)
+- **Wrong daily patterns**: UTC midnight splits local business days incorrectly
+- **Inaccurate monthly trends**: Month boundaries don't align with local calendar
+
+#### **Implementation**
+```sql
+-- Example: Hourly patterns in local timezone (GMT+7)
+extract(hour from (check_in_time + INTERVAL '7 hours'))
+
+-- Example: Daily aggregation in local timezone (GMT+7)
+date(check_in_time + INTERVAL '7 hours')
+```
+
+All date/time analytics automatically display in Indonesian business hours for accurate operational insights.
+
+#### **Business Hours Filtering**
+Hourly visit patterns are filtered to gym operating hours (07:00-21:00 Jakarta time) to ensure:
+- **Accurate peak time analysis**: Only shows customer visit patterns during open hours
+- **Clean data presentation**: Excludes any erroneous timestamps outside business hours
+- **Operational focus**: Analytics reflect actual gym usage patterns
+
 ### Business Intelligence Tests
 The `visits` app includes comprehensive business intelligence tests for:
 - **Revenue Analytics**: Monthly trends, payment methods, and package revenue analysis
@@ -865,7 +930,14 @@ The `visits` app includes comprehensive business intelligence tests for:
 - **Repurchase Analytics**: Customer lifetime value, repurchase rates, and cohort analysis
 - **KPI Calculations**: Business metrics accuracy and data consistency validation
 - **AJAX Endpoints**: Real-time data loading and export functionality testing
-- **Permission Security**: Access control for all business intelligence features
+- **Interactive Chart Endpoints**: 
+  - `test_visits_by_duration_endpoint()` - Tests session duration bucket data retrieval
+  - `test_visits_by_frequency_endpoint()` - Tests member frequency data with visit history
+  - `test_visits_by_day_endpoint()` - Tests day-of-week visit filtering and timezone handling
+  - `test_visits_by_hour_endpoint()` - Tests hourly visit patterns and business hours filtering
+  - **Error Handling**: Tests for invalid parameters, malformed requests, and edge cases
+  - **Data Validation**: Ensures correct JSON structure, field presence, and data types
+- **Permission Security**: Access control for all business intelligence features and interactive endpoints
 
 ### Equipment Tests
 The `equipment` app includes tests for the view analytics system:

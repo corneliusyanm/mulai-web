@@ -5,7 +5,17 @@ from django.shortcuts import redirect, render, get_object_or_404
 from django.urls import path, reverse
 from django.utils import timezone
 from django.utils.html import format_html
-from django.db.models import Count, Q, Sum, Avg, F, Case, When, IntegerField, FloatField
+from django.db.models import (
+    Count,
+    Q,
+    Sum,
+    Avg,
+    F,
+    Case,
+    When,
+    IntegerField,
+    FloatField,
+)
 from django.http import JsonResponse, HttpResponse
 from datetime import timedelta, datetime
 from dateutil.relativedelta import relativedelta
@@ -175,6 +185,26 @@ def get_custom_admin_urls():
             "analytics/sales-data/",
             sales_data_view,
             name="sales-data",
+        ),
+        path(
+            "analytics/visits-by-duration/",
+            visits_by_duration_view,
+            name="visits-by-duration",
+        ),
+        path(
+            "analytics/visits-by-frequency/",
+            visits_by_frequency_view,
+            name="visits-by-frequency",
+        ),
+        path(
+            "analytics/visits-by-day/",
+            visits_by_day_view,
+            name="visits-by-day",
+        ),
+        path(
+            "analytics/visits-by-hour/",
+            visits_by_hour_view,
+            name="visits-by-hour",
         ),
         path(
             "analytics/visits-data/",
@@ -572,6 +602,93 @@ def export_members_view(request):
     return response
 
 
+def calculate_enhanced_kpis(business_metrics, repurchase_analytics):
+    """Calculate enhanced KPI metrics for the BI dashboard"""
+
+    # Safe division helper
+    def safe_divide(numerator, denominator):
+        return (numerator / denominator) if denominator > 0 else 0
+
+    # Calculate enhanced KPIs
+    member_activation_rate = (
+        safe_divide(
+            business_metrics.get("active_members", 0),
+            business_metrics.get("total_members", 1),
+        )
+        * 100
+    )
+
+    visits_per_active_member = safe_divide(
+        business_metrics.get("total_visits", 0),
+        business_metrics.get("active_members", 1),
+    )
+
+    revenue_per_visit = safe_divide(
+        business_metrics.get("total_revenue", 0),
+        business_metrics.get("total_visits", 1),
+    )
+
+    store_revenue_share = (
+        safe_divide(
+            business_metrics.get("store_revenue", 0),
+            business_metrics.get("total_revenue", 1),
+        )
+        * 100
+    )
+
+    # Quality assessments
+    retention_quality = (
+        "Excellent"
+        if business_metrics.get("member_retention_rate", 0) > 75
+        else "Monitor"
+    )
+    session_quality = (
+        "Quality" if business_metrics.get("avg_visit_duration", 0) > 1.5 else "Monitor"
+    )
+
+    # Activation status
+    activation_status = "🟢" if member_activation_rate > 70 else "🟡"
+    retention_status = (
+        "🟢" if business_metrics.get("member_retention_rate", 0) > 75 else "🟡"
+    )
+    session_status = (
+        "🟢" if business_metrics.get("avg_visit_duration", 0) > 1.5 else "🟡"
+    )
+
+    # Store performance assessment
+    store_performance = (
+        "🟢 Good store revenue contribution"
+        if store_revenue_share > 20
+        else "🟡 Consider boosting store sales"
+    )
+
+    # Renewal insights
+    repurchase_rate = repurchase_analytics.get("repurchase_rate", 0)
+    if repurchase_rate > 60:
+        renewal_insight = (
+            f"🟢 Your retention rate of {repurchase_rate:.1f}% is excellent!"
+        )
+    elif repurchase_rate > 40:
+        renewal_insight = f"🟡 Your retention rate of {repurchase_rate:.1f}% is good, but there's room for improvement."
+    else:
+        renewal_insight = f"🔴 Your retention rate of {repurchase_rate:.1f}% needs attention. Consider member engagement programs."
+
+    return {
+        "member_activation_rate": member_activation_rate,
+        "member_activation_percentage": f"{member_activation_rate:.0f}% of Total",
+        "visits_per_active_member": visits_per_active_member,
+        "revenue_per_visit": revenue_per_visit,
+        "store_revenue_share": store_revenue_share,
+        "retention_quality": retention_quality,
+        "session_quality": session_quality,
+        "activation_status": activation_status,
+        "retention_status": retention_status,
+        "session_status": session_status,
+        "store_performance": store_performance,
+        "renewal_insight": renewal_insight,
+    }
+
+
 def business_analytics_view(request):
     """Comprehensive business intelligence dashboard"""
     if not request.user.is_staff:
@@ -628,10 +745,14 @@ def business_analytics_view(request):
     member_analytics = calculate_member_analytics(start_date, end_date)
     repurchase_analytics = calculate_repurchase_analytics(start_date, end_date)
 
+    # Calculate additional KPI metrics for enhanced dashboard
+    enhanced_kpis = calculate_enhanced_kpis(business_metrics, repurchase_analytics)
+
     context = {
         **admin_site.each_context(request),
         "title": "Business Intelligence Dashboard",
         "business_metrics": business_metrics,
+        "enhanced_kpis": enhanced_kpis,
         "revenue_analytics": json.dumps(revenue_analytics, cls=DecimalEncoder),
         "sales_analytics": json.dumps(sales_analytics, cls=DecimalEncoder),
         "visit_analytics": json.dumps(visit_analytics, cls=DecimalEncoder),
@@ -795,8 +916,15 @@ def weekly_metrics_view(request):
     total_installment_payments = len(installment_payments_info)
     total_all_renewals = total_expiring_renewed + total_early_renewals
 
+    # Ensure we don't have more renewals than expiring members (logic consistency)
+    # If we have renewals for members who weren't in our original expiring list,
+    # we should count them as expiring for the rate calculation
+    effective_total_expiring = max(total_expiring, total_expiring_renewed)
+
     expiring_repurchase_rate = (
-        (total_expiring_renewed / total_expiring) * 100 if total_expiring > 0 else 0
+        (total_expiring_renewed / effective_total_expiring) * 100
+        if effective_total_expiring > 0
+        else 0
     )
 
     # Combine all renewals for backward compatibility
@@ -1050,10 +1178,10 @@ def calculate_sales_analytics(start_date, end_date):
         for item in top_products
     ]
 
-    # Daily sales trend
+    # Daily sales trend (using local timezone GMT+7)
     daily_sales = (
         Sale.objects.filter(created_at__gte=start_date)
-        .extra(select={"day": "date(created_at)"})
+        .extra(select={"day": "date(created_at + INTERVAL '7 hours')"})
         .values("day")
         .annotate(
             total_sales=Sum("total_amount"),
@@ -1104,10 +1232,10 @@ def calculate_sales_analytics(start_date, end_date):
 def calculate_visit_analytics(start_date, end_date):
     """Calculate visit patterns and member engagement"""
 
-    # Daily visit patterns
+    # Daily visit patterns (using local timezone GMT+7)
     daily_visits = (
         Visit.objects.filter(check_in_time__gte=start_date)
-        .extra(select={"day": "date(check_in_time)"})
+        .extra(select={"day": "date(check_in_time + INTERVAL '7 hours')"})
         .values("day")
         .annotate(
             total_visits=Count("id"), unique_members=Count("member", distinct=True)
@@ -1115,14 +1243,26 @@ def calculate_visit_analytics(start_date, end_date):
         .order_by("day")
     )
 
-    # Hourly patterns
-    hourly_visits = (
+    # Hourly patterns - filter by business hours 07:00-21:00 Jakarta time
+    hourly_data = (
         Visit.objects.filter(check_in_time__gte=start_date)
-        .extra(select={"hour": "extract(hour from check_in_time)"})
+        .extra(
+            select={"hour": "extract(hour from (check_in_time + INTERVAL '7 hours'))"},
+            where=[
+                "extract(hour from (check_in_time + INTERVAL '7 hours')) BETWEEN %s AND %s"
+            ],
+            params=[7, 21],
+        )
         .values("hour")
         .annotate(total_visits=Count("id"))
         .order_by("hour")
     )
+
+    # Create complete business hours dataset (07:00-21:00)
+    hourly_dict = {int(item["hour"]): item["total_visits"] for item in hourly_data}
+    hourly_visits = []
+    for hour in range(7, 22):  # 07:00 to 21:00 (inclusive)
+        hourly_visits.append({"hour": hour, "total_visits": hourly_dict.get(hour, 0)})
 
     # Member visit frequency
     member_frequencies = (
@@ -1134,12 +1274,12 @@ def calculate_visit_analytics(start_date, end_date):
         .order_by("visit_count")
     )
 
-    # Average session duration
+    # Average session duration (using local timezone GMT+7)
     avg_duration_by_day = (
         Visit.objects.filter(
             check_in_time__gte=start_date, check_out_time__isnull=False
         )
-        .extra(select={"day": "date(check_in_time)"})
+        .extra(select={"day": "date(check_in_time + INTERVAL '7 hours')"})
         .values("day")
         .annotate(avg_duration=Avg(F("check_out_time") - F("check_in_time")))
         .order_by("day")
@@ -1175,21 +1315,147 @@ def calculate_visit_analytics(start_date, end_date):
         for item in avg_duration_by_day
     ]
 
+    # Enhanced Visit Insights
+
+    # 1. Weekly patterns - which days are busiest
+    weekly_patterns = (
+        Visit.objects.filter(check_in_time__gte=start_date)
+        .extra(
+            select={"weekday": "extract(dow from (check_in_time + INTERVAL '7 hours'))"}
+        )
+        .values("weekday")
+        .annotate(
+            total_visits=Count("id"), unique_members=Count("member", distinct=True)
+        )
+        .order_by("weekday")
+    )
+
+    # Convert to readable day names
+    day_names = [
+        "Sunday",
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+    ]
+    weekly_visits = []
+    weekday_dict = {int(item["weekday"]): item for item in weekly_patterns}
+
+    for day_num in range(7):
+        day_data = weekday_dict.get(day_num, {"total_visits": 0, "unique_members": 0})
+        weekly_visits.append(
+            {
+                "day_name": day_names[day_num],
+                "day_short": day_names[day_num][:3],
+                "weekday": day_num,
+                "total_visits": day_data["total_visits"],
+                "unique_members": day_data["unique_members"],
+            }
+        )
+
+    # 2. Session Duration Analysis (by 15-minute buckets)
+    session_duration_buckets = [
+        {"label": "<30m", "min_minutes": 0, "max_minutes": 30, "count": 0},
+        {"label": "30-45m", "min_minutes": 30, "max_minutes": 45, "count": 0},
+        {"label": "45-60m", "min_minutes": 45, "max_minutes": 60, "count": 0},
+        {"label": "60-75m", "min_minutes": 60, "max_minutes": 75, "count": 0},
+        {"label": "75-90m", "min_minutes": 75, "max_minutes": 90, "count": 0},
+        {"label": "90-105m", "min_minutes": 90, "max_minutes": 105, "count": 0},
+        {"label": "105-120m", "min_minutes": 105, "max_minutes": 120, "count": 0},
+        {"label": "120-135m", "min_minutes": 120, "max_minutes": 135, "count": 0},
+        {"label": "135-150m", "min_minutes": 135, "max_minutes": 150, "count": 0},
+        {"label": "150-165m", "min_minutes": 150, "max_minutes": 165, "count": 0},
+        {"label": "165-180m", "min_minutes": 165, "max_minutes": 180, "count": 0},
+        {"label": ">3h", "min_minutes": 180, "max_minutes": None, "count": 0},
+    ]
+
+    # Get all completed sessions with duration (use EXTRACT to convert interval to minutes)
+    completed_visits = (
+        Visit.objects.filter(
+            check_in_time__gte=start_date, check_out_time__isnull=False
+        )
+        .extra(
+            select={
+                "duration_minutes": "EXTRACT(EPOCH FROM (check_out_time - check_in_time)) / 60"
+            }
+        )
+        .values("duration_minutes")
+    )
+
+    # Categorize sessions into buckets
+    for visit in completed_visits:
+        duration = int(visit["duration_minutes"]) if visit["duration_minutes"] else 0
+        for bucket in session_duration_buckets:
+            if bucket["max_minutes"] is None:  # Last bucket (>2.5h)
+                if duration >= bucket["min_minutes"]:
+                    bucket["count"] += 1
+                    break
+            else:
+                if bucket["min_minutes"] <= duration < bucket["max_minutes"]:
+                    bucket["count"] += 1
+                    break
+
+    # 3. Member visit frequency distribution (clear breakdown)
+    member_visit_patterns = (
+        Visit.objects.filter(check_in_time__gte=start_date)
+        .values("member")
+        .annotate(visit_count=Count("id"))
+    )
+
+    # Create frequency distribution: how many members visited X times
+    visit_frequency_distribution = {}
+    for member_data in member_visit_patterns:
+        visits = member_data["visit_count"]
+        if visits in visit_frequency_distribution:
+            visit_frequency_distribution[visits] += 1
+        else:
+            visit_frequency_distribution[visits] = 1
+
+    # Convert to sorted list for chart display
+    frequency_chart_data = []
+    for visit_count in sorted(visit_frequency_distribution.keys()):
+        member_count = visit_frequency_distribution[visit_count]
+        frequency_chart_data.append(
+            {
+                "visit_count": visit_count,
+                "member_count": member_count,
+                "label": f"{visit_count} visit{'s' if visit_count > 1 else ''}",
+            }
+        )
+
+    # 4. Basic session stats
+    total_visits = Visit.objects.filter(check_in_time__gte=start_date).count()
+    completed_sessions = Visit.objects.filter(
+        check_in_time__gte=start_date, check_out_time__isnull=False
+    ).count()
+    checkout_rate = (completed_sessions / max(total_visits, 1)) * 100
+
     return {
         "daily_visits": daily_visits_list,
-        "hourly_patterns": list(hourly_visits),
+        "hourly_patterns": hourly_visits,
         "member_frequencies": list(member_frequencies),
         "session_durations": session_durations_list,
+        # Enhanced insights
+        "weekly_patterns": weekly_visits,
+        "session_duration_buckets": session_duration_buckets,
+        "visit_frequency_distribution": frequency_chart_data,
+        "basic_stats": {
+            "total_visits": total_visits,
+            "completed_sessions": completed_sessions,
+            "checkout_rate": round(checkout_rate, 1),
+        },
     }
 
 
 def calculate_member_analytics(start_date, end_date):
     """Calculate member acquisition and retention analytics"""
 
-    # Member acquisition trend
+    # Member acquisition trend (using local timezone GMT+7)
     monthly_signups = (
         Member.objects.filter(created_at__gte=start_date)
-        .extra(select={"month": "date_trunc('month', created_at)"})
+        .extra(select={"month": "date_trunc('month', created_at + INTERVAL '7 hours')"})
         .values("month")
         .annotate(new_members=Count("id"))
         .order_by("month")
@@ -1779,3 +2045,317 @@ class VisitAdmin(admin.ModelAdmin):
 
 # Register the models with the custom admin site
 admin_site.register(Visit, VisitAdmin)
+# Temporary file with the new view functions to append to visits/admin.py
+
+
+def visits_by_duration_view(request):
+    """AJAX endpoint for visits by duration bucket"""
+    if not request.user.is_staff:
+        return JsonResponse({"error": "Permission denied"}, status=403)
+
+    duration_bucket = request.GET.get("bucket")
+    if not duration_bucket:
+        return JsonResponse({"error": "Duration bucket required"}, status=400)
+
+    # Get date range (same logic as other views)
+    period_type = request.GET.get("period_type", "7_days")
+    now = timezone.now()
+    end_date = now
+    if period_type == "7_days":
+        start_date = now - timedelta(days=7)
+    elif period_type == "2_weeks":
+        start_date = now - timedelta(weeks=2)
+    elif period_type == "4_weeks":
+        start_date = now - timedelta(weeks=4)
+    else:
+        start_date = now - timedelta(days=7)
+
+    # Parse duration bucket to get min/max minutes
+    bucket_mapping = {
+        "<30m": (0, 30),
+        "30-45m": (30, 45),
+        "45-60m": (45, 60),
+        "60-75m": (60, 75),
+        "75-90m": (75, 90),
+        "90-105m": (90, 105),
+        "105-120m": (105, 120),
+        "120-135m": (120, 135),
+        "135-150m": (135, 150),
+        "150-165m": (150, 165),
+        "165-180m": (165, 180),
+        ">3h": (180, None),
+    }
+
+    if duration_bucket not in bucket_mapping:
+        return JsonResponse({"error": "Invalid duration bucket"}, status=400)
+
+    min_minutes, max_minutes = bucket_mapping[duration_bucket]
+
+    # Build query based on duration range
+    visits_query = Visit.objects.filter(
+        check_in_time__gte=start_date, check_out_time__isnull=False
+    ).extra(
+        select={
+            "duration_minutes": "EXTRACT(EPOCH FROM (check_out_time - check_in_time)) / 60"
+        }
+    )
+
+    # Filter by duration bucket
+    if max_minutes is None:  # ">3h" case
+        visits = visits_query.extra(
+            where=["EXTRACT(EPOCH FROM (check_out_time - check_in_time)) / 60 >= %s"],
+            params=[min_minutes],
+        )
+    else:
+        visits = visits_query.extra(
+            where=[
+                "EXTRACT(EPOCH FROM (check_out_time - check_in_time)) / 60 >= %s AND EXTRACT(EPOCH FROM (check_out_time - check_in_time)) / 60 < %s"
+            ],
+            params=[min_minutes, max_minutes],
+        )
+
+    # Get visit details
+    visit_list = []
+    for visit in visits.select_related("member")[:100]:  # Limit to 100 results
+        duration_seconds = (visit.check_out_time - visit.check_in_time).total_seconds()
+        duration_minutes = int(duration_seconds / 60)
+
+        visit_list.append(
+            {
+                "id": visit.id,
+                "member_name": visit.member.name if visit.member else "Unknown",
+                "member_email": visit.member.email if visit.member else "",
+                "check_in": visit.check_in_time.strftime("%Y-%m-%d %H:%M"),
+                "check_out": visit.check_out_time.strftime("%Y-%m-%d %H:%M"),
+                "duration_minutes": duration_minutes,
+                "duration_display": (
+                    f"{duration_minutes//60}h {duration_minutes%60}m"
+                    if duration_minutes >= 60
+                    else f"{duration_minutes}m"
+                ),
+            }
+        )
+
+    return JsonResponse(
+        {"bucket": duration_bucket, "count": len(visit_list), "visits": visit_list}
+    )
+
+
+def visits_by_frequency_view(request):
+    """AJAX endpoint for members by visit frequency"""
+    if not request.user.is_staff:
+        return JsonResponse({"error": "Permission denied"}, status=403)
+
+    visit_count = request.GET.get("visit_count")
+    if not visit_count:
+        return JsonResponse({"error": "Visit count required"}, status=400)
+
+    try:
+        visit_count = int(visit_count)
+    except ValueError:
+        return JsonResponse({"error": "Invalid visit count"}, status=400)
+
+    # Get date range
+    period_type = request.GET.get("period_type", "7_days")
+    now = timezone.now()
+    end_date = now
+    if period_type == "7_days":
+        start_date = now - timedelta(days=7)
+    elif period_type == "2_weeks":
+        start_date = now - timedelta(weeks=2)
+    elif period_type == "4_weeks":
+        start_date = now - timedelta(weeks=4)
+    else:
+        start_date = now - timedelta(days=7)
+
+    # Get members with exact visit count
+    members_with_visits = (
+        Visit.objects.filter(check_in_time__gte=start_date)
+        .values("member")
+        .annotate(total_visits=Count("id"))
+        .filter(total_visits=visit_count)
+    )
+
+    member_list = []
+    for member_data in members_with_visits:
+        member = Member.objects.get(id=member_data["member"])
+
+        # Get recent visits for this member
+        recent_visits = Visit.objects.filter(
+            member=member, check_in_time__gte=start_date
+        ).order_by("-check_in_time")[:5]
+
+        visit_details = []
+        for visit in recent_visits:
+            visit_details.append(
+                {
+                    "check_in": visit.check_in_time.strftime("%Y-%m-%d %H:%M"),
+                    "check_out": (
+                        visit.check_out_time.strftime("%Y-%m-%d %H:%M")
+                        if visit.check_out_time
+                        else "Not checked out"
+                    ),
+                }
+            )
+
+        member_list.append(
+            {
+                "id": member.id,
+                "name": member.name,
+                "email": member.email,
+                "phone": member.phone_number,
+                "visit_count": member_data["total_visits"],
+                "recent_visits": visit_details,
+            }
+        )
+
+    return JsonResponse(
+        {
+            "visit_count": visit_count,
+            "member_count": len(member_list),
+            "members": member_list,
+        }
+    )
+
+
+def visits_by_day_view(request):
+    """AJAX endpoint for visits by day of week"""
+    if not request.user.is_staff:
+        return JsonResponse({"error": "Permission denied"}, status=403)
+
+    day = request.GET.get("day")
+    if day is None:
+        return JsonResponse({"error": "Day required"}, status=400)
+
+    try:
+        day_num = int(day)
+    except ValueError:
+        return JsonResponse({"error": "Invalid day"}, status=400)
+
+    # Get date range
+    period_type = request.GET.get("period_type", "7_days")
+    now = timezone.now()
+    end_date = now
+    if period_type == "7_days":
+        start_date = now - timedelta(days=7)
+    elif period_type == "2_weeks":
+        start_date = now - timedelta(weeks=2)
+    elif period_type == "4_weeks":
+        start_date = now - timedelta(weeks=4)
+    else:
+        start_date = now - timedelta(days=7)
+
+    # Get visits for specific day of week
+    visits = (
+        Visit.objects.filter(check_in_time__gte=start_date)
+        .extra(
+            where=["extract(dow from (check_in_time + INTERVAL '7 hours')) = %s"],
+            params=[day_num],
+        )
+        .select_related("member")
+        .order_by("-check_in_time")[:100]
+    )
+
+    visit_list = []
+    for visit in visits:
+        visit_list.append(
+            {
+                "id": visit.id,
+                "member_name": visit.member.name if visit.member else "Unknown",
+                "check_in": visit.check_in_time.strftime("%Y-%m-%d %H:%M"),
+                "check_out": (
+                    visit.check_out_time.strftime("%Y-%m-%d %H:%M")
+                    if visit.check_out_time
+                    else "Not checked out"
+                ),
+                "day_name": [
+                    "Sunday",
+                    "Monday",
+                    "Tuesday",
+                    "Wednesday",
+                    "Thursday",
+                    "Friday",
+                    "Saturday",
+                ][day_num],
+            }
+        )
+
+    return JsonResponse(
+        {
+            "day": day_num,
+            "day_name": [
+                "Sunday",
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday",
+                "Saturday",
+            ][day_num],
+            "count": len(visit_list),
+            "visits": visit_list,
+        }
+    )
+
+
+def visits_by_hour_view(request):
+    """AJAX endpoint for visits by hour"""
+    if not request.user.is_staff:
+        return JsonResponse({"error": "Permission denied"}, status=403)
+
+    hour = request.GET.get("hour")
+    if hour is None:
+        return JsonResponse({"error": "Hour required"}, status=400)
+
+    try:
+        hour_num = int(hour)
+    except ValueError:
+        return JsonResponse({"error": "Invalid hour"}, status=400)
+
+    # Get date range
+    period_type = request.GET.get("period_type", "7_days")
+    now = timezone.now()
+    end_date = now
+    if period_type == "7_days":
+        start_date = now - timedelta(days=7)
+    elif period_type == "2_weeks":
+        start_date = now - timedelta(weeks=2)
+    elif period_type == "4_weeks":
+        start_date = now - timedelta(weeks=4)
+    else:
+        start_date = now - timedelta(days=7)
+
+    # Get visits for specific hour
+    visits = (
+        Visit.objects.filter(check_in_time__gte=start_date)
+        .extra(
+            where=["extract(hour from (check_in_time + INTERVAL '7 hours')) = %s"],
+            params=[hour_num],
+        )
+        .select_related("member")
+        .order_by("-check_in_time")[:100]
+    )
+
+    visit_list = []
+    for visit in visits:
+        visit_list.append(
+            {
+                "id": visit.id,
+                "member_name": visit.member.name if visit.member else "Unknown",
+                "check_in": visit.check_in_time.strftime("%Y-%m-%d %H:%M"),
+                "check_out": (
+                    visit.check_out_time.strftime("%Y-%m-%d %H:%M")
+                    if visit.check_out_time
+                    else "Not checked out"
+                ),
+            }
+        )
+
+    return JsonResponse(
+        {
+            "hour": hour_num,
+            "hour_display": f"{hour_num:02d}:00",
+            "count": len(visit_list),
+            "visits": visit_list,
+        }
+    )

@@ -124,8 +124,6 @@ class Payment(models.Model):
 
     def update_member_memberships(self):
         """Update member's membership fields based on package type"""
-        if self.skip_membership_update:
-            return
 
         type_num, level, duration_str = self.parse_package_code()
         if not type_num:
@@ -144,9 +142,13 @@ class Payment(models.Model):
             new_date = self.calculate_end_date(
                 self.member.active_until, duration_months
             )
-            self.member.active_until = new_date
+            # Always set membership_end_date for analytics purposes
             self.membership_end_date = new_date
-            member_fields_to_update.append("active_until")
+
+            # Only update member fields if not skipping
+            if not self.skip_membership_update:
+                self.member.active_until = new_date
+                member_fields_to_update.append("active_until")
 
         elif type_num == "1":  # SILVER - active_until + pemula_active_until
             new_active_date = self.calculate_end_date(
@@ -156,10 +158,14 @@ class Payment(models.Model):
                 self.member.pemula_active_until, duration_months
             )
 
-            self.member.active_until = new_active_date
-            self.member.pemula_active_until = new_pemula_date
+            # Always set membership_end_date for analytics purposes
             self.membership_end_date = new_active_date
-            member_fields_to_update.extend(["active_until", "pemula_active_until"])
+
+            # Only update member fields if not skipping
+            if not self.skip_membership_update:
+                self.member.active_until = new_active_date
+                self.member.pemula_active_until = new_pemula_date
+                member_fields_to_update.extend(["active_until", "pemula_active_until"])
 
         elif type_num == "2":  # GOLD - active_until + semi_private_active_until
             new_active_date = self.calculate_end_date(
@@ -169,12 +175,16 @@ class Payment(models.Model):
                 self.member.semi_private_active_until, duration_months
             )
 
-            self.member.active_until = new_active_date
-            self.member.semi_private_active_until = new_semi_private_date
+            # Always set membership_end_date for analytics purposes
             self.membership_end_date = new_active_date
-            member_fields_to_update.extend(
-                ["active_until", "semi_private_active_until"]
-            )
+
+            # Only update member fields if not skipping
+            if not self.skip_membership_update:
+                self.member.active_until = new_active_date
+                self.member.semi_private_active_until = new_semi_private_date
+                member_fields_to_update.extend(
+                    ["active_until", "semi_private_active_until"]
+                )
 
         elif type_num == "3":  # PLATINUM - active_until + pemula + semi_private
             new_active_date = self.calculate_end_date(
@@ -187,13 +197,17 @@ class Payment(models.Model):
                 self.member.semi_private_active_until, duration_months
             )
 
-            self.member.active_until = new_active_date
-            self.member.pemula_active_until = new_pemula_date
-            self.member.semi_private_active_until = new_semi_private_date
+            # Always set membership_end_date for analytics purposes
             self.membership_end_date = new_active_date
-            member_fields_to_update.extend(
-                ["active_until", "pemula_active_until", "semi_private_active_until"]
-            )
+
+            # Only update member fields if not skipping
+            if not self.skip_membership_update:
+                self.member.active_until = new_active_date
+                self.member.pemula_active_until = new_pemula_date
+                self.member.semi_private_active_until = new_semi_private_date
+                member_fields_to_update.extend(
+                    ["active_until", "pemula_active_until", "semi_private_active_until"]
+                )
 
         elif (
             type_num == "4"
@@ -201,9 +215,13 @@ class Payment(models.Model):
             new_date = self.calculate_end_date(
                 self.member.active_until, duration_months
             )
-            self.member.active_until = new_date
+            # Always set membership_end_date for analytics purposes
             self.membership_end_date = new_date
-            member_fields_to_update.append("active_until")
+
+            # Only update member fields if not skipping
+            if not self.skip_membership_update:
+                self.member.active_until = new_date
+                member_fields_to_update.append("active_until")
 
         elif type_num == "5":  # ADD-ON packages
             if level.startswith("ADD-"):
@@ -212,16 +230,24 @@ class Payment(models.Model):
                     new_pemula_date = self.calculate_end_date(
                         self.member.pemula_active_until, duration_months
                     )
-                    self.member.pemula_active_until = new_pemula_date
+                    # Always set membership_end_date for analytics purposes
                     self.membership_end_date = new_pemula_date
-                    member_fields_to_update.append("pemula_active_until")
+
+                    # Only update member fields if not skipping
+                    if not self.skip_membership_update:
+                        self.member.pemula_active_until = new_pemula_date
+                        member_fields_to_update.append("pemula_active_until")
                 elif addon_type == "GOLD":
                     new_semi_private_date = self.calculate_end_date(
                         self.member.semi_private_active_until, duration_months
                     )
-                    self.member.semi_private_active_until = new_semi_private_date
+                    # Always set membership_end_date for analytics purposes
                     self.membership_end_date = new_semi_private_date
-                    member_fields_to_update.append("semi_private_active_until")
+
+                    # Only update member fields if not skipping
+                    if not self.skip_membership_update:
+                        self.member.semi_private_active_until = new_semi_private_date
+                        member_fields_to_update.append("semi_private_active_until")
                 # ADD-DIAMOND does nothing per requirements
 
         # Save member with updated fields

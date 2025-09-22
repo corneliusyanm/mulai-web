@@ -839,6 +839,167 @@ class BusinessIntelligenceViewsTest(TestCase):
             self.assertIn("count", segment)
             self.assertIn("percentage", segment)
 
+    def test_visits_by_duration_endpoint(self):
+        """Test visits by duration bucket AJAX endpoint"""
+        response = self.client.get(
+            reverse("admin:visits-by-duration"),
+            {"bucket": "30-45m", "period_type": "7_days"},
+        )
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertIn("bucket", data)
+        self.assertIn("count", data)
+        self.assertIn("visits", data)
+        self.assertEqual(data["bucket"], "30-45m")
+
+        # Check visit structure if visits exist
+        if data["visits"]:
+            visit = data["visits"][0]
+            self.assertIn("id", visit)
+            self.assertIn("member_name", visit)
+            self.assertIn("check_in", visit)
+            self.assertIn("check_out", visit)
+            self.assertIn("duration_minutes", visit)
+            self.assertIn("duration_display", visit)
+
+    def test_visits_by_duration_invalid_bucket(self):
+        """Test visits by duration with invalid bucket"""
+        response = self.client.get(
+            reverse("admin:visits-by-duration"),
+            {"bucket": "invalid", "period_type": "7_days"},
+        )
+        self.assertEqual(response.status_code, 400)
+
+        data = response.json()
+        self.assertIn("error", data)
+
+    def test_visits_by_frequency_endpoint(self):
+        """Test members by visit frequency AJAX endpoint"""
+        response = self.client.get(
+            reverse("admin:visits-by-frequency"),
+            {"visit_count": "2", "period_type": "7_days"},
+        )
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertIn("visit_count", data)
+        self.assertIn("member_count", data)
+        self.assertIn("members", data)
+        self.assertEqual(data["visit_count"], 2)
+
+        # Check member structure if members exist
+        if data["members"]:
+            member = data["members"][0]
+            self.assertIn("id", member)
+            self.assertIn("name", member)
+            self.assertIn("email", member)
+            self.assertIn("phone", member)
+            self.assertIn("visit_count", member)
+            self.assertIn("recent_visits", member)
+
+    def test_visits_by_frequency_invalid_count(self):
+        """Test visits by frequency with invalid count"""
+        response = self.client.get(
+            reverse("admin:visits-by-frequency"),
+            {"visit_count": "invalid", "period_type": "7_days"},
+        )
+        self.assertEqual(response.status_code, 400)
+
+        data = response.json()
+        self.assertIn("error", data)
+
+    def test_visits_by_day_endpoint(self):
+        """Test visits by day of week AJAX endpoint"""
+        response = self.client.get(
+            reverse("admin:visits-by-day"),
+            {"day": "1", "period_type": "7_days"},  # Monday
+        )
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertIn("day", data)
+        self.assertIn("day_name", data)
+        self.assertIn("count", data)
+        self.assertIn("visits", data)
+        self.assertEqual(data["day"], 1)
+        self.assertEqual(data["day_name"], "Monday")
+
+        # Check visit structure if visits exist
+        if data["visits"]:
+            visit = data["visits"][0]
+            self.assertIn("id", visit)
+            self.assertIn("member_name", visit)
+            self.assertIn("check_in", visit)
+            self.assertIn("check_out", visit)
+            self.assertIn("day_name", visit)
+
+    def test_visits_by_day_invalid_day(self):
+        """Test visits by day with invalid day"""
+        response = self.client.get(
+            reverse("admin:visits-by-day"), {"day": "invalid", "period_type": "7_days"}
+        )
+        self.assertEqual(response.status_code, 400)
+
+        data = response.json()
+        self.assertIn("error", data)
+
+    def test_visits_by_hour_endpoint(self):
+        """Test visits by hour AJAX endpoint"""
+        response = self.client.get(
+            reverse("admin:visits-by-hour"), {"hour": "10", "period_type": "7_days"}
+        )
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertIn("hour", data)
+        self.assertIn("hour_display", data)
+        self.assertIn("count", data)
+        self.assertIn("visits", data)
+        self.assertEqual(data["hour"], 10)
+        self.assertEqual(data["hour_display"], "10:00")
+
+        # Check visit structure if visits exist
+        if data["visits"]:
+            visit = data["visits"][0]
+            self.assertIn("id", visit)
+            self.assertIn("member_name", visit)
+            self.assertIn("check_in", visit)
+            self.assertIn("check_out", visit)
+
+    def test_visits_by_hour_invalid_hour(self):
+        """Test visits by hour with invalid hour"""
+        response = self.client.get(
+            reverse("admin:visits-by-hour"),
+            {"hour": "invalid", "period_type": "7_days"},
+        )
+        self.assertEqual(response.status_code, 400)
+
+        data = response.json()
+        self.assertIn("error", data)
+
+    def test_interactive_endpoints_permission_required(self):
+        """Test that interactive endpoints require staff permissions"""
+        # Create a non-staff user
+        self.client.logout()
+        User.objects.create_user(username="regular", password="test")
+        self.client.login(username="regular", password="test")
+
+        endpoints = [
+            ("admin:visits-by-duration", {"bucket": "30-45m"}),
+            ("admin:visits-by-frequency", {"visit_count": "2"}),
+            ("admin:visits-by-day", {"day": "1"}),
+            ("admin:visits-by-hour", {"hour": "10"}),
+        ]
+
+        for endpoint_name, params in endpoints:
+            response = self.client.get(reverse(endpoint_name), params)
+            self.assertEqual(response.status_code, 403)
+
+            data = response.json()
+            self.assertIn("error", data)
+            self.assertEqual(data["error"], "Permission denied")
+
 
 class WeeklyMetricsViewTest(TestCase):
     """Test cases for the Weekly Metrics Tracker functionality"""
@@ -1347,7 +1508,7 @@ class WeeklyMetricsViewTest(TestCase):
 
         context = response.context
 
-        # Should now have 100% repurchase rate (2/2 = 100%)
-        self.assertEqual(context["total_repurchased"], 2)
+        # Should now have 100% repurchase rate (3/3 = 100%)
+        self.assertEqual(context["total_repurchased"], 3)
         self.assertEqual(context["repurchase_rate"], 100.0)
         self.assertEqual(context["did_not_repurchase_members"].count(), 0)

@@ -230,6 +230,7 @@
 
 .chart-container canvas {
     background-color: white !important;
+    cursor: pointer !important;
 }
 
 .full-width-section {
@@ -392,6 +393,8 @@
         color: #2d3748 !important;
     }
 }
+
+/* Enhanced Visit Insights Styles */
 </style>
 {% endblock %}
 
@@ -444,32 +447,54 @@
         </div>
     </div>
 
-    <!-- KPI Cards -->
+    <!-- Enhanced KPI Cards -->
     <div class="kpi-grid">
-                        <div class="kpi-card" style="background: white; color: #2d3748;">
-                    <div class="kpi-number" style="color: #2d3748;">Rp {{ business_metrics.total_revenue|floatformat:0 }}</div>
-                    <div class="kpi-label" style="color: #718096;">Total Revenue</div>
-                </div>
-                <div class="kpi-card" style="background: white; color: #2d3748;">
-                    <div class="kpi-number" style="color: #2d3748;">{{ business_metrics.total_members }}</div>
-                    <div class="kpi-label" style="color: #718096;">Total Members</div>
-                </div>
-                <div class="kpi-card" style="background: white; color: #2d3748;">
-                    <div class="kpi-number" style="color: #2d3748;">{{ business_metrics.active_members }}</div>
-                    <div class="kpi-label" style="color: #718096;">Active Members</div>
-                </div>
-                <div class="kpi-card" style="background: white; color: #2d3748;">
-                    <div class="kpi-number" style="color: #2d3748;">{{ business_metrics.total_visits }}</div>
-                    <div class="kpi-label" style="color: #718096;">Total Visits</div>
-                </div>
-                <div class="kpi-card" style="background: white; color: #2d3748;">
-                    <div class="kpi-number" style="color: #2d3748;">{{ business_metrics.member_retention_rate|floatformat:1 }}%</div>
-                    <div class="kpi-label" style="color: #718096;">Retention Rate</div>
-                </div>
-                <div class="kpi-card" style="background: white; color: #2d3748;">
-                    <div class="kpi-number" style="color: #2d3748;">Rp {{ business_metrics.customer_lifetime_value|floatformat:0 }}</div>
-                    <div class="kpi-label" style="color: #718096;">Customer LTV</div>
-                </div>
+        <div class="kpi-card" style="background: white; color: #2d3748;">
+            <div class="kpi-number" style="color: #2d3748;">Rp {{ business_metrics.total_revenue|floatformat:0 }}</div>
+            <div class="kpi-label" style="color: #718096;">Total Revenue</div>
+            <div class="kpi-change positive">💰 Primary Income</div>
+        </div>
+        <div class="kpi-card" style="background: white; color: #2d3748;">
+            <div class="kpi-number" style="color: #2d3748;">{{ business_metrics.total_members }}</div>
+            <div class="kpi-label" style="color: #718096;">Total Members</div>
+            <div class="kpi-change positive">👥 Community Size</div>
+        </div>
+        <div class="kpi-card" style="background: white; color: #2d3748;">
+            <div class="kpi-number" style="color: #2d3748;">{{ business_metrics.active_members }}</div>
+            <div class="kpi-label" style="color: #718096;">Active Members</div>
+            <div class="kpi-change positive">
+                {{ enhanced_kpis.activation_status }} {{ enhanced_kpis.member_activation_percentage }}
+            </div>
+        </div>
+        <div class="kpi-card" style="background: white; color: #2d3748;">
+            <div class="kpi-number" style="color: #2d3748;">{{ business_metrics.total_visits }}</div>
+            <div class="kpi-label" style="color: #718096;">Total Visits</div>
+            <div class="kpi-change positive">🚶‍♂️ Engagement</div>
+        </div>
+        <div class="kpi-card" style="background: white; color: #2d3748;">
+            <div class="kpi-number" style="color: #2d3748;">{{ business_metrics.member_retention_rate|floatformat:1 }}%</div>
+            <div class="kpi-label" style="color: #718096;">Retention Rate</div>
+            <div class="kpi-change positive">
+                {{ enhanced_kpis.retention_status }} {{ enhanced_kpis.retention_quality }}
+            </div>
+        </div>
+        <div class="kpi-card" style="background: white; color: #2d3748;">
+            <div class="kpi-number" style="color: #2d3748;">Rp {{ business_metrics.customer_lifetime_value|floatformat:0 }}</div>
+            <div class="kpi-label" style="color: #718096;">Customer LTV</div>
+            <div class="kpi-change positive">📈 Growth Potential</div>
+        </div>
+        <div class="kpi-card" style="background: white; color: #2d3748;">
+            <div class="kpi-number" style="color: #2d3748;">{{ business_metrics.unique_visitors }}</div>
+            <div class="kpi-label" style="color: #718096;">Unique Visitors</div>
+            <div class="kpi-change positive">👤 Reach</div>
+        </div>
+        <div class="kpi-card" style="background: white; color: #2d3748;">
+            <div class="kpi-number" style="color: #2d3748;">{{ business_metrics.avg_visit_duration|floatformat:1 }}h</div>
+            <div class="kpi-label" style="color: #718096;">Avg Session</div>
+            <div class="kpi-change positive">
+                {{ enhanced_kpis.session_status }} {{ enhanced_kpis.session_quality }}
+            </div>
+        </div>
     </div>
 
     <!-- Revenue & Sales Analytics -->
@@ -515,12 +540,82 @@
             </div>
         </div>
 
+    </div>
+
+    <!-- Enhanced Visit Insights -->
+    <div class="section-grid" style="grid-template-columns: repeat(2, 1fr); gap: 30px;">
+        
+        <!-- Weekly Patterns -->
         <div class="chart-section">
             <div class="section-header" style="background: #f7fafc; color: #2d3748;">
-                <div class="section-title" style="color: #2d3748;">👥 Member Segments</div>
+                <div class="section-title" style="color: #2d3748;">📅 Weekly Patterns</div>
             </div>
             <div class="chart-container">
-                <canvas id="segmentsChart"></canvas>
+                <canvas id="weeklyChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Session Duration Buckets -->
+        <div class="chart-section">
+            <div class="section-header" style="background: #f7fafc; color: #2d3748;">
+                <div class="section-title" style="color: #2d3748;">⏱️ Session Duration Analysis</div>
+            </div>
+            <div class="chart-container">
+                <canvas id="durationChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Member Visit Frequency -->
+    <div class="full-width-section">
+        <div class="section-header" style="background: #f7fafc; color: #2d3748;">
+            <div class="section-title" style="color: #2d3748;">🎯 Member Visit Frequency Distribution</div>
+        </div>
+        <div class="chart-container">
+            <canvas id="frequencyChart"></canvas>
+            <div style="margin-top: 20px; text-align: center; padding: 15px; background: #f7fafc; border-radius: 8px;">
+                <div style="color: #666; font-size: 0.9em;">Shows how many members visited X times in the selected period</div>
+                <div style="color: #666; font-size: 0.9em; margin-top: 5px;">
+                    Total visits: {{ visitData.basic_stats.total_visits }} | 
+                    Checkout rate: {{ visitData.basic_stats.checkout_rate }}%
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Weekly Renewal Insights (Inspired by Weekly Metrics Tracker) -->
+    <div class="full-width-section">
+        <div class="section-header" style="background: #f7fafc; color: #2d3748;">
+            <div class="section-title" style="color: #2d3748;">🔄 Member Renewal Intelligence</div>
+            <div class="section-actions">
+                <button onclick="exportRenewalData()">Export Renewal Data</button>
+            </div>
+        </div>
+        <div class="chart-container" style="height: auto; padding: 30px;">
+            <div class="metric-list">
+                <div class="metric-item">
+                    <div class="metric-value">{{ repurchase_analytics.repurchase_rate|floatformat:1 }}%</div>
+                    <div class="metric-label">Overall Repurchase Rate</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value">{{ repurchase_analytics.repeat_customers }}</div>
+                    <div class="metric-label">Repeat Customers</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value">{{ repurchase_analytics.avg_repurchase_interval|floatformat:0 }}</div>
+                    <div class="metric-label">Days Between Renewals</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value">{{ business_metrics.new_members }}</div>
+                    <div class="metric-label">New Members This Period</div>
+                </div>
+            </div>
+            <div style="margin-top: 20px; padding: 15px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #4299e1;">
+                <strong style="color: #2d3748;">💡 Renewal Insight:</strong>
+                <p style="margin: 10px 0; color: #4a5568;">
+                    Members typically renew every {{ repurchase_analytics.avg_repurchase_interval|floatformat:0 }} days. 
+                    {{ enhanced_kpis.renewal_insight }}
+                </p>
             </div>
         </div>
     </div>
@@ -531,6 +626,7 @@
             <button class="tab-button active" onclick="switchTab('repurchase')" style="color: #2d3748;">💎 Customer Lifetime</button>
             <button class="tab-button" onclick="switchTab('cohort')" style="color: #2d3748;">📈 Cohort Analysis</button>
             <button class="tab-button" onclick="switchTab('products')" style="color: #2d3748;">🏆 Top Products</button>
+            <button class="tab-button" onclick="switchTab('operational')" style="color: #2d3748;">⚡ Operations</button>
             <button class="tab-button" onclick="switchTab('insights')" style="color: #2d3748;">🧠 Business Insights</button>
         </div>
 
@@ -593,6 +689,45 @@
             </div>
         </div>
 
+        <div id="operational-tab" class="tab-content" style="background: white; color: #2d3748;">
+            <h3 style="color: #2d3748;">Operational Intelligence</h3>
+            <div class="metric-list">
+                <div class="metric-item">
+                    <div class="metric-value">{{ enhanced_kpis.visits_per_active_member|floatformat:1 }}</div>
+                    <div class="metric-label">Visits per Active Member</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value">{{ enhanced_kpis.revenue_per_visit|floatformat:0 }}</div>
+                    <div class="metric-label">Revenue per Visit (Rp)</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value">{{ enhanced_kpis.member_activation_rate|floatformat:1 }}%</div>
+                    <div class="metric-label">Member Activation Rate</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value">{{ enhanced_kpis.store_revenue_share|floatformat:1 }}%</div>
+                    <div class="metric-label">Store Revenue Share</div>
+                </div>
+            </div>
+            <div style="margin-top: 25px;">
+                <h4 style="color: #2d3748; margin-bottom: 15px;">📊 Quick Operational Insights</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div style="padding: 15px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                        <strong style="color: #4299e1;">Peak Activity:</strong>
+                        <p style="margin: 5px 0; color: #718096; font-size: 14px;">
+                            Most visits happen during evening hours. Consider staffing accordingly.
+                        </p>
+                    </div>
+                    <div style="padding: 15px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                        <strong style="color: #38b2ac;">Revenue Mix:</strong>
+                        <p style="margin: 5px 0; color: #718096; font-size: 14px;">
+                            {{ enhanced_kpis.store_performance }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div id="insights-tab" class="tab-content" style="background: white; color: #2d3748;">
             <h3 style="color: #2d3748;">Key Business Insights</h3>
             <div class="metric-list">
@@ -617,13 +752,29 @@
     </div>
 </div>
 
+<!-- Modal for displaying visit/member details -->
+<div id="visitModal" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4);">
+    <div class="modal-content" style="background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 800px; border-radius: 8px;">
+        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 id="visitModalTitle" style="margin: 0;">Visit Details</h2>
+            <span class="close" style="color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+        </div>
+        <div id="visitModalContent">
+            <!-- Content will be populated by JavaScript -->
+        </div>
+    </div>
+</div>
+
 <script>
+// Global variables for data access
+let revenueData, salesData, visitData, memberData;
+
 document.addEventListener('DOMContentLoaded', function() {
     // Get data from Django context
-    const revenueData = {{ revenue_analytics|safe }};
-    const salesData = {{ sales_analytics|safe }};
-    const visitData = {{ visit_analytics|safe }};
-    const memberData = {{ member_analytics|safe }};
+    revenueData = {{ revenue_analytics|safe }};
+    salesData = {{ sales_analytics|safe }};
+    visitData = {{ visit_analytics|safe }};
+    memberData = {{ member_analytics|safe }};
     
     // Chart configurations
     const chartOptions = {
@@ -739,32 +890,124 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Member Segments Chart
-    if (memberData.member_segments.length > 0) {
-        new Chart(document.getElementById('segmentsChart'), {
-            type: 'pie',
-            data: {
-                labels: memberData.member_segments.map(s => s.segment),
-                datasets: [{
-                    data: memberData.member_segments.map(s => s.count),
-                    backgroundColor: ['#38b2ac', '#4299e1', '#68d391']
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                backgroundColor: 'white',
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: '#2d3748'
-                        }
+
+    // Weekly Patterns Chart
+    new Chart(document.getElementById('weeklyChart'), {
+        type: 'bar',
+        data: {
+            labels: visitData.weekly_patterns.map(d => d.day_short),
+            datasets: [{
+                label: 'Total Visits',
+                data: visitData.weekly_patterns.map(d => d.total_visits),
+                backgroundColor: 'rgba(72, 187, 120, 0.8)',
+                borderColor: '#48bb78',
+                borderWidth: 2
+            }, {
+                label: 'Unique Members',
+                data: visitData.weekly_patterns.map(d => d.unique_members),
+                backgroundColor: 'rgba(66, 153, 225, 0.6)',
+                borderColor: '#4299e1',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            ...chartOptions,
+            backgroundColor: 'white',
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        color: '#2d3748'
                     }
                 }
+            },
+            onClick: (event, elements) => {
+                if (elements.length > 0) {
+                    const index = elements[0].index;
+                    const dayData = visitData.weekly_patterns[index];
+                    showVisitsByDay(dayData.weekday);
+                }
             }
-        });
-    }
+        }
+    });
+
+    // Session Duration Buckets Chart  
+    new Chart(document.getElementById('durationChart'), {
+        type: 'bar',
+        data: {
+            labels: visitData.session_duration_buckets.map(b => b.label),
+            datasets: [{
+                label: 'Session Count',
+                data: visitData.session_duration_buckets.map(b => b.count),
+                backgroundColor: 'rgba(72, 187, 120, 0.8)',
+                borderColor: '#48bb78',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            ...chartOptions,
+            backgroundColor: 'white',
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            onClick: (event, elements) => {
+                if (elements.length > 0) {
+                    const index = elements[0].index;
+                    const bucket = visitData.session_duration_buckets[index];
+                    showVisitsByDuration(bucket.label);
+                }
+            }
+        }
+    });
+
+    // Member Visit Frequency Chart
+    new Chart(document.getElementById('frequencyChart'), {
+        type: 'bar',
+        data: {
+            labels: visitData.visit_frequency_distribution.map(d => d.label),
+            datasets: [{
+                label: 'Number of Members',
+                data: visitData.visit_frequency_distribution.map(d => d.member_count),
+                backgroundColor: 'rgba(66, 153, 225, 0.8)',
+                borderColor: '#4299e1',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            ...chartOptions,
+            backgroundColor: 'white',
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Visit Frequency'
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Number of Members'
+                    },
+                    beginAtZero: true
+                }
+            },
+            onClick: (event, elements) => {
+                if (elements.length > 0) {
+                    const index = elements[0].index;
+                    const frequencyData = visitData.visit_frequency_distribution[index];
+                    showMembersByFrequency(frequencyData.visit_count);
+                }
+            }
+        }
+    });
 
     // Products Chart
     if (salesData.top_products.length > 0) {
@@ -863,13 +1106,13 @@ function switchChart(chartType, viewType) {
         else if (viewType === 'hourly') {
             console.log('Hourly patterns data:', visitData.hourly_patterns);
             
-            // Update to hourly view (showing hourly patterns)
+            // Update to hourly view (showing hourly patterns for business hours 07:00-21:00)
             if (visitData.hourly_patterns && visitData.hourly_patterns.length > 0) {
-                // Create labels for all 24 hours
+                // Create labels for business hours only (07:00-21:00)
                 const hourLabels = [];
                 const hourData = [];
                 
-                for (let hour = 0; hour < 24; hour++) {
+                for (let hour = 7; hour <= 21; hour++) {
                     hourLabels.push(`${hour.toString().padStart(2, '0')}:00`);
                     
                     // Find data for this hour
@@ -884,6 +1127,15 @@ function switchChart(chartType, viewType) {
                 // Update button states
                 document.querySelector('.hourly-btn').classList.add('active');
                 document.querySelector('.daily-btn').classList.remove('active');
+                
+                // Add onClick for hourly view
+                chart.options.onClick = (event, elements) => {
+                    if (elements.length > 0) {
+                        const index = elements[0].index;
+                        const hourNum = 7 + index;  // Business hours start at 7
+                        showVisitsByHour(hourNum);
+                    }
+                };
                 
                 chart.update();
             } else {
@@ -963,5 +1215,168 @@ function exportSalesData() {
     
     window.open(url, '_blank');
 }
+
+function exportRenewalData() {
+    const period = document.getElementById('periodSelect').value;
+    
+    let url = `/admin/analytics/export-business/?type=renewal`;
+    
+    if (period === 'custom') {
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        url += `&start_date=${startDate}&end_date=${endDate}&period_type=custom`;
+    } else {
+        url += `&period_type=${period}`;
+    }
+    
+    window.open(url, '_blank');
+}
+
+// Modal close functionality
+document.querySelector('.close').addEventListener('click', () => {
+    document.getElementById('visitModal').style.display = 'none';
+});
+
+window.addEventListener('click', (e) => {
+    const modal = document.getElementById('visitModal');
+    if (e.target === modal) {
+        modal.style.display = 'none';
+    }
+});
+
+// Functions to show visit/member data when charts are clicked
+
+function showVisitsByDuration(bucket) {
+    const periodType = new URLSearchParams(window.location.search).get('period_type') || '7_days';
+    
+    fetch(`/admin/analytics/visits-by-duration/?bucket=${bucket}&period_type=${periodType}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert(data.error);
+                return;
+            }
+            
+            displayVisitModal(
+                `Sessions: ${data.bucket}`,
+                `${data.count} sessions in the ${data.bucket} duration range`,
+                data.visits.map(visit => `
+                    <div style="padding: 10px; border-bottom: 1px solid #eee;">
+                        <strong>${visit.member_name}</strong><br>
+                        <small>${visit.check_in} - ${visit.check_out}</small><br>
+                        <span style="color: #666;">Duration: ${visit.duration_display}</span>
+                    </div>
+                `).join('')
+            );
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error fetching session data');
+        });
+}
+
+function showMembersByFrequency(visitCount) {
+    const periodType = new URLSearchParams(window.location.search).get('period_type') || '7_days';
+    
+    fetch(`/admin/analytics/visits-by-frequency/?visit_count=${visitCount}&period_type=${periodType}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert(data.error);
+                return;
+            }
+            
+            displayVisitModal(
+                `Members with ${data.visit_count} visit${data.visit_count > 1 ? 's' : ''}`,
+                `${data.member_count} members visited ${data.visit_count} time${data.visit_count > 1 ? 's' : ''}`,
+                data.members.map(member => `
+                    <div style="padding: 15px; border-bottom: 1px solid #eee;">
+                        <div style="font-weight: bold; margin-bottom: 5px;">${member.name}</div>
+                        <div style="color: #666; margin-bottom: 10px;">${member.email} • ${member.phone}</div>
+                        <div style="margin-left: 20px;">
+                            <strong>Recent visits:</strong>
+                            ${member.recent_visits.map(visit => `
+                                <div style="margin: 5px 0;">
+                                    <small>${visit.check_in} - ${visit.check_out}</small>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('')
+            );
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error fetching member data');
+        });
+}
+
+function showVisitsByDay(dayNum) {
+    const periodType = new URLSearchParams(window.location.search).get('period_type') || '7_days';
+    
+    fetch(`/admin/analytics/visits-by-day/?day=${dayNum}&period_type=${periodType}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert(data.error);
+                return;
+            }
+            
+            displayVisitModal(
+                `${data.day_name} Visits`,
+                `${data.count} visits on ${data.day_name}s`,
+                data.visits.map(visit => `
+                    <div style="padding: 10px; border-bottom: 1px solid #eee;">
+                        <strong>${visit.member_name}</strong><br>
+                        <small>${visit.check_in} - ${visit.check_out}</small>
+                    </div>
+                `).join('')
+            );
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error fetching visit data');
+        });
+}
+
+function showVisitsByHour(hour) {
+    const periodType = new URLSearchParams(window.location.search).get('period_type') || '7_days';
+    
+    fetch(`/admin/analytics/visits-by-hour/?hour=${hour}&period_type=${periodType}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert(data.error);
+                return;
+            }
+            
+            displayVisitModal(
+                `${data.hour_display} Visits`,
+                `${data.count} visits at ${data.hour_display}`,
+                data.visits.map(visit => `
+                    <div style="padding: 10px; border-bottom: 1px solid #eee;">
+                        <strong>${visit.member_name}</strong><br>
+                        <small>${visit.check_in} - ${visit.check_out}</small>
+                    </div>
+                `).join('')
+            );
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error fetching visit data');
+        });
+}
+
+function displayVisitModal(title, subtitle, content) {
+    document.getElementById('visitModalTitle').textContent = title;
+    document.getElementById('visitModalContent').innerHTML = `
+        <div style="margin-bottom: 20px; color: #666; font-size: 1.1em;">${subtitle}</div>
+        <div style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px;">
+            ${content || '<p style="padding: 20px; text-align: center; color: #999;">No data available</p>'}
+        </div>
+    `;
+    document.getElementById('visitModal').style.display = 'block';
+}
+
 </script>
 {% endblock %}
