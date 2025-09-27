@@ -26,6 +26,7 @@ class EquipmentModelTest(TestCase):
             "standard": "https://www.youtube.com/watch?v=abcdef123",
             "shortened": "https://youtu.be/abcdef123",
             "embed": "https://www.youtube.com/embed/abcdef123",
+            "shorts": "https://www.youtube.com/shorts/abcdef123",
         }
         expected_url = "https://www.youtube.com/embed/abcdef123"
 
@@ -41,7 +42,9 @@ class EquipmentModelTest(TestCase):
             "standard": "https://www.youtube.com/watch?v=abcdef123",
             "shortened": "https://youtu.be/abcdef123",
             "embed": "https://www.youtube.com/embed/abcdef123",
+            "shorts": "https://www.youtube.com/shorts/abcdef123",
             "with_params": "https://www.youtube.com/watch?v=abcdef123&t=30s",
+            "shorts_with_params": "https://www.youtube.com/shorts/abcdef123?feature=share",
         }
         expected_id = "abcdef123"
 
@@ -112,6 +115,7 @@ class EquipmentModelTest(TestCase):
             "https://www.youtube.com/watch?v=tip1",
             "https://youtu.be/tip2",
             "https://www.youtube.com/embed/tip3",
+            "https://www.youtube.com/shorts/tip4",
         ]
         equipment = Equipment(
             name="Test Equipment",
@@ -120,9 +124,9 @@ class EquipmentModelTest(TestCase):
         )
 
         video_data = equipment.get_additional_video_data()
-        self.assertEqual(len(video_data), 3)
+        self.assertEqual(len(video_data), 4)
 
-        # Test first video data structure
+        # Test first video data structure (standard watch URL)
         first_video = video_data[0]
         self.assertIn("url", first_video)
         self.assertIn("video_id", first_video)
@@ -135,6 +139,18 @@ class EquipmentModelTest(TestCase):
         self.assertEqual(
             first_video["thumbnail_url"],
             "https://img.youtube.com/vi/tip1/hqdefault.jpg",
+        )
+
+        # Test shorts video processing
+        shorts_video = video_data[3]
+        self.assertEqual(shorts_video["url"], "https://www.youtube.com/shorts/tip4")
+        self.assertEqual(shorts_video["video_id"], "tip4")
+        self.assertEqual(
+            shorts_video["embed_url"], "https://www.youtube.com/embed/tip4"
+        )
+        self.assertEqual(
+            shorts_video["thumbnail_url"],
+            "https://img.youtube.com/vi/tip4/hqdefault.jpg",
         )
 
     def test_get_additional_video_data_filters_invalid(self):
@@ -172,7 +188,9 @@ class EquipmentModelTest(TestCase):
             "https://www.youtube.com/watch?v=abc123": "abc123",
             "https://youtu.be/def456": "def456",
             "https://www.youtube.com/embed/ghi789": "ghi789",
+            "https://www.youtube.com/shorts/mno012": "mno012",
             "https://www.youtube.com/watch?v=xyz123&t=30s": "xyz123",
+            "https://www.youtube.com/shorts/pqr345?feature=share": "pqr345",
             "": None,
             None: None,
         }
@@ -203,6 +221,141 @@ class EquipmentModelTest(TestCase):
         # Check that additional video data is accessible in template
         video_data = equipment.get_additional_video_data()
         self.assertEqual(len(video_data), 2)
+
+    def test_youtube_shorts_url_conversion(self):
+        """
+        Test that YouTube Shorts URLs are properly converted to embed format.
+        This tests the specific use case mentioned by the user.
+        """
+        # Test main video with shorts URL
+        equipment = Equipment.objects.create(
+            name="Test Equipment with Shorts",
+            video_link="https://www.youtube.com/shorts/Dca_kc5ONOQ",
+        )
+
+        # Should extract video ID correctly
+        self.assertEqual(equipment.get_youtube_video_id(), "Dca_kc5ONOQ")
+
+        # Should generate correct embed URL
+        expected_embed = "https://www.youtube.com/embed/Dca_kc5ONOQ"
+        self.assertEqual(equipment.get_youtube_embed_url(), expected_embed)
+
+        # Should generate correct thumbnail URL
+        expected_thumbnail = "https://img.youtube.com/vi/Dca_kc5ONOQ/hqdefault.jpg"
+        self.assertEqual(equipment.get_youtube_thumbnail_url(), expected_thumbnail)
+
+        # Test additional videos with shorts URLs
+        additional_shorts = [
+            "https://www.youtube.com/shorts/abc123",
+            "https://www.youtube.com/shorts/def456?feature=share",
+        ]
+        equipment.additional_videos = additional_shorts
+        equipment.save()
+
+        video_data = equipment.get_additional_video_data()
+        self.assertEqual(len(video_data), 2)
+
+        # Check first shorts video
+        self.assertEqual(video_data[0]["video_id"], "abc123")
+        self.assertEqual(
+            video_data[0]["embed_url"], "https://www.youtube.com/embed/abc123"
+        )
+
+        # Check second shorts video (with parameters)
+        self.assertEqual(video_data[1]["video_id"], "def456")
+        self.assertEqual(
+            video_data[1]["embed_url"], "https://www.youtube.com/embed/def456"
+        )
+
+    def test_urls_without_protocol_support(self):
+        """
+        Test that URLs without https:// protocol are automatically handled.
+        """
+        # Test main video without protocol
+        equipment = Equipment.objects.create(
+            name="Test Equipment No Protocol",
+            video_link="youtube.com/watch?v=noproto123",
+        )
+
+        # Should extract video ID correctly
+        self.assertEqual(equipment.get_youtube_video_id(), "noproto123")
+
+        # Should generate correct embed URL
+        expected_embed = "https://www.youtube.com/embed/noproto123"
+        self.assertEqual(equipment.get_youtube_embed_url(), expected_embed)
+
+        # Test additional videos without protocol
+        additional_urls_no_protocol = [
+            "www.youtube.com/watch?v=tip1",
+            "youtu.be/tip2",
+            "youtube.com/shorts/tip3",
+            "www.youtube.com/embed/tip4",
+        ]
+        equipment.additional_videos = additional_urls_no_protocol
+        equipment.save()
+
+        video_data = equipment.get_additional_video_data()
+        self.assertEqual(len(video_data), 4)
+
+        # Check that all video IDs are extracted correctly
+        expected_ids = ["tip1", "tip2", "tip3", "tip4"]
+        for i, expected_id in enumerate(expected_ids):
+            self.assertEqual(video_data[i]["video_id"], expected_id)
+            self.assertEqual(
+                video_data[i]["embed_url"],
+                f"https://www.youtube.com/embed/{expected_id}",
+            )
+
+    def test_mixed_protocol_urls(self):
+        """
+        Test handling of mixed URLs - some with protocol, some without.
+        """
+        mixed_urls = [
+            "https://www.youtube.com/watch?v=with_https",
+            "youtube.com/shorts/without_https",
+            "http://youtu.be/with_http",
+            "www.youtube.com/embed/without_protocol",
+        ]
+
+        equipment = Equipment(
+            name="Mixed Protocol Test",
+            video_link="youtube.com/watch?v=main",
+            additional_videos=mixed_urls,
+        )
+
+        # Test main video
+        self.assertEqual(equipment.get_youtube_video_id(), "main")
+
+        # Test additional videos processing
+        video_data = equipment.get_additional_video_data()
+        self.assertEqual(len(video_data), 4)
+
+        expected_ids = ["with_https", "without_https", "with_http", "without_protocol"]
+        for i, expected_id in enumerate(expected_ids):
+            self.assertEqual(video_data[i]["video_id"], expected_id)
+
+    def test_ensure_protocol_method(self):
+        """
+        Test the _ensure_protocol helper method directly.
+        """
+        equipment = Equipment(name="Test", video_link="dummy")
+
+        test_cases = {
+            # Already has protocol - should remain unchanged
+            "https://youtube.com/watch?v=test": "https://youtube.com/watch?v=test",
+            "http://youtu.be/test": "http://youtu.be/test",
+            # Missing protocol - should add https://
+            "youtube.com/watch?v=test": "https://youtube.com/watch?v=test",
+            "www.youtube.com/shorts/test": "https://www.youtube.com/shorts/test",
+            "youtu.be/test": "https://youtu.be/test",
+            # Edge cases
+            "": "",
+            None: None,
+        }
+
+        for input_url, expected_url in test_cases.items():
+            result = equipment._ensure_protocol(input_url)
+            self.assertEqual(result, expected_url, f"Failed for input: {input_url}")
 
 
 class EquipmentViewsTest(TestCase):

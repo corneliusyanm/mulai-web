@@ -39,13 +39,21 @@ class Equipment(models.Model):
     def get_youtube_video_id(self):
         """
         Extracts the YouTube video ID from various URL formats.
-        Supports standard, shortened, and embed URLs.
+        Supports standard, shortened, embed, and shorts URLs.
+        Automatically adds https:// if missing.
         """
-        if "youtube.com/embed" in self.video_link:
-            # Extract ID from embed URL
-            return self.video_link.split("/embed/")[1].split("?")[0]
+        # Ensure URL has protocol
+        url = self._ensure_protocol(self.video_link)
 
-        parsed_url = urlparse(self.video_link)
+        if "youtube.com/embed" in url:
+            # Extract ID from embed URL
+            return url.split("/embed/")[1].split("?")[0]
+
+        if "youtube.com/shorts/" in url:
+            # Extract ID from shorts URL
+            return url.split("/shorts/")[1].split("?")[0]
+
+        parsed_url = urlparse(url)
         if "youtu.be" in parsed_url.netloc:
             video_id = parsed_url.path[1:]
         else:
@@ -57,7 +65,7 @@ class Equipment(models.Model):
     def get_youtube_embed_url(self):
         """
         Extracts the YouTube video ID and returns the embed URL.
-        Supports standard, shortened, and embed URLs.
+        Supports standard, shortened, embed, and shorts URLs.
         """
         video_id = self.get_youtube_video_id()
         if video_id:
@@ -97,16 +105,37 @@ class Equipment(models.Model):
                     )
         return video_data
 
+    def _ensure_protocol(self, url):
+        """
+        Ensures URL has https:// protocol. Adds it if missing.
+        """
+        if not url:
+            return url
+
+        # If URL already has protocol, return as is
+        if url.startswith(("http://", "https://")):
+            return url
+
+        # Add https:// if missing
+        return f"https://{url}"
+
     def _extract_youtube_video_id(self, url):
         """
         Helper method to extract YouTube video ID from any URL format.
         Similar to get_youtube_video_id but works with any URL string.
+        Automatically adds https:// if missing.
         """
         if not url:
             return None
 
+        # Ensure URL has protocol
+        url = self._ensure_protocol(url)
+
         if "youtube.com/embed" in url:
             return url.split("/embed/")[1].split("?")[0]
+
+        if "youtube.com/shorts/" in url:
+            return url.split("/shorts/")[1].split("?")[0]
 
         parsed_url = urlparse(url)
         if "youtu.be" in parsed_url.netloc:

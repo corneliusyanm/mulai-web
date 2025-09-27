@@ -9,7 +9,7 @@ class EquipmentAdminForm(forms.ModelForm):
     additional_videos_input = forms.CharField(
         widget=forms.Textarea(attrs={"rows": 4, "cols": 80}),
         required=False,
-        help_text="Masukkan URL video tambahan, satu URL per baris. Contoh:\nhttps://www.youtube.com/watch?v=tcq5dX-ZcvA",
+        help_text="Masukkan URL video tambahan, satu URL per baris. https:// opsional. Contoh:\nwww.youtube.com/watch?v=tcq5dX-ZcvA\nyoutube.com/shorts/Dca_kc5ONOQ\nyoutu.be/xyz123",
         label="Video Tambahan (URL)",
     )
 
@@ -28,23 +28,53 @@ class EquipmentAdminForm(forms.ModelForm):
         if "additional_videos" in self.fields:
             self.fields["additional_videos"].widget = forms.HiddenInput()
 
+    def _ensure_protocol(self, url):
+        """
+        Ensures URL has https:// protocol. Adds it if missing.
+        """
+        if not url:
+            return url
+
+        # If URL already has protocol, return as is
+        if url.startswith(("http://", "https://")):
+            return url
+
+        # Add https:// if missing
+        return f"https://{url}"
+
     def clean_additional_videos_input(self):
         urls_text = self.cleaned_data.get("additional_videos_input", "")
         if not urls_text:
             return []
 
         # Split by newlines and filter out empty lines
-        urls = [url.strip() for url in urls_text.split("\n") if url.strip()]
+        raw_urls = [url.strip() for url in urls_text.split("\n") if url.strip()]
 
-        # Basic validation - check if URLs look like YouTube URLs
+        # Ensure all URLs have protocol and validate
+        processed_urls = []
         youtube_domains = ["youtube.com", "youtu.be", "www.youtube.com"]
-        for url in urls:
-            if not any(domain in url for domain in youtube_domains):
+        youtube_patterns = ["/watch?v=", "/shorts/", "/embed/", "youtu.be/"]
+
+        for raw_url in raw_urls:
+            # Add protocol if missing
+            processed_url = self._ensure_protocol(raw_url)
+
+            # Validate that it's a YouTube URL
+            is_youtube_domain = any(
+                domain in processed_url for domain in youtube_domains
+            )
+            is_youtube_pattern = any(
+                pattern in processed_url for pattern in youtube_patterns
+            )
+
+            if not (is_youtube_domain and is_youtube_pattern):
                 raise forms.ValidationError(
-                    f"URL tidak valid: {url}. Hanya URL YouTube yang diperbolehkan."
+                    f"URL tidak valid: {raw_url}. Hanya URL YouTube yang diperbolehkan (termasuk /watch, /shorts, /embed)."
                 )
 
-        return urls
+            processed_urls.append(processed_url)
+
+        return processed_urls
 
     def save(self, commit=True):
         instance = super().save(commit=False)

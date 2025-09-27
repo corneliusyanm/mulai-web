@@ -467,8 +467,11 @@ This provides consistent experience level classification across both members and
 
 #### **Admin Interface**
 - **Simple URL Management**: Paste YouTube URLs in textarea, one per line
-- **URL Validation**: Automatic validation ensures only YouTube URLs are accepted
+- **YouTube Shorts Support**: Full support for `/shorts/{videoId}` URLs alongside standard `/watch?v=` URLs
+- **Protocol Flexibility**: `https://` prefix is optional - system automatically adds it if missing
+- **URL Validation**: Automatic validation ensures only valid YouTube URLs are accepted (watch, shorts, embed, youtu.be)
 - **Visual Feedback**: Shows count of additional videos in equipment list view
+- **Smart Processing**: Automatically converts all URL formats to optimal embed format for consistent playback
 
 #### **User Experience**
 - **Horizontal Video Selection**: Row of clickable video thumbnails below main video
@@ -476,6 +479,24 @@ This provides consistent experience level classification across both members and
 - **Active State Indicators**: Green borders highlight currently selected video
 - **Smooth Animations**: Auto-scroll to video on switch, staggered loading animations
 - **Mobile Responsive**: Optimized thumbnail sizes and touch interactions for mobile devices
+
+#### **Supported YouTube URL Formats**
+All YouTube URL formats are automatically supported and converted to the optimal embed format:
+
+- **Standard URLs**: `https://www.youtube.com/watch?v=VIDEO_ID`
+- **Shortened URLs**: `https://youtu.be/VIDEO_ID`  
+- **Embed URLs**: `https://www.youtube.com/embed/VIDEO_ID`
+- **Shorts URLs**: `https://www.youtube.com/shorts/VIDEO_ID` ⭐ **New!**
+- **URLs with Parameters**: All formats work with additional parameters (e.g., `?t=30s`, `?feature=share`)
+
+#### **Protocol Flexibility** 
+**URLs without `https://` are automatically handled** ⭐ **New!**:
+
+- `youtube.com/watch?v=VIDEO_ID` → Auto-converts to `https://youtube.com/watch?v=VIDEO_ID`
+- `www.youtube.com/shorts/VIDEO_ID` → Auto-converts to `https://www.youtube.com/shorts/VIDEO_ID`
+- `youtu.be/VIDEO_ID` → Auto-converts to `https://youtu.be/VIDEO_ID`
+
+**Mixed URL support**: You can paste URLs with or without protocol - the system handles both seamlessly.
 
 ### Performance Optimizations
 - **Embedded YouTube Players**: Uses actual YouTube embeds for full functionality (titles, play buttons)
@@ -502,8 +523,10 @@ This provides consistent experience level classification across both members and
   - `get_additional_video_data()`: Processes additional video URLs into structured data with embed URLs and thumbnails
   - `_extract_youtube_video_id()`: Helper method for extracting video IDs from various YouTube URL formats
 - **Video Management Features**:
-  - **Multiple URL Support**: Standard YouTube URLs, shortened youtu.be URLs, embed URLs
-  - **Data Validation**: Automatic filtering of invalid or non-YouTube URLs
+  - **Multiple URL Support**: Standard YouTube URLs, shortened youtu.be URLs, embed URLs, **YouTube Shorts URLs**
+  - **Automatic URL Conversion**: YouTube Shorts URLs (`/shorts/{videoId}`) are automatically converted to embed format
+  - **Protocol Handling**: `_ensure_protocol()` method automatically adds `https://` prefix when missing
+  - **Data Validation**: Automatic filtering of invalid or non-YouTube URLs (includes Shorts URL validation)
   - **Structured Processing**: Converts URL arrays into rich data objects with IDs, embed URLs, and thumbnails
 - **Caching Strategy**:
   - Page-level: 4-hour cache for entire equipment list page
@@ -966,7 +989,9 @@ The `visits` app includes comprehensive business intelligence tests for:
 The `equipment` app includes comprehensive tests covering:
 - **Model Tests**: Equipment creation, YouTube URL processing, and view counter functionality
 - **Multiple Videos Feature**: Tests for `additional_videos` field storage, `get_additional_video_data()` processing, and URL validation
-- **YouTube Integration**: Tests for video ID extraction from various URL formats (standard, shortened, embed URLs)
+- **YouTube Integration**: Tests for video ID extraction from various URL formats (standard, shortened, embed, **Shorts URLs**)
+- **YouTube Shorts Support**: Dedicated tests for `/shorts/` URL conversion including parameter handling
+- **Protocol Handling**: Tests for URLs without `https://` prefix - automatic protocol addition and mixed URL processing
 - **Bot Detection**: Validates that over 25 bot patterns are correctly identified and legitimate browsers are not flagged
 - **View Analytics**: 24-hour cooldown system, authenticated vs anonymous tracking, and atomic increment operations
 - **Integration Tests**: Full end-to-end tests verifying page visits trigger correct view count increments
