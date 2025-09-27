@@ -452,36 +452,59 @@ This provides consistent experience level classification across both members and
 - **`Equipment`**: Represents a piece of gym equipment.
   - `name`: CharField (Name of the equipment)
   - `description`: TextField (How to use the equipment)
-  - `video_link`: URLField (Link to a YouTube tutorial video)
+  - `video_link`: URLField (Link to the main YouTube tutorial video)
+  - `additional_videos`: JSONField (Array of additional YouTube URLs for tips and detailed explanations)
   - `muscle_group`: CharField (Primary muscle group targeted)
   - `detailed_muscle_group`: CharField (Specific muscle group targeted)
 
+### Multiple Videos Support
+
+#### **Main + Additional Videos Architecture**
+- **Main Tutorial Video**: Primary comprehensive tutorial (setup, muscle groups, movement)
+- **Additional Tips Videos**: Supplementary content for advanced tips, common mistakes, variations
+- **Seamless Video Switching**: Click any additional video to replace main video content
+- **Smart Video Selection Interface**: Visual indicators show currently playing video
+
+#### **Admin Interface**
+- **Simple URL Management**: Paste YouTube URLs in textarea, one per line
+- **URL Validation**: Automatic validation ensures only YouTube URLs are accepted
+- **Visual Feedback**: Shows count of additional videos in equipment list view
+
+#### **User Experience**
+- **Horizontal Video Selection**: Row of clickable video thumbnails below main video
+- **Interactive Switching**: Click thumbnail → main video switches to that content + auto-plays
+- **Active State Indicators**: Green borders highlight currently selected video
+- **Smooth Animations**: Auto-scroll to video on switch, staggered loading animations
+- **Mobile Responsive**: Optimized thumbnail sizes and touch interactions for mobile devices
+
 ### Performance Optimizations
-- **YouTube Thumbnail Loading**: Uses YouTube's thumbnail API instead of loading full iframe videos
-- **Progressive Loading**: First 2 videos load immediately, remaining videos load when scrolled into view
-- **Lazy Loading**: Intersection Observer API detects when videos come into viewport
+- **Embedded YouTube Players**: Uses actual YouTube embeds for full functionality (titles, play buttons)
+- **Auto-play on Switch**: Videos start immediately when selected for seamless experience
 - **Caching**: 4-hour page cache + 12-hour data cache to reduce database queries
-- **Mobile Optimization**: Reduced bandwidth usage with thumbnail-first approach
+- **Mobile Optimization**: Responsive video sizes and touch-friendly interactions
 
 ### Views (`equipment/views.py`)
 - **`equipment_list`** (`/alat/`):
   - Displays a grid of all available equipment, grouped by muscle group
-  - **Performance**: Uses cached data and progressive video loading for mobile optimization
+  - **Performance**: Uses cached data for fast loading
   - Each item shows YouTube thumbnail with play button overlay
-  - Videos load on demand (click or scroll into view)
 - **`equipment_detail`** (`/alat/<slug:slug>/`):
-  - Shows the details for a specific piece of equipment, including an embedded YouTube video guide
+  - Shows detailed equipment information with main tutorial video
+  - **Multiple Videos UI**: Horizontal row of additional video thumbnails below main video
+  - **Video Switching**: JavaScript-powered seamless switching between main and additional videos
+  - **Interactive Features**: Auto-play on switch, smooth scrolling, visual active states
 
 ### Technical Implementation
 - **YouTube API Integration**:
-  - `get_youtube_video_id()`: Extracts video ID from various YouTube URL formats
+  - `get_youtube_video_id()`: Extracts video ID from main video URL
   - `get_youtube_thumbnail_url()`: Generates YouTube thumbnail URLs (multiple quality options)
   - `get_youtube_embed_url()`: Creates embed URLs with performance-optimized parameters
-- **Lazy Loading Strategy**:
-  - Initial page load: Show thumbnails only (fast)
-  - Progressive loading: Load first 2 videos automatically, others on scroll
-  - Intersection Observer: 25% visibility threshold with 50px margin
-  - Click-to-load: Users can click any thumbnail to load video immediately
+  - `get_additional_video_data()`: Processes additional video URLs into structured data with embed URLs and thumbnails
+  - `_extract_youtube_video_id()`: Helper method for extracting video IDs from various YouTube URL formats
+- **Video Management Features**:
+  - **Multiple URL Support**: Standard YouTube URLs, shortened youtu.be URLs, embed URLs
+  - **Data Validation**: Automatic filtering of invalid or non-YouTube URLs
+  - **Structured Processing**: Converts URL arrays into rich data objects with IDs, embed URLs, and thumbnails
 - **Caching Strategy**:
   - Page-level: 4-hour cache for entire equipment list page
   - Data-level: 12-hour cache for equipment data
@@ -940,11 +963,14 @@ The `visits` app includes comprehensive business intelligence tests for:
 - **Permission Security**: Access control for all business intelligence features and interactive endpoints
 
 ### Equipment Tests
-The `equipment` app includes tests for the view analytics system:
-- **Model Tests**: Correct initialization of view counters and atomic updates via `increment_view_count()`.
-- **Bot Detection**: Validates that over 25 bot patterns are correctly identified and that legitimate browser user agents are ignored.
-- **View Counting Logic**: Ensures the 24-hour cooldown works correctly and that bots are not counted.
-- **Integration Tests**: Full end-to-end tests verifying that page visits correctly trigger view count increments for both anonymous and authenticated users.
+The `equipment` app includes comprehensive tests covering:
+- **Model Tests**: Equipment creation, YouTube URL processing, and view counter functionality
+- **Multiple Videos Feature**: Tests for `additional_videos` field storage, `get_additional_video_data()` processing, and URL validation
+- **YouTube Integration**: Tests for video ID extraction from various URL formats (standard, shortened, embed URLs)
+- **Bot Detection**: Validates that over 25 bot patterns are correctly identified and legitimate browsers are not flagged
+- **View Analytics**: 24-hour cooldown system, authenticated vs anonymous tracking, and atomic increment operations
+- **Integration Tests**: Full end-to-end tests verifying page visits trigger correct view count increments
+- **Data Validation**: Tests for filtering invalid URLs and handling edge cases in video processing
 
 ### Running Tests
 

@@ -68,6 +68,142 @@ class EquipmentModelTest(TestCase):
             equipment.get_youtube_thumbnail_url("maxresdefault"), expected_maxres
         )
 
+    def test_additional_videos_default(self):
+        """
+        Test that additional_videos field defaults to empty list.
+        """
+        equipment = Equipment.objects.create(
+            name="Test Equipment",
+            video_link="https://www.youtube.com/watch?v=main123",
+        )
+        self.assertEqual(equipment.additional_videos, [])
+
+    def test_additional_videos_storage(self):
+        """
+        Test that additional_videos field can store multiple URLs.
+        """
+        urls = [
+            "https://www.youtube.com/watch?v=tip1",
+            "https://youtu.be/tip2",
+            "https://www.youtube.com/embed/tip3",
+        ]
+        equipment = Equipment.objects.create(
+            name="Test Equipment",
+            video_link="https://www.youtube.com/watch?v=main123",
+            additional_videos=urls,
+        )
+        self.assertEqual(equipment.additional_videos, urls)
+
+    def test_get_additional_video_data_empty(self):
+        """
+        Test get_additional_video_data returns empty list when no additional videos.
+        """
+        equipment = Equipment(
+            name="Test Equipment",
+            video_link="https://www.youtube.com/watch?v=main123",
+        )
+        self.assertEqual(equipment.get_additional_video_data(), [])
+
+    def test_get_additional_video_data_with_videos(self):
+        """
+        Test get_additional_video_data processes URLs correctly.
+        """
+        additional_urls = [
+            "https://www.youtube.com/watch?v=tip1",
+            "https://youtu.be/tip2",
+            "https://www.youtube.com/embed/tip3",
+        ]
+        equipment = Equipment(
+            name="Test Equipment",
+            video_link="https://www.youtube.com/watch?v=main123",
+            additional_videos=additional_urls,
+        )
+
+        video_data = equipment.get_additional_video_data()
+        self.assertEqual(len(video_data), 3)
+
+        # Test first video data structure
+        first_video = video_data[0]
+        self.assertIn("url", first_video)
+        self.assertIn("video_id", first_video)
+        self.assertIn("embed_url", first_video)
+        self.assertIn("thumbnail_url", first_video)
+
+        self.assertEqual(first_video["url"], "https://www.youtube.com/watch?v=tip1")
+        self.assertEqual(first_video["video_id"], "tip1")
+        self.assertEqual(first_video["embed_url"], "https://www.youtube.com/embed/tip1")
+        self.assertEqual(
+            first_video["thumbnail_url"],
+            "https://img.youtube.com/vi/tip1/hqdefault.jpg",
+        )
+
+    def test_get_additional_video_data_filters_invalid(self):
+        """
+        Test that invalid URLs are filtered out from additional video data.
+        """
+        additional_urls = [
+            "https://www.youtube.com/watch?v=valid1",
+            "",  # Empty string
+            "not a url",  # Invalid URL
+            "https://vimeo.com/123456",  # Non-YouTube URL
+            "https://youtu.be/valid2",
+        ]
+        equipment = Equipment(
+            name="Test Equipment",
+            video_link="https://www.youtube.com/watch?v=main123",
+            additional_videos=additional_urls,
+        )
+
+        video_data = equipment.get_additional_video_data()
+        # Should only return the 2 valid YouTube URLs
+        self.assertEqual(len(video_data), 2)
+        self.assertEqual(video_data[0]["video_id"], "valid1")
+        self.assertEqual(video_data[1]["video_id"], "valid2")
+
+    def test_extract_youtube_video_id_method(self):
+        """
+        Test the private _extract_youtube_video_id method with different URL formats.
+        """
+        equipment = Equipment(
+            name="Test", video_link="https://www.youtube.com/watch?v=dummy"
+        )
+
+        test_urls = {
+            "https://www.youtube.com/watch?v=abc123": "abc123",
+            "https://youtu.be/def456": "def456",
+            "https://www.youtube.com/embed/ghi789": "ghi789",
+            "https://www.youtube.com/watch?v=xyz123&t=30s": "xyz123",
+            "": None,
+            None: None,
+        }
+
+        for url, expected_id in test_urls.items():
+            result = equipment._extract_youtube_video_id(url)
+            self.assertEqual(result, expected_id, f"Failed for URL: {url}")
+
+    def test_additional_videos_in_template_context(self):
+        """
+        Test that additional videos are available in detail view context.
+        """
+        additional_urls = [
+            "https://www.youtube.com/watch?v=tip1",
+            "https://youtu.be/tip2",
+        ]
+        equipment = Equipment.objects.create(
+            name="Test Equipment",
+            video_link="https://www.youtube.com/watch?v=main123",
+            additional_videos=additional_urls,
+        )
+
+        response = self.client.get(
+            reverse("equipment:detail", kwargs={"slug": equipment.slug})
+        )
+        self.assertEqual(response.status_code, 200)
+
+        # Check that additional video data is accessible in template
+        video_data = equipment.get_additional_video_data()
+        self.assertEqual(len(video_data), 2)
+
 
 class EquipmentViewsTest(TestCase):
     def setUp(self):

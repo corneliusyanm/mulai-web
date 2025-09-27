@@ -6,10 +6,10 @@
 <style>
     .video-wrapper {
         position: relative;
-        padding-bottom: 142.22%; /* 9:16 portrait aspect ratio reduced by 20% */
+        padding-bottom: 135%; /* 9:16 portrait aspect ratio reduced by 20% */
         height: 0;
         margin-bottom: 0.5rem;
-        max-width: 320px; /* Limit width for portrait videos reduced by 20% */
+        max-width: 300px; /* Limit width for portrait videos reduced by 20% */
         margin-left: auto;
         margin-right: auto;
     }
@@ -23,7 +23,7 @@
     .back-button {
         color: #BEF006;
         text-decoration: none;
-        font-size: 1.2rem;
+        font-size: 1.05rem;
         margin-bottom: 6rem;
         display: inline-block;
     }
@@ -34,6 +34,100 @@
     .description-section h2 {
         margin-bottom: 0.25rem;
     }
+    
+    /* Additional videos styles */
+    .additional-videos-section {
+        margin-top: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .additional-videos-row {
+        display: flex;
+        gap: 1rem;
+        overflow-x: auto;
+        padding-bottom: 0.5rem;
+        scrollbar-width: thin;
+    }
+    .additional-video-item {
+        flex: 0 0 auto;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        position: relative;
+        text-align: center;
+    }
+    .additional-video-item:hover {
+        transform: scale(1.03);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+    }
+    .additional-video-item.active {
+        box-shadow: 0 0 0 3px #BEF006;
+        transform: scale(1.05);
+    }
+    .additional-video-item.main-tutorial {
+        border: 2px solid #BEF006;
+    }
+    .additional-video-wrapper {
+        position: relative;
+        width: 200px;
+        height: 150px;
+    }
+    .additional-video-wrapper iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+        pointer-events: none; /* Prevent direct interaction, force modal */
+    }
+    .additional-video-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: transparent;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1;
+    }
+    .play-overlay {
+        background: rgba(0,0,0,0.7);
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+    .additional-video-item:hover .play-overlay {
+        opacity: 1;
+    }
+    .play-overlay i {
+        color: white;
+        font-size: 20px;
+        margin-left: 3px;
+    }
+    
+    @media (max-width: 768px) {
+        .additional-video-wrapper {
+            width: 160px;
+            height: 120px;
+        }
+        .play-overlay {
+            width: 40px;
+            height: 40px;
+        }
+        .play-overlay i {
+            font-size: 16px;
+        }
+        .additional-videos-row {
+            gap: 0.75rem;
+        }
+    }
 </style>
 
 <div class="container my-4">
@@ -41,19 +135,57 @@
         <div class="col-lg-8 mx-auto">
             
             
-            <h1 class="mb-2">{{ equipment.name }}</h1>
-            <p>Target Otot: {{ equipment.detailed_muscle_group }}</p>
+            <h1 class="mb-2" style="font-size: 1.75rem;">{{ equipment.name }}</h1>
+            <p style="font-size: 0.95rem;">Target Otot: {{ equipment.detailed_muscle_group }}</p>
             
             {% if equipment.get_youtube_embed_url %}
             <div class="video-wrapper shadow rounded">
-                <iframe src="{{ equipment.get_youtube_embed_url }}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                <iframe id="mainVideoFrame" src="{{ equipment.get_youtube_embed_url }}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+            {% endif %}
+
+            {% if equipment.get_additional_video_data %}
+            <div class="additional-videos-section">
+                <h5 class="mb-3" style="font-size: 1.1rem;"><i class="fas fa-play-circle"></i> Video Tips Tambahan:</h5>
+                <div class="additional-videos-row">
+                    <!-- Main tutorial button -->
+                    <div class="additional-video-item main-tutorial active" onclick="playMainVideo('{{ equipment.get_youtube_embed_url }}', 'Tutorial Utama')">
+                        <div class="additional-video-wrapper">
+                            <iframe src="{{ equipment.get_youtube_embed_url }}" 
+                                    frameborder="0" 
+                                    allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                    allowfullscreen></iframe>
+                            <div class="additional-video-overlay">
+                                <div class="play-overlay">
+                                    <i class="fas fa-graduation-cap"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Additional videos -->
+                    {% for video in equipment.get_additional_video_data %}
+                    <div class="additional-video-item" onclick="playVideo('{{ video.embed_url }}', 'Tips {{ forloop.counter }}')">
+                        <div class="additional-video-wrapper">
+                            <iframe src="{{ video.embed_url }}" 
+                                    frameborder="0" 
+                                    allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                    allowfullscreen></iframe>
+                            <div class="additional-video-overlay">
+                                <div class="play-overlay">
+                                    <i class="fas fa-play"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
             {% endif %}
 
             {% if equipment.description %}
             <div class="mt-2 description-section">
-                <h2>Deskripsi</h2>
-                <p>{{ equipment.description|linebreaks }}</p>
+                <h2 style="font-size: 1.35rem;">Deskripsi</h2>
+                <p style="font-size: 0.95rem;">{{ equipment.description|linebreaks }}</p>
             </div>
             {% endif %}
 
@@ -65,4 +197,69 @@
         </div>
     </div>
 </div>
+
+<script>
+function playVideo(embedUrl, videoTitle) {
+    const mainIframe = document.getElementById('mainVideoFrame');
+    
+    // Add autoplay parameter to the embed URL
+    const autoplayUrl = embedUrl + (embedUrl.includes('?') ? '&' : '?') + 'autoplay=1&rel=0';
+    
+    // Update main video
+    mainIframe.src = autoplayUrl;
+    
+    // Update active states
+    updateActiveVideoState();
+    event.target.closest('.additional-video-item').classList.add('active');
+    
+    // Scroll to main video smoothly
+    document.querySelector('.video-wrapper').scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
+    });
+}
+
+function playMainVideo(embedUrl, videoTitle) {
+    const mainIframe = document.getElementById('mainVideoFrame');
+    
+    // Add autoplay parameter to the embed URL
+    const autoplayUrl = embedUrl + (embedUrl.includes('?') ? '&' : '?') + 'autoplay=1&rel=0';
+    
+    // Update main video
+    mainIframe.src = autoplayUrl;
+    
+    // Update active states - main tutorial should be active
+    updateActiveVideoState();
+    document.querySelector('.main-tutorial').classList.add('active');
+    
+    // Scroll to main video smoothly
+    document.querySelector('.video-wrapper').scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
+    });
+}
+
+function updateActiveVideoState() {
+    // Remove active class from all video items
+    document.querySelectorAll('.additional-video-item').forEach(item => {
+        item.classList.remove('active');
+    });
+}
+
+// Add subtle animation when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Add stagger animation to video items
+    const videoItems = document.querySelectorAll('.additional-video-item');
+    videoItems.forEach((item, index) => {
+        item.style.opacity = '0';
+        item.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+            item.style.transition = 'all 0.3s ease';
+            item.style.opacity = '1';
+            item.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+});
+</script>
 {% endblock %} 
