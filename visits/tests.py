@@ -794,19 +794,6 @@ class BusinessIntelligenceViewsTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "text/csv")
 
-    def test_business_analytics_custom_timeframe(self):
-        """Test business analytics with custom timeframe"""
-        response = self.client.get(
-            reverse("admin:business-analytics"),
-            {"period_type": "6_months", "type": "revenue"},
-        )
-
-        self.assertEqual(response.status_code, 200)
-        context = response.context
-
-        self.assertEqual(context["period_type"], "6_months")
-        self.assertEqual(context["analysis_type"], "revenue")
-
     def test_ajax_endpoints_permission_denied(self):
         """Test that AJAX endpoints deny access to non-staff users"""
         self.client.logout()

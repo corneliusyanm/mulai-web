@@ -694,48 +694,30 @@ def business_analytics_view(request):
     if not request.user.is_staff:
         raise PermissionDenied
 
-    # Get date range from request with new period types
-    period_type = request.GET.get("period_type", "7_days")
+    # Get date range from request - simplified like weekly_metrics_view
     analysis_type = request.GET.get("type", "overview")
 
-    now = timezone.now()
+    today = timezone.now().date()
+    end_date_str = request.GET.get("end_date", today.strftime("%Y-%m-%d"))
+    start_date_str = request.GET.get(
+        "start_date", (today - timedelta(days=7)).strftime("%Y-%m-%d")
+    )
 
-    # Handle custom date range
-    if period_type == "custom":
-        start_date_str = request.GET.get("start_date")
-        end_date_str = request.GET.get("end_date")
+    try:
+        start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+        end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
 
-        if start_date_str and end_date_str:
-            from datetime import datetime
-
-            start_date = datetime.strptime(start_date_str, "%Y-%m-%d").replace(
-                tzinfo=timezone.get_current_timezone()
-            )
-            end_date = datetime.strptime(end_date_str, "%Y-%m-%d").replace(
-                tzinfo=timezone.get_current_timezone()
-            )
-        else:
-            # Default to last 8 weeks if custom dates not provided
-            start_date = now - timedelta(days=7)
-            end_date = now
-    else:
-        # Handle predefined period types
-        end_date = now
-        if period_type == "7_days":
-            start_date = now - timedelta(days=7)
-        elif period_type == "2_weeks":
-            start_date = now - timedelta(weeks=2)
-        elif period_type == "4_weeks":
-            start_date = now - timedelta(weeks=4)
-        elif period_type == "8_weeks":
-            start_date = now - timedelta(weeks=8)
-        elif period_type == "3_months":
-            start_date = now - relativedelta(months=3)
-        elif period_type == "6_months":
-            start_date = now - relativedelta(months=6)
-        else:
-            # Default to 8 weeks
-            start_date = now - timedelta(weeks=8)
+        # Convert to datetime with timezone for consistency with rest of the code
+        start_date = datetime.combine(start_date, datetime.min.time()).replace(
+            tzinfo=timezone.get_current_timezone()
+        )
+        end_date = datetime.combine(end_date, datetime.min.time()).replace(
+            tzinfo=timezone.get_current_timezone()
+        )
+    except ValueError:
+        # Handle invalid date format - use default dates
+        start_date = timezone.now() - timedelta(days=7)
+        end_date = timezone.now()
 
     # Calculate comprehensive business metrics
     business_metrics = calculate_business_metrics(start_date, end_date)
@@ -758,7 +740,6 @@ def business_analytics_view(request):
         "visit_analytics": json.dumps(visit_analytics, cls=DecimalEncoder),
         "member_analytics": json.dumps(member_analytics, cls=DecimalEncoder),
         "repurchase_analytics": repurchase_analytics,
-        "period_type": period_type,
         "analysis_type": analysis_type,
         "start_date": start_date.strftime("%Y-%m-%d"),
         "end_date": end_date.strftime("%Y-%m-%d"),

@@ -408,43 +408,33 @@
 
     <!-- Controls -->
     <div class="controls-panel">
-        <div class="control-group">
-            <label>Time Period</label>
-            <select id="periodSelect">
-                <option value="7_days" {% if period_type == '7_days' %}selected{% endif %}>Last 7 Days</option>
-                <option value="2_weeks" {% if period_type == '2_weeks' %}selected{% endif %}>Last 2 Weeks</option>
-                <option value="4_weeks" {% if period_type == '4_weeks' %}selected{% endif %}>Last 4 Weeks</option>
-                <option value="8_weeks" {% if period_type == '8_weeks' %}selected{% endif %}>Last 8 Weeks</option>
-                <option value="3_months" {% if period_type == '3_months' %}selected{% endif %}>Last 3 Months</option>
-                <option value="6_months" {% if period_type == '6_months' %}selected{% endif %}>Last 6 Months</option>
-                <option value="custom" {% if period_type == 'custom' %}selected{% endif %}>Custom Date Range</option>
-            </select>
-        </div>
-        <div class="control-group" id="customDateRange" style="display: {% if period_type == 'custom' %}flex{% else %}none{% endif %};">
-            <label>From Date</label>
-            <input type="date" id="startDate" value="{{ start_date }}">
-        </div>
-        <div class="control-group" id="customDateRangeTo" style="display: {% if period_type == 'custom' %}flex{% else %}none{% endif %};">
-            <label>To Date</label>
-            <input type="date" id="endDate" value="{{ end_date }}">
-        </div>
-        <div class="control-group">
-            <label>Analysis Type</label>
-            <select id="analysisType">
-                <option value="overview" {% if analysis_type == 'overview' %}selected{% endif %}>Business Overview</option>
-                <option value="revenue" {% if analysis_type == 'revenue' %}selected{% endif %}>Revenue Focus</option>
-                <option value="members" {% if analysis_type == 'members' %}selected{% endif %}>Member Analytics</option>
-                <option value="operations" {% if analysis_type == 'operations' %}selected{% endif %}>Operations</option>
-            </select>
-        </div>
-        <div class="control-group">
-            <label>&nbsp;</label>
-            <button class="btn" onclick="updateDashboard()">🔄 Update Dashboard</button>
-        </div>
-        <div class="control-group">
-            <label>&nbsp;</label>
-            <button class="btn" onclick="exportData()">📊 Export Data</button>
-        </div>
+        <form method="get" action="">
+            <div class="control-group">
+                <label for="start_date">Start Date</label>
+                <input type="date" id="start_date" name="start_date" value="{{ start_date }}">
+            </div>
+            <div class="control-group">
+                <label for="end_date">End Date</label>
+                <input type="date" id="end_date" name="end_date" value="{{ end_date }}">
+            </div>
+            <div class="control-group">
+                <label for="type">Analysis Type</label>
+                <select id="type" name="type">
+                    <option value="overview" {% if analysis_type == 'overview' %}selected{% endif %}>Business Overview</option>
+                    <option value="revenue" {% if analysis_type == 'revenue' %}selected{% endif %}>Revenue Focus</option>
+                    <option value="members" {% if analysis_type == 'members' %}selected{% endif %}>Member Analytics</option>
+                    <option value="operations" {% if analysis_type == 'operations' %}selected{% endif %}>Operations</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label>&nbsp;</label>
+                <button type="submit" class="btn">🔄 Update Dashboard</button>
+            </div>
+            <div class="control-group">
+                <label>&nbsp;</label>
+                <button type="button" class="btn" onclick="exportData()">📊 Export Data</button>
+            </div>
+        </form>
     </div>
 
     <!-- Enhanced KPI Cards -->
@@ -1039,26 +1029,8 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function updateDashboard() {
-    const period = document.getElementById('periodSelect').value;
-    const analysisType = document.getElementById('analysisType').value;
-    
-    const url = new URL(window.location);
-    
-    if (period === 'custom') {
-        const startDate = document.getElementById('startDate').value;
-        const endDate = document.getElementById('endDate').value;
-        url.searchParams.set('start_date', startDate);
-        url.searchParams.set('end_date', endDate);
-        url.searchParams.set('period_type', 'custom');
-    } else {
-        url.searchParams.set('period_type', period);
-        url.searchParams.delete('start_date');
-        url.searchParams.delete('end_date');
-    }
-    
-    url.searchParams.set('type', analysisType);
-    
-    window.location.href = url.toString();
+    // The form now handles this automatically via submit
+    return false;
 }
 
 function switchTab(tabName) {
@@ -1168,66 +1140,31 @@ function switchChart(chartType, viewType) {
 }
 
 function exportData() {
-    const period = document.getElementById('periodSelect').value;
-    const analysisType = document.getElementById('analysisType').value;
+    const startDate = document.getElementById('start_date').value;
+    const endDate = document.getElementById('end_date').value;
+    const analysisType = document.getElementById('type').value;
     
-    let url = `/admin/analytics/export-business/?type=revenue`;
-    
-    if (period === 'custom') {
-        const startDate = document.getElementById('startDate').value;
-        const endDate = document.getElementById('endDate').value;
-        url += `&start_date=${startDate}&end_date=${endDate}&period_type=custom`;
-    } else {
-        url += `&period_type=${period}`;
-    }
+    let url = `/admin/analytics/export-business/?type=revenue&start_date=${startDate}&end_date=${endDate}&analysis_type=${analysisType}`;
     
     window.open(url, '_blank');
 }
 
-// Show/hide custom date range fields
-document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('periodSelect').addEventListener('change', function() {
-        const customFields = document.getElementById('customDateRange');
-        const customFieldsTo = document.getElementById('customDateRangeTo');
-        
-        if (this.value === 'custom') {
-            customFields.style.display = 'flex';
-            customFieldsTo.style.display = 'flex';
-        } else {
-            customFields.style.display = 'none';
-            customFieldsTo.style.display = 'none';
-        }
-    });
-});
+// Date range fields are now always visible
 
 function exportSalesData() {
-    const period = document.getElementById('periodSelect').value;
+    const startDate = document.getElementById('start_date').value;
+    const endDate = document.getElementById('end_date').value;
     
-    let url = `/admin/analytics/export-business/?type=visits`;
-    
-    if (period === 'custom') {
-        const startDate = document.getElementById('startDate').value;
-        const endDate = document.getElementById('endDate').value;
-        url += `&start_date=${startDate}&end_date=${endDate}&period_type=custom`;
-    } else {
-        url += `&period_type=${period}`;
-    }
+    let url = `/admin/analytics/export-business/?type=visits&start_date=${startDate}&end_date=${endDate}`;
     
     window.open(url, '_blank');
 }
 
 function exportRenewalData() {
-    const period = document.getElementById('periodSelect').value;
+    const startDate = document.getElementById('start_date').value;
+    const endDate = document.getElementById('end_date').value;
     
-    let url = `/admin/analytics/export-business/?type=renewal`;
-    
-    if (period === 'custom') {
-        const startDate = document.getElementById('startDate').value;
-        const endDate = document.getElementById('endDate').value;
-        url += `&start_date=${startDate}&end_date=${endDate}&period_type=custom`;
-    } else {
-        url += `&period_type=${period}`;
-    }
+    let url = `/admin/analytics/export-business/?type=renewal&start_date=${startDate}&end_date=${endDate}`;
     
     window.open(url, '_blank');
 }
