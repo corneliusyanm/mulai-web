@@ -106,6 +106,11 @@ DATABASES = {
         "PASSWORD": os.environ.get("DB_PASSWORD", "mulai"),
         "HOST": os.environ.get("DB_HOST", "localhost"),
         "PORT": os.environ.get("DB_PORT", "5435"),
+        # Add these lines ⬇️
+        "CONN_MAX_AGE": 600,  # Reuse connections for 10 minutes
+        "OPTIONS": {
+            "connect_timeout": 10,
+        },
     }
 }
 
@@ -174,6 +179,9 @@ AUTH_USER_MODEL = "accounts.User"
 # Session settings
 SESSION_COOKIE_AGE = 365 * 24 * 60 * 60  # 1 year in seconds
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+
+# Use database for sessions (more efficient than file-based)
+SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"
 
 # Logging configuration to see errors even when DEBUG is False
 LOGGING = {
