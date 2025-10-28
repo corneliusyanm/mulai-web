@@ -3,6 +3,7 @@ from django.contrib.auth.mixins import UserPassesTestMixin
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
+from django.utils import timezone
 from django.views.generic import DetailView
 from django.views.generic.edit import CreateView, UpdateView
 
@@ -96,6 +97,24 @@ class MemberDetailView(MemberRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         member = self.get_object()
+        today = timezone.now().date()
+
+        # Filter booked classes for upcoming and past
+        context["upcoming_booked_classes"] = member.booked_classes.filter(
+            date__gte=today
+        ).order_by("date", "start_time")
+        context["past_booked_classes"] = member.booked_classes.filter(
+            date__lt=today
+        ).order_by("-date", "-start_time")[:10]
+
+        # Filter waitlisted classes for upcoming and past
+        context["upcoming_waitlisted_classes"] = member.waitlisted_classes.filter(
+            date__gte=today
+        ).order_by("date", "start_time")
+        context["past_waitlisted_classes"] = member.waitlisted_classes.filter(
+            date__lt=today
+        ).order_by("-date", "-start_time")[:10]
+
         context["recent_visits"] = Visit.objects.filter(member=member).order_by(
             "-check_in_time"
         )[:5]
