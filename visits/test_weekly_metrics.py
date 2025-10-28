@@ -136,9 +136,17 @@ class WeeklyMetricsViewTest(TestCase):
 
     def test_expiring_member_renewal(self):
         """Test that a member whose membership expires this week and renews is correctly categorized"""
-        # Make Diana an existing member with a past payment
-        self.create_past_payment(
-            self.existing_member_expiring, self.bronze_1_month, days_ago=32
+        # Make Diana an existing member with a past payment from August (before test week)
+        past_payment_date = timezone.make_aware(
+            datetime(
+                2025, 8, 15, 10, 0, 0
+            )  # August 15, well before Sept 13-19 test week
+        )
+        Payment.objects.create(
+            member=self.existing_member_expiring,
+            package=self.bronze_1_month,
+            amount=self.bronze_1_month.default_price,
+            payment_date=past_payment_date,
         )
 
         # Set her membership to expire on Sept 16 (within test week)
@@ -173,9 +181,12 @@ class WeeklyMetricsViewTest(TestCase):
 
     def test_early_renewal(self):
         """Test that a member who renews before expiry is correctly categorized"""
-        # Make Dian an existing member
-        self.create_past_payment(
-            self.existing_member_early_renewal, self.silver_3_months, days_ago=60
+        # Make Dian an existing member with a past payment from July (before test week)
+        Payment.objects.create(
+            member=self.existing_member_early_renewal,
+            package=self.silver_3_months,
+            amount=self.silver_3_months.default_price,
+            payment_date=timezone.make_aware(datetime(2025, 7, 10, 10, 0, 0)),
         )
 
         # Set her membership to expire much later (not in test week)
@@ -211,9 +222,12 @@ class WeeklyMetricsViewTest(TestCase):
 
     def test_installment_payment(self):
         """Test that installment payments are correctly categorized"""
-        # Make Josh an existing member
-        self.create_past_payment(
-            self.existing_member_installment, self.bronze_12_months, days_ago=120
+        # Make Josh an existing member with a past payment from May (before test week)
+        Payment.objects.create(
+            member=self.existing_member_installment,
+            package=self.bronze_12_months,
+            amount=self.bronze_12_months.default_price,
+            payment_date=timezone.make_aware(datetime(2025, 5, 1, 10, 0, 0)),
         )
 
         # He makes an installment payment on Sept 13
@@ -290,8 +304,13 @@ class WeeklyMetricsViewTest(TestCase):
             know_mulai_gym_from="Friend",
         )
 
-        # Make him an existing member with past payment
-        self.create_past_payment(expired_member, self.bronze_1_month, days_ago=35)
+        # Make him an existing member with past payment from August (before test week)
+        Payment.objects.create(
+            member=expired_member,
+            package=self.bronze_1_month,
+            amount=self.bronze_1_month.default_price,
+            payment_date=timezone.make_aware(datetime(2025, 8, 10, 10, 0, 0)),
+        )
 
         # Set his membership to expire on Sept 13 (within test week)
         expired_member.active_until = timezone.make_aware(
@@ -323,9 +342,12 @@ class WeeklyMetricsViewTest(TestCase):
         """Test that statistics are calculated correctly"""
         # Set up various scenarios
 
-        # Expiring member who renews
-        self.create_past_payment(
-            self.existing_member_expiring, self.bronze_1_month, days_ago=32
+        # Expiring member who renews (Diana)
+        Payment.objects.create(
+            member=self.existing_member_expiring,
+            package=self.bronze_1_month,
+            amount=self.bronze_1_month.default_price,
+            payment_date=timezone.make_aware(datetime(2025, 8, 15, 10, 0, 0)),
         )
         self.existing_member_expiring.active_until = timezone.make_aware(
             datetime(2025, 9, 16, 16, 59, 59)
@@ -335,9 +357,12 @@ class WeeklyMetricsViewTest(TestCase):
             self.existing_member_expiring, self.bronze_1_month, date(2025, 9, 15)
         )
 
-        # Early renewal
-        self.create_past_payment(
-            self.existing_member_early_renewal, self.silver_3_months, days_ago=60
+        # Early renewal (Dian)
+        Payment.objects.create(
+            member=self.existing_member_early_renewal,
+            package=self.silver_3_months,
+            amount=self.silver_3_months.default_price,
+            payment_date=timezone.make_aware(datetime(2025, 7, 10, 10, 0, 0)),
         )
         self.existing_member_early_renewal.active_until = timezone.make_aware(
             datetime(2025, 12, 20, 16, 59, 59)
@@ -347,9 +372,12 @@ class WeeklyMetricsViewTest(TestCase):
             self.existing_member_early_renewal, self.silver_3_months, date(2025, 9, 17)
         )
 
-        # Installment payment
-        self.create_past_payment(
-            self.existing_member_installment, self.bronze_12_months, days_ago=120
+        # Installment payment (Josh)
+        Payment.objects.create(
+            member=self.existing_member_installment,
+            package=self.bronze_12_months,
+            amount=self.bronze_12_months.default_price,
+            payment_date=timezone.make_aware(datetime(2025, 5, 1, 10, 0, 0)),
         )
         self.create_weekly_payment(
             self.existing_member_installment,

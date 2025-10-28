@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import timedelta, time
 
 from django.test import TestCase, RequestFactory
 from django.utils import timezone
@@ -290,6 +290,147 @@ class MemberViewsTest(TestCase):
         response = self.client.get(reverse("member_logout"))
         self.assertEqual(response.status_code, 302)
         self.assertIsNone(self.client.session.get("member_email"))
+
+    def test_member_detail_view_upcoming_classes_filter(self):
+        """
+        Test that member detail view only shows upcoming classes (today and future).
+        """
+        from classes.models import Class, ClassSchedule, ClassInstance
+
+        # Create a class and schedule
+        test_class = Class.objects.create(
+            name="Test Class", description="Test", max_members=10
+        )
+        schedule = ClassSchedule.objects.create(
+            class_obj=test_class,
+            day_of_week=0,
+            start_time=time(10, 0),
+            end_time=time(11, 0),
+        )
+
+        today = timezone.now().date()
+        yesterday = today - timedelta(days=1)
+        tomorrow = today + timedelta(days=1)
+
+        # Create class instances
+        past_instance = ClassInstance.objects.create(
+            class_schedule=schedule,
+            date=yesterday,
+            start_time=time(10, 0),
+            end_time=time(11, 0),
+        )
+        today_instance = ClassInstance.objects.create(
+            class_schedule=schedule,
+            date=today,
+            start_time=time(10, 0),
+            end_time=time(11, 0),
+        )
+        future_instance = ClassInstance.objects.create(
+            class_schedule=schedule,
+            date=tomorrow,
+            start_time=time(10, 0),
+            end_time=time(11, 0),
+        )
+
+        # Book member to all instances
+        past_instance.booked_members.add(self.member)
+        today_instance.booked_members.add(self.member)
+        future_instance.booked_members.add(self.member)
+
+        # Login and check detail view
+        session = self.client.session
+        session["member_email"] = self.member.email
+        session.save()
+
+        response = self.client.get(reverse("member_details"))
+        self.assertEqual(response.status_code, 200)
+
+        # Check context data
+        upcoming_booked = response.context["upcoming_booked_classes"]
+        past_booked = response.context["past_booked_classes"]
+
+        # Should have today and tomorrow in upcoming
+        self.assertEqual(upcoming_booked.count(), 2)
+        self.assertIn(today_instance, upcoming_booked)
+        self.assertIn(future_instance, upcoming_booked)
+
+        # Should have yesterday in past
+        self.assertEqual(past_booked.count(), 1)
+        self.assertIn(past_instance, past_booked)
+
+    def test_member_detail_view_waitlisted_classes_filter(self):
+        """
+        Test that member detail view correctly filters waitlisted classes.
+        """
+        from classes.models import Class, ClassSchedule, ClassInstance
+
+        test_class = Class.objects.create(
+            name="Waitlist Test", description="Test", max_members=10
+        )
+        schedule = ClassSchedule.objects.create(
+            class_obj=test_class,
+            day_of_week=0,
+            start_time=time(14, 0),
+            end_time=time(15, 0),
+        )
+
+        today = timezone.now().date()
+        yesterday = today - timedelta(days=1)
+        tomorrow = today + timedelta(days=1)
+
+        # Create instances
+        past_waitlist_instance = ClassInstance.objects.create(
+            class_schedule=schedule,
+            date=yesterday,
+            start_time=time(14, 0),
+            end_time=time(15, 0),
+        )
+        future_waitlist_instance = ClassInstance.objects.create(
+            class_schedule=schedule,
+            date=tomorrow,
+            start_time=time(14, 0),
+            end_time=time(15, 0),
+        )
+
+        # Add member to waitlists
+        past_waitlist_instance.waitlisted_members.add(self.member)
+        future_waitlist_instance.waitlisted_members.add(self.member)
+
+        # Login and check detail view
+        session = self.client.session
+        session["member_email"] = self.member.email
+        session.save()
+
+        response = self.client.get(reverse("member_details"))
+
+        # Check context data
+        upcoming_waitlisted = response.context["upcoming_waitlisted_classes"]
+        past_waitlisted = response.context["past_waitlisted_classes"]
+
+        # Should have only tomorrow in upcoming
+        self.assertEqual(upcoming_waitlisted.count(), 1)
+        self.assertIn(future_waitlist_instance, upcoming_waitlisted)
+
+        # Should have yesterday in past
+        self.assertEqual(past_waitlisted.count(), 1)
+        self.assertIn(past_waitlist_instance, past_waitlisted)
+
+    def test_member_detail_view_no_classes(self):
+        """
+        Test that member detail view handles members with no classes correctly.
+        """
+        session = self.client.session
+        session["member_email"] = self.member.email
+        session.save()
+
+        response = self.client.get(reverse("member_details"))
+        self.assertEqual(response.status_code, 200)
+
+        # All class querysets should be empty
+        self.assertEqual(response.context["upcoming_booked_classes"].count(), 0)
+        self.assertEqual(response.context["past_booked_classes"].count(), 0)
+        self.assertEqual(response.context["upcoming_waitlisted_classes"].count(), 0)
+        self.assertEqual(response.context["past_waitlisted_classes"].count(), 0)
 
 
 class GuestAndFeedbackTest(TestCase):
