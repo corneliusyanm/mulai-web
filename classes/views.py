@@ -81,6 +81,22 @@ def book_class(request, instance_id):
         messages.warning(request, "Anda sudah terdaftar di kelas ini.")
         return redirect("classes:class_detail", pk=instance.id)
 
+    # Check subscription access for special classes
+    class_name = instance.class_schedule.class_obj.name.lower()
+    if "semi private" in class_name and not member.is_semi_private_active_member:
+        messages.error(
+            request,
+            "Membership Gold kamu belum aktif. Silahkan hubungi admin untuk mengaktifkannya.",
+        )
+        return redirect("classes:class_detail", pk=instance.id)
+
+    if "kelas pemula" in class_name and not member.is_pemula_active_member:
+        messages.error(
+            request,
+            "Membership Silver kamu belum aktif. Silahkan hubungi admin untuk mengaktifkannya.",
+        )
+        return redirect("classes:class_detail", pk=instance.id)
+
     # Check if there are available slots
     if instance.booked_members.count() < instance.class_schedule.class_obj.max_members:
         instance.booked_members.add(member)

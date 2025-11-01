@@ -183,6 +183,12 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 # Use database for sessions (more efficient than file-based)
 SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"
 
+# Message tags mapping for Bootstrap
+from django.contrib.messages import constants as messages
+MESSAGE_TAGS = {
+    messages.ERROR: 'danger',
+}
+
 # Logging configuration to see errors even when DEBUG is False
 LOGGING = {
     "version": 1,

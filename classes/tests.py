@@ -3,6 +3,7 @@ from django.utils import timezone
 from django.core.management import call_command
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth.models import User
+from django.urls import reverse
 from datetime import date, timedelta
 from io import StringIO
 from accounts.models import Member
@@ -637,3 +638,242 @@ class ClassListViewTest(TestCase):
         # Only OPEN and FULL status instances should appear
         statuses = set(instance.status for instance in instances_list)
         self.assertTrue(statuses.issubset({"OPEN", "FULL"}))
+
+
+class BookingValidationTest(TestCase):
+    """Test booking validation for subscription-based classes"""
+
+    def setUp(self):
+        # Create test classes
+        self.semi_private_class = Class.objects.create(
+            name="Semi Private Training",
+            description="Semi private class",
+            max_members=5,
+        )
+        self.kelas_pemula_class = Class.objects.create(
+            name="Kelas Pemula - Beginners",
+            description="Beginner class",
+            max_members=10,
+        )
+        self.regular_class = Class.objects.create(
+            name="Regular Class", description="Regular class", max_members=15
+        )
+
+        # Create schedules
+        self.semi_private_schedule = ClassSchedule.objects.create(
+            class_obj=self.semi_private_class,
+            day_of_week=0,
+            start_time="09:00:00",
+            end_time="10:00:00",
+        )
+        self.kelas_pemula_schedule = ClassSchedule.objects.create(
+            class_obj=self.kelas_pemula_class,
+            day_of_week=0,
+            start_time="10:00:00",
+            end_time="11:00:00",
+        )
+        self.regular_schedule = ClassSchedule.objects.create(
+            class_obj=self.regular_class,
+            day_of_week=0,
+            start_time="11:00:00",
+            end_time="12:00:00",
+        )
+
+        # Create class instances
+        today = timezone.now().date()
+        self.semi_private_instance = ClassInstance.objects.create(
+            class_schedule=self.semi_private_schedule,
+            date=today,
+            start_time=self.semi_private_schedule.start_time,
+            end_time=self.semi_private_schedule.end_time,
+            status="OPEN",
+        )
+        self.kelas_pemula_instance = ClassInstance.objects.create(
+            class_schedule=self.kelas_pemula_schedule,
+            date=today,
+            start_time=self.kelas_pemula_schedule.start_time,
+            end_time=self.kelas_pemula_schedule.end_time,
+            status="OPEN",
+        )
+        self.regular_instance = ClassInstance.objects.create(
+            class_schedule=self.regular_schedule,
+            date=today,
+            start_time=self.regular_schedule.start_time,
+            end_time=self.regular_schedule.end_time,
+            status="OPEN",
+        )
+
+        # Create members with different subscription states
+        self.member_no_subscription = Member.objects.create(
+            name="No Subscription Member",
+            email="nosub@example.com",
+            phone_number="628111111111",
+            age=25,
+            height=170.0,
+            weight=70.0,
+            gender="M",
+            goals="Stay fit",
+            years_of_working_out="1-2 years",
+        )
+
+        self.member_with_semi_private = Member.objects.create(
+            name="Semi Private Member",
+            email="semiprivate@example.com",
+            phone_number="628222222222",
+            age=25,
+            height=170.0,
+            weight=70.0,
+            gender="M",
+            goals="Stay fit",
+            years_of_working_out="1-2 years",
+            semi_private_active_until=timezone.now() + timedelta(days=30),
+        )
+
+        self.member_with_pemula = Member.objects.create(
+            name="Pemula Member",
+            email="pemula@example.com",
+            phone_number="628333333333",
+            age=25,
+            height=170.0,
+            weight=70.0,
+            gender="M",
+            goals="Stay fit",
+            years_of_working_out="1-2 years",
+            pemula_active_until=timezone.now() + timedelta(days=30),
+        )
+
+        self.member_expired_semi_private = Member.objects.create(
+            name="Expired Semi Private",
+            email="expired@example.com",
+            phone_number="628444444444",
+            age=25,
+            height=170.0,
+            weight=70.0,
+            gender="M",
+            goals="Stay fit",
+            years_of_working_out="1-2 years",
+            semi_private_active_until=timezone.now() - timedelta(days=1),
+        )
+
+    def test_semi_private_booking_without_subscription(self):
+        """Test that member cannot book Semi Private without active subscription"""
+        session = self.client.session
+        session["member_email"] = self.member_no_subscription.email
+        session.save()
+
+        url = reverse("classes:book_class", args=[self.semi_private_instance.id])
+        response = self.client.post(url, follow=True)
+
+        self.assertContains(response, "Gold")
+        self.semi_private_instance.refresh_from_db()
+        self.assertNotIn(
+            self.member_no_subscription, self.semi_private_instance.booked_members.all()
+        )
+
+    def test_semi_private_booking_with_active_subscription(self):
+        """Test that member can book Semi Private with active subscription"""
+        session = self.client.session
+        session["member_email"] = self.member_with_semi_private.email
+        session.save()
+
+        url = reverse("classes:book_class", args=[self.semi_private_instance.id])
+        response = self.client.post(url, follow=True)
+
+        self.assertContains(response, "Berhasil booking kelas")
+        self.semi_private_instance.refresh_from_db()
+        self.assertIn(
+            self.member_with_semi_private,
+            self.semi_private_instance.booked_members.all(),
+        )
+
+    def test_semi_private_booking_with_expired_subscription(self):
+        """Test that member cannot book Semi Private with expired subscription"""
+        session = self.client.session
+        session["member_email"] = self.member_expired_semi_private.email
+        session.save()
+
+        url = reverse("classes:book_class", args=[self.semi_private_instance.id])
+        response = self.client.post(url, follow=True)
+
+        self.assertContains(response, "Gold")
+        self.semi_private_instance.refresh_from_db()
+        self.assertNotIn(
+            self.member_expired_semi_private,
+            self.semi_private_instance.booked_members.all(),
+        )
+
+    def test_kelas_pemula_booking_without_subscription(self):
+        """Test that member cannot book Kelas Pemula without active subscription"""
+        session = self.client.session
+        session["member_email"] = self.member_no_subscription.email
+        session.save()
+
+        url = reverse("classes:book_class", args=[self.kelas_pemula_instance.id])
+        response = self.client.post(url, follow=True)
+
+        self.assertContains(response, "Silver")
+        self.kelas_pemula_instance.refresh_from_db()
+        self.assertNotIn(
+            self.member_no_subscription, self.kelas_pemula_instance.booked_members.all()
+        )
+
+    def test_kelas_pemula_booking_with_active_subscription(self):
+        """Test that member can book Kelas Pemula with active subscription"""
+        session = self.client.session
+        session["member_email"] = self.member_with_pemula.email
+        session.save()
+
+        url = reverse("classes:book_class", args=[self.kelas_pemula_instance.id])
+        response = self.client.post(url, follow=True)
+
+        self.assertContains(response, "Berhasil booking kelas")
+        self.kelas_pemula_instance.refresh_from_db()
+        self.assertIn(
+            self.member_with_pemula, self.kelas_pemula_instance.booked_members.all()
+        )
+
+    def test_regular_class_booking_without_special_subscription(self):
+        """Test that member can book regular class without special subscriptions"""
+        session = self.client.session
+        session["member_email"] = self.member_no_subscription.email
+        session.save()
+
+        url = reverse("classes:book_class", args=[self.regular_instance.id])
+        response = self.client.post(url, follow=True)
+
+        self.assertContains(response, "Berhasil booking kelas")
+        self.regular_instance.refresh_from_db()
+        self.assertIn(
+            self.member_no_subscription, self.regular_instance.booked_members.all()
+        )
+
+    def test_case_insensitive_class_name_matching(self):
+        """Test that class name matching is case-insensitive"""
+        # Create a class with lowercase name
+        lowercase_class = Class.objects.create(
+            name="semi private lowercase", description="Test", max_members=5
+        )
+        schedule = ClassSchedule.objects.create(
+            class_obj=lowercase_class,
+            day_of_week=1,
+            start_time="14:00:00",
+            end_time="15:00:00",
+        )
+        instance = ClassInstance.objects.create(
+            class_schedule=schedule,
+            date=timezone.now().date(),
+            start_time=schedule.start_time,
+            end_time=schedule.end_time,
+            status="OPEN",
+        )
+
+        session = self.client.session
+        session["member_email"] = self.member_no_subscription.email
+        session.save()
+
+        url = reverse("classes:book_class", args=[instance.id])
+        response = self.client.post(url, follow=True)
+
+        self.assertContains(response, "Gold")
+        instance.refresh_from_db()
+        self.assertNotIn(self.member_no_subscription, instance.booked_members.all())
