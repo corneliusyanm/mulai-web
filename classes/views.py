@@ -83,19 +83,31 @@ def book_class(request, instance_id):
 
     # Check subscription access for special classes
     class_name = instance.class_schedule.class_obj.name.lower()
-    if "semi private" in class_name and not member.is_semi_private_active_member:
-        messages.error(
-            request,
-            "Membership Gold kamu belum aktif. Silahkan hubungi admin untuk mengaktifkannya.",
-        )
-        return redirect("classes:class_detail", pk=instance.id)
+    class_date_start = timezone.make_aware(
+        timezone.datetime.combine(instance.date, timezone.datetime.min.time())
+    )
 
-    if "kelas pemula" in class_name and not member.is_pemula_active_member:
-        messages.error(
-            request,
-            "Membership Silver kamu belum aktif. Silahkan hubungi admin untuk mengaktifkannya.",
-        )
-        return redirect("classes:class_detail", pk=instance.id)
+    if "semi private" in class_name:
+        if (
+            not member.semi_private_active_until
+            or member.semi_private_active_until < class_date_start
+        ):
+            messages.error(
+                request,
+                "Membership Gold kamu sudah tidak aktif pada tanggal tersebut. Silahkan hubungi admin untuk mengaktifkannya.",
+            )
+            return redirect("classes:class_detail", pk=instance.id)
+
+    if "kelas pemula" in class_name:
+        if (
+            not member.pemula_active_until
+            or member.pemula_active_until < class_date_start
+        ):
+            messages.error(
+                request,
+                "Membership Silver kamu sudah tidak aktif pada tanggal tersebut. Silahkan hubungi admin untuk mengaktifkannya.",
+            )
+            return redirect("classes:class_detail", pk=instance.id)
 
     # Check if there are available slots
     if instance.booked_members.count() < instance.class_schedule.class_obj.max_members:

@@ -877,3 +877,129 @@ class BookingValidationTest(TestCase):
         self.assertContains(response, "Gold")
         instance.refresh_from_db()
         self.assertNotIn(self.member_no_subscription, instance.booked_members.all())
+
+    def test_semi_private_booking_expires_before_class_date(self):
+        """Test that member cannot book Semi Private if subscription expires before class date"""
+        # Member has subscription active today but expires in 2 days
+        member_expiring_soon = Member.objects.create(
+            name="Expiring Soon",
+            email="expiringsoon@example.com",
+            phone_number="628555555555",
+            age=25,
+            height=170.0,
+            weight=70.0,
+            gender="M",
+            goals="Stay fit",
+            years_of_working_out="1-2 years",
+            semi_private_active_until=timezone.now() + timedelta(days=2),
+        )
+
+        # Create a class instance 5 days in the future
+        future_schedule = ClassSchedule.objects.create(
+            class_obj=self.semi_private_class,
+            day_of_week=2,
+            start_time="15:00:00",
+            end_time="16:00:00",
+        )
+        future_instance = ClassInstance.objects.create(
+            class_schedule=future_schedule,
+            date=timezone.now().date() + timedelta(days=5),
+            start_time=future_schedule.start_time,
+            end_time=future_schedule.end_time,
+            status="OPEN",
+        )
+
+        session = self.client.session
+        session["member_email"] = member_expiring_soon.email
+        session.save()
+
+        url = reverse("classes:book_class", args=[future_instance.id])
+        response = self.client.post(url, follow=True)
+
+        self.assertContains(response, "Gold")
+        future_instance.refresh_from_db()
+        self.assertNotIn(member_expiring_soon, future_instance.booked_members.all())
+
+    def test_pemula_booking_expires_before_class_date(self):
+        """Test that member cannot book Kelas Pemula if subscription expires before class date"""
+        # Member has subscription active today but expires in 2 days
+        member_expiring_soon = Member.objects.create(
+            name="Expiring Soon Pemula",
+            email="expiringsoonpemula@example.com",
+            phone_number="628666666666",
+            age=25,
+            height=170.0,
+            weight=70.0,
+            gender="M",
+            goals="Stay fit",
+            years_of_working_out="1-2 years",
+            pemula_active_until=timezone.now() + timedelta(days=2),
+        )
+
+        # Create a class instance 5 days in the future
+        future_schedule = ClassSchedule.objects.create(
+            class_obj=self.kelas_pemula_class,
+            day_of_week=3,
+            start_time="16:00:00",
+            end_time="17:00:00",
+        )
+        future_instance = ClassInstance.objects.create(
+            class_schedule=future_schedule,
+            date=timezone.now().date() + timedelta(days=5),
+            start_time=future_schedule.start_time,
+            end_time=future_schedule.end_time,
+            status="OPEN",
+        )
+
+        session = self.client.session
+        session["member_email"] = member_expiring_soon.email
+        session.save()
+
+        url = reverse("classes:book_class", args=[future_instance.id])
+        response = self.client.post(url, follow=True)
+
+        self.assertContains(response, "Silver")
+        future_instance.refresh_from_db()
+        self.assertNotIn(member_expiring_soon, future_instance.booked_members.all())
+
+    def test_semi_private_booking_active_until_class_date(self):
+        """Test that member can book Semi Private if subscription is active on class date"""
+        # Member has subscription that expires 10 days from now
+        member_active_long = Member.objects.create(
+            name="Active Long",
+            email="activelong@example.com",
+            phone_number="628777777777",
+            age=25,
+            height=170.0,
+            weight=70.0,
+            gender="M",
+            goals="Stay fit",
+            years_of_working_out="1-2 years",
+            semi_private_active_until=timezone.now() + timedelta(days=10),
+        )
+
+        # Create a class instance 5 days in the future
+        future_schedule = ClassSchedule.objects.create(
+            class_obj=self.semi_private_class,
+            day_of_week=4,
+            start_time="17:00:00",
+            end_time="18:00:00",
+        )
+        future_instance = ClassInstance.objects.create(
+            class_schedule=future_schedule,
+            date=timezone.now().date() + timedelta(days=5),
+            start_time=future_schedule.start_time,
+            end_time=future_schedule.end_time,
+            status="OPEN",
+        )
+
+        session = self.client.session
+        session["member_email"] = member_active_long.email
+        session.save()
+
+        url = reverse("classes:book_class", args=[future_instance.id])
+        response = self.client.post(url, follow=True)
+
+        self.assertContains(response, "Berhasil booking kelas")
+        future_instance.refresh_from_db()
+        self.assertIn(member_active_long, future_instance.booked_members.all())
