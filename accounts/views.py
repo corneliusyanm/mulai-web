@@ -142,8 +142,128 @@ def home(request):
     return render(request, "home.html")
 
 
+JOB_LISTINGS = [
+    {
+        "id": "admin-front-office",
+        "title": "Admin & Front Office (Part Time)",
+        "is_active": True,
+        "apply_url": "https://docs.google.com/forms/d/e/1FAIpQLSeoLI9VxWRcZqHGJAH3zb154kJU1k9jvlieGngY3OPpGiz2qg/viewform",
+        "looking_for": {
+            "priority": [
+                {
+                    "label": "Usia 21-30 tahun minimal pendidikan SMA sederajat",
+                    "desc": "",
+                },
+                {
+                    "label": "Memiliki kemampuan komunikasi yang baik dan berpenampilan menarik",
+                    "desc": "",
+                },
+                {
+                    "label": "Memiliki semangat tinggi untuk belajar hal & ilmu yang baru.",
+                    "desc": "",
+                },
+                {
+                    "label": "Menyukai olahraga dan berpengalaman di bidang sales adalah nilai tambah",
+                    "desc": "",
+                },
+                {
+                    "label": "Memiliki keterampilan edit konten adalah nilai tambah",
+                    "desc": "",
+                },
+            ],
+            "bonus": [],
+            "note": "",
+        },
+        "responsibilities": [
+            "Menjaga Gym shift siang (14.00-21.00) & menjaga kebershihan Gym, sekitar 1-2 shift per minggu",
+            "Mengelola akun data member pada website mulaigym",
+            "Memberi senyum, salam, sapa pada member yang datang & pergi",
+        ],
+    },
+    {
+        "id": "fitness-trainer",
+        "title": "Fitness Trainer (Full Time)",
+        "is_active": False,
+        "apply_url": "https://docs.google.com/forms/d/e/1FAIpQLSfMP0gmgjXRLNts9slQObb2nHpSMK-Fyjch44A0PeL46Bj06Q/viewform?usp=header",
+        "looking_for": {
+            "priority": [
+                {
+                    "label": "Ramah & sabar",
+                    "desc": "(bisa mendengarkan & membimbing para pemula).",
+                },
+                {
+                    "label": "Kemampuan mengajar & komunikasi",
+                    "desc": "(jelaskan gerakan dengan tepat namun mudah dimengerti).",
+                },
+                {
+                    "label": "Semangat belajar",
+                    "desc": "(terbuka untuk terus upgrade pengetahuan fitness dan kesehatan).",
+                },
+            ],
+            "bonus": [
+                "Sertifikasi/lisensi resmi.",
+                "Badan berotot/atletis.",
+                "Pengalaman mengajar lama.",
+            ],
+            "note": "✅ Fresh graduate / pengalaman pertama sebagai trainer dipersilahkan!",
+        },
+        "responsibilities": [
+            "Merancang & memandu program latihan Kelas Pemula.",
+            "Menjawab pertanyaan & menunjukkan penggunaan alat serta teknik yang tepat kepada para member.",
+            "Memantau kemajuan dan memberi motivasi para member.",
+            "Menjaga keamanan, kebersihan, serta suasana nyaman di dalam Gym.",
+        ],
+    },
+    {
+        "id": "admin-front-office",
+        "title": "Admin & Front Office (Full Time)",
+        "is_active": False,
+        "apply_url": "https://docs.google.com/forms/d/e/1FAIpQLSfMP0gmgjXRLNts9slQObb2nHpSMK-Fyjch44A0PeL46Bj06Q/viewform?usp=header",
+        "looking_for": {
+            "priority": [
+                {
+                    "label": "Wanita usia 21-30 tahun minimal pendidikan SMA sederajat",
+                    "desc": "",
+                },
+                {
+                    "label": "Memiliki kemampuan komunikasi yang baik dan berpenampilan menarik",
+                    "desc": "",
+                },
+                {
+                    "label": "Memiliki semangat tinggi untuk belajar hal & ilmu yang baru.",
+                    "desc": "",
+                },
+                {
+                    "label": "Menyukai olahraga dan berpengalaman di bidang sales adalah nilai tambah",
+                    "desc": "",
+                },
+                {
+                    "label": "Memiliki keterampilan edit konten adalah nilai tambah",
+                    "desc": "",
+                },
+            ],
+            "bonus": [],
+            "note": "",
+        },
+        "responsibilities": [
+            "Menjaga Gym shift siang (14.00-21.00) & menjaga kebershihan Gym",
+            "Mengelola akun data member pada website mulaigym",
+            "Memberi senyum, salam, sapa pada member yang datang & pergi",
+            "Mengelola member & mengembangkan strategi penjualan",
+            "Mengelola media sosial mulaigym.id",
+        ],
+    },
+]
+
+
 def job_openings(request):
-    return render(request, "lowongan-kerja.html")
+    active_jobs = [job for job in JOB_LISTINGS if job["is_active"]]
+    closed_jobs = [job for job in JOB_LISTINGS if not job["is_active"]]
+    return render(
+        request,
+        "lowongan-kerja.html",
+        {"active_jobs": active_jobs, "closed_jobs": closed_jobs},
+    )
 
 
 def tamu_signup_view(request):
