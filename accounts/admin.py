@@ -578,6 +578,23 @@ class ActiveMemberAdmin(MemberAdmin):
 
     change_list_template = "admin/accounts/activemember/change_list.html"
 
+    def has_module_permission(self, request):
+        """Use Member's permissions instead of ActiveMember's"""
+        return request.user.has_perm("accounts.view_member")
+
+    def has_view_permission(self, request, obj=None):
+        return request.user.has_perm("accounts.view_member")
+
+    def has_change_permission(self, request, obj=None):
+        return request.user.has_perm("accounts.change_member")
+
+    def has_add_permission(self, request):
+        # Disable add - users should add via Member admin
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return request.user.has_perm("accounts.delete_member")
+
     def get_queryset(self, request):
         """Filter to only show active members"""
         today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
