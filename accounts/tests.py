@@ -5,8 +5,8 @@ from django.utils import timezone
 from django.urls import reverse
 from unittest.mock import Mock
 
-from .models import Member, Tamu, Masukkan, Prospect
-from .admin import ProspectAdmin, MemberAdmin, SaleInline
+from .models import Member, ActiveMember, Tamu, Masukkan, Prospect
+from .admin import ProspectAdmin, MemberAdmin, ActiveMemberAdmin, SaleInline
 from .models import User
 from visits.admin import admin_site
 from payments.models import Payment
@@ -1006,3 +1006,232 @@ class MemberAdminTest(TestCase):
 
         total_sales = member_admin.total_sales(self.member)
         self.assertEqual(total_sales, "Rp 0")
+
+
+class MemberTrackingFlagsTest(TestCase):
+    """Test the admin tracking flags on Member model."""
+
+    def test_default_flag_values(self):
+        """Test that tracking flags default to False."""
+        member = Member.objects.create(
+            name="Flag Test User",
+            email="flagtest@example.com",
+            phone_number="628999888777",
+            gender="M",
+            age=25,
+            height=170,
+            weight=70,
+            years_of_working_out="1 tahun",
+            goals="Test",
+            know_mulai_gym_from="test",
+        )
+        self.assertFalse(member.asked_referral)
+        self.assertFalse(member.asked_google_review)
+        self.assertFalse(member.missed_installment)
+
+    def test_flag_can_be_set_true(self):
+        """Test that tracking flags can be set to True."""
+        member = Member.objects.create(
+            name="Flag True User",
+            email="flagtrue@example.com",
+            phone_number="628999888666",
+            gender="F",
+            age=28,
+            height=165,
+            weight=55,
+            years_of_working_out="belum",
+            goals="Test",
+            know_mulai_gym_from="test",
+            asked_referral=True,
+            asked_google_review=True,
+            missed_installment=True,
+        )
+        self.assertTrue(member.asked_referral)
+        self.assertTrue(member.asked_google_review)
+        self.assertTrue(member.missed_installment)
+
+    def test_flag_update(self):
+        """Test that tracking flags can be updated."""
+        member = Member.objects.create(
+            name="Flag Update User",
+            email="flagupdate@example.com",
+            phone_number="628999888555",
+            gender="M",
+            age=30,
+            height=175,
+            weight=80,
+            years_of_working_out="2 tahun",
+            goals="Test",
+            know_mulai_gym_from="test",
+        )
+        self.assertFalse(member.asked_referral)
+
+        member.asked_referral = True
+        member.save()
+        member.refresh_from_db()
+        self.assertTrue(member.asked_referral)
+
+
+class ActiveMemberProxyModelTest(TestCase):
+    """Test the ActiveMember proxy model."""
+
+    def setUp(self):
+        self.active_member = Member.objects.create(
+            name="Active User",
+            email="active@example.com",
+            phone_number="628111222333",
+            gender="M",
+            age=25,
+            height=170,
+            weight=70,
+            years_of_working_out="1 tahun",
+            goals="Test",
+            know_mulai_gym_from="test",
+            active_until=timezone.now() + timedelta(days=30),
+        )
+        self.expired_member = Member.objects.create(
+            name="Expired User",
+            email="expired@example.com",
+            phone_number="628111222444",
+            gender="F",
+            age=28,
+            height=165,
+            weight=55,
+            years_of_working_out="belum",
+            goals="Test",
+            know_mulai_gym_from="test",
+            active_until=timezone.now() - timedelta(days=30),
+        )
+
+    def test_active_member_is_proxy(self):
+        """Test that ActiveMember is a proxy model of Member."""
+        self.assertTrue(ActiveMember._meta.proxy)
+        self.assertEqual(ActiveMember._meta.proxy_for_model, Member)
+
+    def test_active_member_queryset_same_as_member(self):
+        """Test that ActiveMember queries the same table as Member."""
+        # Both should exist in ActiveMember.objects.all() since no filter applied yet
+        all_members = Member.objects.all()
+        self.assertEqual(all_members.count(), 2)
+
+
+class ActiveMemberAdminTest(TestCase):
+    """Test the ActiveMemberAdmin functionality."""
+
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.admin_user = User.objects.create_superuser(
+            "admin_active", "admin_active@example.com", "password"
+        )
+        self.active_member = Member.objects.create(
+            name="Active Admin Test",
+            email="activeadmin@example.com",
+            phone_number="628555666777",
+            gender="M",
+            age=25,
+            height=170,
+            weight=70,
+            years_of_working_out="1 tahun",
+            goals="Test",
+            know_mulai_gym_from="test",
+            active_until=timezone.now() + timedelta(days=30),
+        )
+        self.expired_member = Member.objects.create(
+            name="Expired Admin Test",
+            email="expiredadmin@example.com",
+            phone_number="628555666888",
+            gender="F",
+            age=28,
+            height=165,
+            weight=55,
+            years_of_working_out="belum",
+            goals="Test",
+            know_mulai_gym_from="test",
+            active_until=timezone.now() - timedelta(days=30),
+        )
+
+    def test_active_member_admin_queryset_filters_active_only(self):
+        """Test that ActiveMemberAdmin only shows active members."""
+        request = self.factory.get("/admin/accounts/activemember/")
+        request.user = self.admin_user
+
+        admin_instance = ActiveMemberAdmin(ActiveMember, admin_site)
+        queryset = admin_instance.get_queryset(request)
+
+        self.assertEqual(queryset.count(), 1)
+        self.assertIn(self.active_member, queryset)
+        self.assertNotIn(self.expired_member, queryset)
+
+    def test_active_member_admin_inherits_from_member_admin(self):
+        """Test that ActiveMemberAdmin inherits from MemberAdmin."""
+        self.assertTrue(issubclass(ActiveMemberAdmin, MemberAdmin))
+
+    def test_active_member_admin_list_editable_includes_flags(self):
+        """Test that the tracking flags are list_editable in ActiveMemberAdmin."""
+        self.assertIn("asked_referral", ActiveMemberAdmin.list_editable)
+        self.assertIn("asked_google_review", ActiveMemberAdmin.list_editable)
+        self.assertIn("missed_installment", ActiveMemberAdmin.list_editable)
+
+    def test_active_member_csv_export(self):
+        """Test the CSV export for active members."""
+        request = self.factory.get("/admin/accounts/activemember/export-csv/")
+        request.user = self.admin_user
+
+        admin_instance = ActiveMemberAdmin(ActiveMember, admin_site)
+        response = admin_instance.export_active_members_csv(request)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "text/csv")
+        self.assertIn("attachment", response["Content-Disposition"])
+        self.assertIn("active_members_", response["Content-Disposition"])
+
+        # Check content includes active member but not expired
+        content = response.content.decode("utf-8")
+        self.assertIn("Active Admin Test", content)
+        self.assertNotIn("Expired Admin Test", content)
+
+
+class MemberAdminCSVExportTest(TestCase):
+    """Test the CSV export functionality in MemberAdmin."""
+
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.admin_user = User.objects.create_superuser(
+            "admin_csv", "admin_csv@example.com", "password"
+        )
+        self.member = Member.objects.create(
+            name="CSV Test User",
+            email="csvtest@example.com",
+            phone_number="628777888999",
+            gender="M",
+            age=25,
+            height=170,
+            weight=70,
+            years_of_working_out="1 tahun",
+            goals="Test goals",
+            know_mulai_gym_from="Instagram",
+            asked_referral=True,
+            asked_google_review=False,
+            missed_installment=True,
+        )
+
+    def test_member_csv_export_all(self):
+        """Test the CSV export for all members."""
+        request = self.factory.get("/admin/accounts/member/export-csv/")
+        request.user = self.admin_user
+
+        admin_instance = MemberAdmin(Member, admin_site)
+        response = admin_instance.export_members_csv(request)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "text/csv")
+        self.assertIn("attachment", response["Content-Disposition"])
+        self.assertIn("members_", response["Content-Disposition"])
+
+        # Check content
+        content = response.content.decode("utf-8")
+        self.assertIn("CSV Test User", content)
+        self.assertIn("csvtest@example.com", content)
+        # Check flags are included
+        self.assertIn("asked_referral", content)  # Header
+        self.assertIn("True", content)  # asked_referral value

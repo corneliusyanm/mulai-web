@@ -76,6 +76,20 @@ class Member(models.Model):
         help_text="Status pemula member - bisa true, false, atau kosong",
     )
 
+    # Admin tracking flags
+    asked_referral = models.BooleanField(
+        default=False,
+        help_text="Flag: sudah ditanya apakah punya kenalan yang bisa diajak ke gym",
+    )
+    asked_google_review = models.BooleanField(
+        default=False,
+        help_text="Flag: sudah diminta untuk memberikan Google review",
+    )
+    missed_installment = models.BooleanField(
+        default=False,
+        help_text="Flag: member yang cicilan tapi tidak melanjutkan pembayaran",
+    )
+
     def __str__(self):
         return f"{self.name} ({self.email})"
 
@@ -109,6 +123,15 @@ class Member(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+
+
+class ActiveMember(Member):
+    """Proxy model for viewing only active members in admin"""
+
+    class Meta:
+        proxy = True
+        verbose_name = "Active Member"
+        verbose_name_plural = "Active Members"
 
 
 class Tamu(models.Model):

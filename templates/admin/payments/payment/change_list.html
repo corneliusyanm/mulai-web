@@ -1,0 +1,9 @@
+{% extends "admin/change_list.html" %}
+{% load admin_urls %}
+
+{% block object-tools-items %}
+{{ block.super }}
+<li>
+    <a href="{% url 'admin:payments_payment_export_csv' %}" class="button">Download Payments CSV</a>
+</li>
+{% endblock %}

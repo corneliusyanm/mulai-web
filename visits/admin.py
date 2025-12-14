@@ -953,6 +953,11 @@ def weekly_metrics_view(request):
         created_at__date__lte=end_date,
     ).order_by("created_at")
 
+    # Member tracking flags counts (irrespective of date)
+    total_asked_referral = Member.objects.filter(asked_referral=True).count()
+    total_asked_google_review = Member.objects.filter(asked_google_review=True).count()
+    total_missed_installment = Member.objects.filter(missed_installment=True).count()
+
     context = {
         **admin_site.each_context(request),
         "title": "Weekly Metrics Tracker",
@@ -978,6 +983,10 @@ def weekly_metrics_view(request):
         "total_weekly_visits": total_weekly_visits,
         "total_weekly_tamu": total_weekly_tamu,
         "weekly_tamu_details": weekly_tamu_details,
+        # Member tracking flags (all-time counts)
+        "total_asked_referral": total_asked_referral,
+        "total_asked_google_review": total_asked_google_review,
+        "total_missed_installment": total_missed_installment,
     }
 
     return render(request, "admin/analytics/weekly_metrics.html", context)

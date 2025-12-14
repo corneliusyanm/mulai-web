@@ -2,9 +2,13 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.utils import timezone
 from django.utils.html import format_html
+from django.urls import path, reverse
+from django.http import HttpResponse
+from django.shortcuts import render
+import csv
 
 from visits.admin import admin_site
-from .models import Member, User, Tamu, Masukkan, Prospect
+from .models import Member, ActiveMember, User, Tamu, Masukkan, Prospect
 from payments.models import Payment
 from purchases.models import Sale, SaleItem
 from visits.models import Visit
@@ -190,11 +194,23 @@ class MemberAdmin(WhatsAppLinkMixin, admin.ModelAdmin):
         "formatted_pemula_active_until",
         "formatted_semi_private_active_until",
         "pt_session_count",
+        "asked_referral",
+        "asked_google_review",
+        "missed_installment",
         "membership_status",
         "created_at",
     )
-    list_filter = ("gender", "is_pemula", "created_at")
+    list_filter = (
+        "gender",
+        "is_pemula",
+        "asked_referral",
+        "asked_google_review",
+        "missed_installment",
+        "created_at",
+    )
+    list_editable = ("asked_referral", "asked_google_review", "missed_installment")
     search_fields = ("name", "email", "phone_number")
+    change_list_template = "admin/accounts/member/change_list.html"
     readonly_fields = (
         "created_at",
         "total_payments",
@@ -228,6 +244,16 @@ class MemberAdmin(WhatsAppLinkMixin, admin.ModelAdmin):
                     "semi_private_active_until",
                     "pt_session_count",
                     "is_pemula",
+                )
+            },
+        ),
+        (
+            "Admin Tracking Flags",
+            {
+                "fields": (
+                    "asked_referral",
+                    "asked_google_review",
+                    "missed_installment",
                 )
             },
         ),
@@ -450,6 +476,208 @@ class MemberAdmin(WhatsAppLinkMixin, admin.ModelAdmin):
         "Class Booking History (Recent 10 + Waitlist)"
     )
 
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                "export-csv/",
+                self.admin_site.admin_view(self.export_members_csv),
+                name="accounts_member_export_csv",
+            ),
+        ]
+        return custom_urls + urls
+
+    def export_members_csv(self, request):
+        """Export all members as CSV (SELECT * FROM accounts_member ORDER BY id DESC)"""
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = (
+            f'attachment; filename="members_{timezone.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+        )
+
+        writer = csv.writer(response)
+        # Header row - all fields
+        writer.writerow(
+            [
+                "id",
+                "name",
+                "email",
+                "phone_number",
+                "gender",
+                "age",
+                "height",
+                "weight",
+                "address",
+                "social_media_username",
+                "years_of_working_out",
+                "goals",
+                "know_mulai_gym_from",
+                "why_choose_mulai",
+                "active_until",
+                "pemula_active_until",
+                "semi_private_active_until",
+                "pt_session_count",
+                "is_pemula",
+                "asked_referral",
+                "asked_google_review",
+                "missed_installment",
+                "created_at",
+            ]
+        )
+
+        members = Member.objects.all().order_by("-id")
+        for m in members:
+            writer.writerow(
+                [
+                    m.id,
+                    m.name,
+                    m.email,
+                    m.phone_number,
+                    m.gender,
+                    m.age,
+                    m.height,
+                    m.weight,
+                    m.address,
+                    m.social_media_username,
+                    m.years_of_working_out,
+                    m.goals,
+                    m.know_mulai_gym_from,
+                    m.why_choose_mulai,
+                    (
+                        timezone.localtime(m.active_until).strftime("%Y-%m-%d %H:%M:%S")
+                        if m.active_until
+                        else ""
+                    ),
+                    (
+                        timezone.localtime(m.pemula_active_until).strftime(
+                            "%Y-%m-%d %H:%M:%S"
+                        )
+                        if m.pemula_active_until
+                        else ""
+                    ),
+                    (
+                        timezone.localtime(m.semi_private_active_until).strftime(
+                            "%Y-%m-%d %H:%M:%S"
+                        )
+                        if m.semi_private_active_until
+                        else ""
+                    ),
+                    m.pt_session_count,
+                    m.is_pemula,
+                    m.asked_referral,
+                    m.asked_google_review,
+                    m.missed_installment,
+                    timezone.localtime(m.created_at).strftime("%Y-%m-%d %H:%M:%S"),
+                ]
+            )
+
+        return response
+
+
+class ActiveMemberAdmin(MemberAdmin):
+    """Admin for viewing only active members with all the same features as MemberAdmin"""
+
+    change_list_template = "admin/accounts/activemember/change_list.html"
+
+    def get_queryset(self, request):
+        """Filter to only show active members"""
+        today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        return super().get_queryset(request).filter(active_until__gte=today_start)
+
+    def get_urls(self):
+        """Override to use different URL names for active member exports"""
+        urls = admin.ModelAdmin.get_urls(self)
+        custom_urls = [
+            path(
+                "export-csv/",
+                self.admin_site.admin_view(self.export_active_members_csv),
+                name="accounts_activemember_export_csv",
+            ),
+        ]
+        return custom_urls + urls
+
+    def export_active_members_csv(self, request):
+        """Export active members only as CSV"""
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = (
+            f'attachment; filename="active_members_{timezone.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+        )
+
+        writer = csv.writer(response)
+        writer.writerow(
+            [
+                "id",
+                "name",
+                "email",
+                "phone_number",
+                "gender",
+                "age",
+                "height",
+                "weight",
+                "address",
+                "social_media_username",
+                "years_of_working_out",
+                "goals",
+                "know_mulai_gym_from",
+                "why_choose_mulai",
+                "active_until",
+                "pemula_active_until",
+                "semi_private_active_until",
+                "pt_session_count",
+                "is_pemula",
+                "asked_referral",
+                "asked_google_review",
+                "missed_installment",
+                "created_at",
+            ]
+        )
+
+        for m in self.get_queryset(request).order_by("-id"):
+            writer.writerow(
+                [
+                    m.id,
+                    m.name,
+                    m.email,
+                    m.phone_number,
+                    m.gender,
+                    m.age,
+                    m.height,
+                    m.weight,
+                    m.address,
+                    m.social_media_username,
+                    m.years_of_working_out,
+                    m.goals,
+                    m.know_mulai_gym_from,
+                    m.why_choose_mulai,
+                    (
+                        timezone.localtime(m.active_until).strftime("%Y-%m-%d %H:%M:%S")
+                        if m.active_until
+                        else ""
+                    ),
+                    (
+                        timezone.localtime(m.pemula_active_until).strftime(
+                            "%Y-%m-%d %H:%M:%S"
+                        )
+                        if m.pemula_active_until
+                        else ""
+                    ),
+                    (
+                        timezone.localtime(m.semi_private_active_until).strftime(
+                            "%Y-%m-%d %H:%M:%S"
+                        )
+                        if m.semi_private_active_until
+                        else ""
+                    ),
+                    m.pt_session_count,
+                    m.is_pemula,
+                    m.asked_referral,
+                    m.asked_google_review,
+                    m.missed_installment,
+                    timezone.localtime(m.created_at).strftime("%Y-%m-%d %H:%M:%S"),
+                ]
+            )
+
+        return response
+
 
 class TamuAdmin(WhatsAppLinkMixin, admin.ModelAdmin):
     list_display = (
@@ -510,6 +738,7 @@ class ProspectAdmin(WhatsAppLinkMixin, admin.ModelAdmin):
 
 admin_site.register(User, CustomUserAdmin)
 admin_site.register(Member, MemberAdmin)
+admin_site.register(ActiveMember, ActiveMemberAdmin)
 admin_site.register(Tamu, TamuAdmin)
 admin_site.register(Masukkan, MasukkanAdmin)
 admin_site.register(Prospect, ProspectAdmin)

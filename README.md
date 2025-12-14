@@ -42,11 +42,22 @@ Mulai Gym was opened since June 28, 2025.
   - `phone_number`: CharField (Unique, stores digits only, e.g., 628123...)
   - `active_until`: DateTimeField (nullable)
   - `is_active_member` property: Checks if `active_until >= today`.
+  - **Admin Tracking Flags** (boolean fields for admin operations):
+    - `asked_referral`: Flag to track members who have been asked for referrals (contacts who might be interested in joining the gym)
+    - `asked_google_review`: Flag to track members who have been asked to leave a Google review
+    - `missed_installment`: Flag to track members who have installment payments but missed/stopped paying
 
 ### Admin (`visits/admin_init.py`)
-- **`MemberAdmin`**
-  - Displays name, email, phone, `active_until`, status.
+- **`MemberAdmin`** (`/admin/accounts/member/`)
+  - Displays name, email, phone, `active_until`, status, and admin tracking flags.
   - `membership_status` method calculates Active/Expired.
+  - **Admin Tracking Flags** columns (`asked_referral`, `asked_google_review`, `missed_installment`) are editable directly in the list view via checkboxes.
+  - **CSV Export**: Download all members data as CSV via "Download All Members CSV" button.
+- **`ActiveMemberAdmin`** (`/admin/accounts/activemember/`)
+  - Proxy model admin showing only active members (where `active_until >= today`).
+  - Inherits all functionality from `MemberAdmin` including editable flag checkboxes.
+  - **CSV Export**: Download active members only as CSV via "Download Active Members CSV" button.
+  - Automatically appears in the sidebar under ACCOUNTS section.
 - **`VisitAdmin` (`visits/admin.py`)**
   - Displays member, check-in/out times, duration.
   - Filters, search fields defined.
@@ -568,9 +579,13 @@ To understand which equipment guides are most popular, a view tracking system ha
 ### Admin (`visits/admin_init.py` & `payments/admin.py`)
 - **`PackageAdmin`**:
   - Allows for managing product packages directly from the admin panel.
-- **`PaymentAdmin`**:
-  - Displays a detailed list of all sales transactions.
+- **`PaymentAdmin`** (`/admin/payments/payment/`):
+  - Displays a detailed list of all payment transactions.
   - Automatically assigns the logged-in admin to the `created_by` field on new entries.
+  - **CSV Export**: Download payments data as CSV via "Download Payments CSV" button. Exports: payment_id, amount, member_id, name, payment_date, notes, package_code, apakah_nyicil, gender, age, is_pemula, know_mulai_gym_from, why_choose_mulai, goals.
+- **`SaleAdmin`** (`/admin/purchases/sale/`):
+  - Displays store sales transactions with product details.
+  - **CSV Export**: Download sales data as CSV via "Download Sales CSV" button. Exports: sale_id, created_at, total_amount, notes, member_name, payment_method, product_name, quantity, price_at_purchase.
 
 ### Membership Logic (`Payment.save()`)
 - When a `Payment` is saved, it intelligently calculates the member's new `active_until` date.
@@ -676,6 +691,10 @@ The analytics system draws data from multiple models:
 - **Features**:
   - **Date Range Picker**: Allows selection of any weekly period for analysis.
   - **Smart Statistics Dashboard**: 8 key metrics including renewal rates, payment counts, and revenue.
+  - **Member Tracking Flags**: Shows all-time counts for admin tracking flags:
+    - **Asked for Referral**: Total members flagged as having been asked for referrals
+    - **Asked for Google Review**: Total members flagged as having been asked for Google reviews
+    - **Missed Installment**: Total members flagged as having missed installment payments
   - **Intelligent Categorization**: Separates different types of member activity:
     1. **Expiring Member Renewals**: Members whose membership expired during the target week AND who renewed
     2. **Early Renewals**: Members who renewed before their membership expired
@@ -862,6 +881,10 @@ The `accounts` app includes tests for:
 - **Admin Inline Tests**: Verification of `PaymentInline` and `SaleInline` registration within `MemberAdmin`.
 - **SaleInline Display Logic**: Ensures the `items_list` method correctly formats and displays product purchase details in the admin.
 - **Total Calculations**: Tests for `total_payments` and `total_sales` methods in `MemberAdmin`, including zero balance scenarios and proper Rupiah formatting.
+- **Member Tracking Flags Tests**: Tests for `asked_referral`, `asked_google_review`, `missed_installment` default values, setting, and updating.
+- **ActiveMember Proxy Model Tests**: Tests for the proxy model, verifying it correctly inherits from Member.
+- **ActiveMemberAdmin Tests**: Tests for queryset filtering (only active members), inheritance from MemberAdmin, list_editable flags, and CSV export functionality.
+- **CSV Export Tests**: Tests for exporting all members and active members to CSV with correct headers and data.
 
 ### Reminder Tests
 The `reminders` app includes comprehensive tests for:

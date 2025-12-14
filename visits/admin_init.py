@@ -2,7 +2,9 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.utils import timezone
 from django.utils.html import format_html
-from django.urls import reverse
+from django.urls import path, reverse
+from django.http import HttpResponse
+import csv
 
 from accounts.models import Member, User
 from payments.models import Payment, Package
@@ -15,7 +17,7 @@ from classes.admin import ClassAdmin, ClassInstanceAdmin
 from payments.admin import PaymentAdminForm
 
 # Import the new models and admin configurations from the purchases app
-from purchases.models import Product, Sale
+from purchases.models import Product, Sale, SaleItem
 from purchases.admin import ProductAdmin, SaleAdmin
 
 # Only register if not already registered
@@ -79,6 +81,7 @@ if not admin_site._registry.get(Payment):
         list_filter = ("payment_date", "payment_method", "package")
         search_fields = ("member__email", "member__name", "member__phone_number")
         autocomplete_fields = ["member"]
+        change_list_template = "admin/payments/payment/change_list.html"
 
         fieldsets = (
             (
@@ -97,6 +100,79 @@ if not admin_site._registry.get(Payment):
                 },
             ),
         )
+
+        def get_urls(self):
+            urls = super().get_urls()
+            custom_urls = [
+                path(
+                    "export-csv/",
+                    self.admin_site.admin_view(self.export_payments_csv),
+                    name="payments_payment_export_csv",
+                ),
+            ]
+            return custom_urls + urls
+
+        def export_payments_csv(self, request):
+            """Export payments with member details as CSV"""
+            response = HttpResponse(content_type="text/csv")
+            response["Content-Disposition"] = (
+                f'attachment; filename="payments_{timezone.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+            )
+
+            writer = csv.writer(response)
+            writer.writerow(
+                [
+                    "payment_id",
+                    "amount",
+                    "member_id",
+                    "name",
+                    "payment_date",
+                    "notes",
+                    "package_code",
+                    "apakah_nyicil",
+                    "gender",
+                    "age",
+                    "is_pemula",
+                    "know_mulai_gym_from",
+                    "why_choose_mulai",
+                    "goals",
+                ]
+            )
+
+            # Query matching the SQL: exclude ids 16, 17, 46
+            payments = (
+                Payment.objects.select_related("member", "package")
+                .exclude(id__in=[16, 17, 46])
+                .order_by("-id")
+            )
+
+            for p in payments:
+                writer.writerow(
+                    [
+                        p.id,
+                        p.amount,
+                        p.member.id if p.member else "",
+                        p.member.name if p.member else "",
+                        (
+                            timezone.localtime(p.payment_date).strftime(
+                                "%Y-%m-%d %H:%M:%S"
+                            )
+                            if p.payment_date
+                            else ""
+                        ),
+                        p.notes or "",
+                        p.package.code if p.package else "",
+                        p.apakah_nyicil,
+                        p.member.gender if p.member else "",
+                        p.member.age if p.member else "",
+                        p.member.is_pemula if p.member else "",
+                        p.member.know_mulai_gym_from if p.member else "",
+                        p.member.why_choose_mulai if p.member else "",
+                        p.member.goals if p.member else "",
+                    ]
+                )
+
+            return response
 
         def clickable_id(self, obj):
             """Clickable ID that links to the payment detail page"""
@@ -200,7 +276,101 @@ if not admin_site._registry.get(Product):
     admin_site.register(Product, ProductAdmin)
 
 if not admin_site._registry.get(Sale):
-    admin_site.register(Sale, SaleAdmin)
+
+    class CustomSaleAdmin(SaleAdmin):
+        change_list_template = "admin/purchases/sale/change_list.html"
+
+        def get_urls(self):
+            urls = super().get_urls()
+            custom_urls = [
+                path(
+                    "export-csv/",
+                    self.admin_site.admin_view(self.export_sales_csv),
+                    name="purchases_sale_export_csv",
+                ),
+            ]
+            return custom_urls + urls
+
+        def export_sales_csv(self, request):
+            """Export sales with product details as CSV"""
+            response = HttpResponse(content_type="text/csv")
+            response["Content-Disposition"] = (
+                f'attachment; filename="sales_{timezone.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+            )
+
+            writer = csv.writer(response)
+            writer.writerow(
+                [
+                    "sale_id",
+                    "created_at",
+                    "total_amount",
+                    "notes",
+                    "member_name",
+                    "payment_method",
+                    "product_name",
+                    "quantity",
+                    "price_at_purchase",
+                ]
+            )
+
+            # Query matching the SQL: exclude DITRAKTIR_ONEL payment method
+            sales = (
+                Sale.objects.select_related("member")
+                .exclude(payment_method="DITRAKTIR_ONEL")
+                .order_by("-created_at", "-id")
+            )
+
+            for sale in sales:
+                sale_items = SaleItem.objects.filter(sale=sale).select_related(
+                    "product"
+                )
+
+                if sale_items.exists():
+                    for item in sale_items:
+                        writer.writerow(
+                            [
+                                sale.id,
+                                (
+                                    timezone.localtime(sale.created_at).strftime(
+                                        "%Y-%m-%d %H:%M:%S"
+                                    )
+                                    if sale.created_at
+                                    else ""
+                                ),
+                                sale.total_amount,
+                                sale.notes or "",
+                                sale.member.name if sale.member else "",
+                                sale.payment_method or "",
+                                item.product.name if item.product else "",
+                                item.quantity,
+                                item.price_at_purchase,
+                            ]
+                        )
+                else:
+                    # Sale with no items
+                    writer.writerow(
+                        [
+                            sale.id,
+                            (
+                                timezone.localtime(sale.created_at).strftime(
+                                    "%Y-%m-%d %H:%M:%S"
+                                )
+                                if sale.created_at
+                                else ""
+                            ),
+                            sale.total_amount,
+                            sale.notes or "",
+                            sale.member.name if sale.member else "",
+                            sale.payment_method or "",
+                            "",
+                            "",
+                            "",
+                        ]
+                    )
+
+            return response
+
+    admin_site.register(Sale, CustomSaleAdmin)
 
 # Register Visit model to custom admin site
 if not admin_site._registry.get(Visit):
