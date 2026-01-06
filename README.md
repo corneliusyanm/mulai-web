@@ -90,7 +90,7 @@ graph TD
         B -->|No| C[Show Email/Phone Form]
         C -->|POST| D{Find Member}
         D -->|Not Found| E[Show Error]
-        D -->|Found| F[Log In User<br>(Create Session)]
+        D -->|Found| F[Log In User<br>Create Session]
         F --> G
         B -->|Yes| G{Member Active?}
         G -->|No| H[Show Failure: Inactive Member]
@@ -101,7 +101,7 @@ graph TD
     subgraph Success Page
         K[Visit /check-in/success] --> L{Logged In?}
         L -->|No| M[Redirect to /check-in]
-        L -->|Yes| N[Find Latest Visit<br>(Active or Not)]
+        L -->|Yes| N[Find Latest Visit<br>Active or Not]
         N --> O[Show Success Page<br>quick_check_in.html]
     end
 
