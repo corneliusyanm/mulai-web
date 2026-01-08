@@ -206,7 +206,7 @@ To connect to a real Mulai Gym server:
 1. Set in `.env`:
    ```
    USE_MOCK_DATA=false
-   GYM_API_BASE_URL=http://localhost:8000
+   GYM_API_BASE_URL=https://mulaigym.id
    GYM_API_KEY=your_secret_key
    ```
 
