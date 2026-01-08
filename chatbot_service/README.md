@@ -2,6 +2,9 @@
 
 A WhatsApp chatbot that lets gym members book classes via chat. Built with FastAPI and 360dialog API.
 
+## DEMO Video Link
+https://www.youtube.com/watch?v=P_D_aLeRnpc
+
 ## Background
 
 **Real problem this solves:** At Mulai Gym, members often forget to book their classes through the website. This is especially common with older members who aren't tech-savvy. The result? Trainers get surprised by unregistered attendees, and gym admins end up manually booking for members after back-and-forth messages like:
@@ -217,3 +220,13 @@ To connect to a real Mulai Gym server:
 | Decline | no, tidak, nope, n, ga, gak |
 | Cancel/Exit | cancel, batal, exit, quit, stop |
 | Help | help, hi, hello, halo, menu |
+
+## Notes
+
+**Why this use case:** This solves a real problem at a real gym. The chatbot is already integrated with an existing Django backend and can be deployed to production immediately.
+
+**Design decisions:**
+- **Keyword matching over NLP** — Simple, predictable, and works for the target audience (gym members who just want to book quickly). No ML overhead or misinterpretation risks.
+- **State machine for conversation** — Each user has a mode (idle → selecting_class → confirm_waitlist). Clear flow, easy to debug.
+- **Mock data layer** — `gym_api.py` switches between mock and real API via config. Allows full testing without external dependencies.
+- **In-memory state** — Good enough for a chatbot where conversations are short-lived. For production scale, would swap to Redis.
