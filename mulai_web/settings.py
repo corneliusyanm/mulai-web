@@ -57,7 +57,11 @@ INSTALLED_APPS = [
     "equipment",
     "reminders",
     "classes",
+    "chatbot_api",
 ]
+
+# Chatbot API Key (for securing chatbot endpoints)
+CHATBOT_API_KEY = os.environ.get("CHATBOT_API_KEY", "")
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -185,8 +189,9 @@ SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"
 
 # Message tags mapping for Bootstrap
 from django.contrib.messages import constants as messages
+
 MESSAGE_TAGS = {
-    messages.ERROR: 'danger',
+    messages.ERROR: "danger",
 }
 
 # Logging configuration to see errors even when DEBUG is False

@@ -190,8 +190,9 @@ class WeeklyMetricsViewTest(TestCase):
         )
 
         # Set her membership to expire much later (not in test week)
+        # Use a date far in the future to ensure it's treated as "active" by the Payment model
         self.existing_member_early_renewal.active_until = timezone.make_aware(
-            datetime(2025, 12, 20, 16, 59, 59)
+            datetime(2027, 12, 20, 16, 59, 59)
         )
         self.existing_member_early_renewal.save()
 
@@ -364,8 +365,9 @@ class WeeklyMetricsViewTest(TestCase):
             amount=self.silver_3_months.default_price,
             payment_date=timezone.make_aware(datetime(2025, 7, 10, 10, 0, 0)),
         )
+        # Use a date far in the future to ensure it's treated as "active" by the Payment model
         self.existing_member_early_renewal.active_until = timezone.make_aware(
-            datetime(2025, 12, 20, 16, 59, 59)
+            datetime(2027, 12, 20, 16, 59, 59)
         )
         self.existing_member_early_renewal.save()
         self.create_weekly_payment(

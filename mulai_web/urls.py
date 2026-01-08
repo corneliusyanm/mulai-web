@@ -46,6 +46,8 @@ urlpatterns = [
     path("visits/", include("visits.urls")),
     path("alat/", include("equipment.urls", namespace="equipment")),
     path("kelas/", include("classes.urls", namespace="classes")),
+    # Chatbot API
+    path("api/chatbot/", include("chatbot_api.urls", namespace="chatbot_api")),
     # Redirect /kuesioner to Google Form
     path(
         "kuesioner/",
