@@ -341,6 +341,7 @@ graph TD
         L -->|No| M[Redirect to /check-in]
         L -->|Yes| N[Find Latest Visit<br>Active or Not]
         N --> O[Show Success Page<br>quick_check_in.html]
+        O --> O2[Auto-redirect to /akun<br>after 5 seconds]
     end
 
     subgraph Check-out Process
@@ -349,8 +350,24 @@ graph TD
         Q -->|Yes| S{Has Active Visit?}
         S -->|No| T[Show Failure: No Active Visit]
         S -->|Yes| U[Auto Check-out]
+        U --> U2[Show Success Page]
+        U2 --> U3[Auto-redirect to /akun<br>after 5 seconds]
     end
 ```
+
+### Auto-Redirect After Success
+After a successful check-in or check-out, the success page automatically redirects to `/akun` (member account page) after 5 seconds. This prevents:
+- Users leaving the success page open on their phone
+- Accidental duplicate visits when reopening the browser the next day
+
+A countdown timer is displayed: "Kembali ke beranda dalam X detik..."
+
+### Development Mode Features
+When `DJANGO_DEBUG=True` (local development), the navbar displays additional links:
+- **Check In (DEV)** - Quick access to `/check-in` for testing
+- **Check Out (DEV)** - Quick access to `/check-out` for testing
+
+These links are hidden in production.
 
 ### Validations & Messages
 - Check-in:
