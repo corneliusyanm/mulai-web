@@ -140,6 +140,14 @@
                 <li class="nav-item">
                   <a class="nav-link fw-bold" href="{% url 'tamu_signup' %}">• Registrasi Tamu</a>
                 </li>
+                {% if DEBUG %}
+                <li class="nav-item">
+                    <a class="nav-link fw-bold text-success" href="{% url 'check_in_page' %}">• Check In (DEV)</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-bold text-danger" href="{% url 'check_out_page' %}">• Check Out (DEV)</a>
+                </li>
+                {% endif %}
                 <!-- <li class="nav-item">
                     <a class="nav-link fw-bold" href="{{ request.scheme }}://{{ request.get_host }}/lowongan-kerja">• Lowongan Kerja</a>
                 </li> -->
