@@ -11,6 +11,244 @@ Insights:
 
 Mulai Gym was opened since June 28, 2025.
 
+# Overall Architecture
+Infrastructure & Deployment Architecture
+```mermaid
+graph TB
+    subgraph Internet
+        Users[👥 Users/Members<br/>Web Browsers]
+    end
+    
+    subgraph "Cloudflare"
+        CF[☁️ Cloudflare<br/>DNS + Proxy + SSL]
+    end
+    
+    subgraph "Hostinger"
+        DNS[🌐 Domain Registration<br/>mulaigym.id]
+    end
+    
+    subgraph "DigitalOcean Droplet<br/>178.128.116.170"
+        NGINX[🔀 Nginx<br/>Reverse Proxy]
+        Docker[🐳 Docker Container]
+        
+        subgraph "mulai_web Container"
+            Django[⚙️ Django App<br/>Gunicorn]
+            Static[📦 Static Files<br/>WhiteNoise]
+        end
+        
+        Cron[⏰ Cron Jobs<br/>- Class Generation<br/>- Reminder Generation<br/>- SSL Renewal]
+    end
+    
+    subgraph "Supabase"
+        DB[(🗄️ PostgreSQL<br/>Database)]
+    end
+    
+    Users -->|HTTPS| CF
+    CF -->|Proxied| NGINX
+    DNS -.->|Nameservers| CF
+    NGINX --> Docker
+    Docker --> Django
+    Django -->|TCP Connection| DB
+    Cron -.->|Daily Tasks| Django
+    
+    style CF fill:#f9a825
+    style Docker fill:#0db7ed
+    style DB fill:#3ecf8e
+    style Django fill:#092e20
+```
+
+Django application architecture
+```mermaid
+graph TB
+    subgraph Internet
+        Users[👥 Users/Members<br/>Web Browsers]
+    end
+    
+    subgraph "Cloudflare"
+        CF[☁️ Cloudflare<br/>DNS + Proxy + SSL]
+    end
+    
+    subgraph "Hostinger"
+        DNS[🌐 Domain Registration<br/>mulaigym.id]
+    end
+    
+    subgraph "DigitalOcean Droplet<br/>178.128.116.170"
+        NGINX[🔀 Nginx<br/>Reverse Proxy]
+        Docker[🐳 Docker Container]
+        
+        subgraph "mulai_web Container"
+            Django[⚙️ Django App<br/>Gunicorn]
+            Static[📦 Static Files<br/>WhiteNoise]
+        end
+        
+        Cron[⏰ Cron Jobs<br/>- Class Generation<br/>- Reminder Generation<br/>- SSL Renewal]
+    end
+    
+    subgraph "Supabase"
+        DB[(🗄️ PostgreSQL<br/>Database)]
+    end
+    
+    Users -->|HTTPS| CF
+    CF -->|Proxied| NGINX
+    DNS -.->|Nameservers| CF
+    NGINX --> Docker
+    Docker --> Django
+    Django -->|TCP Connection| DB
+    Cron -.->|Daily Tasks| Django
+    
+    style CF fill:#f9a825
+    style Docker fill:#0db7ed
+    style DB fill:#3ecf8e
+    style Django fill:#092e20
+```
+
+Simplified Entity Relationship Diagram
+```mermaid
+erDiagram
+    Member ||--o{ Visit : "checks in"
+    Member ||--o{ Payment : "makes"
+    Member ||--o{ Sale : "purchases"
+    Member ||--o{ Reminder : "receives"
+    Member ||--o{ ClassBooking : "books"
+    
+    Payment }o--|| Package : "uses"
+    
+    Sale ||--|{ SaleItem : "contains"
+    SaleItem }o--|| Product : "references"
+    
+    ClassInstance ||--o{ ClassBooking : "has"
+    ClassSchedule ||--o{ ClassInstance : "generates"
+    Class ||--o{ ClassSchedule : "has"
+    
+    User ||--o{ Payment : "creates"
+    User ||--o{ Sale : "records"
+    
+    Member {
+        int id PK
+        string name
+        string email UK
+        string phone_number UK
+        string gender
+        int age
+        datetime active_until
+        datetime pemula_active_until
+        datetime semi_private_active_until
+        boolean is_pemula
+        boolean asked_referral
+        boolean asked_google_review
+        boolean missed_installment
+    }
+    
+    Visit {
+        int id PK
+        int member_id FK
+        datetime check_in_time
+        datetime check_out_time
+    }
+    
+    Payment {
+        int id PK
+        int member_id FK
+        int package_id FK
+        decimal amount
+        datetime payment_date
+        datetime membership_end_date
+        string payment_method
+        boolean apakah_nyicil
+        int created_by FK
+    }
+    
+    Package {
+        int id PK
+        string code UK
+        decimal default_price
+        string description
+    }
+    
+    Sale {
+        int id PK
+        int member_id FK
+        decimal total_amount
+        string payment_method
+        datetime created_at
+        int created_by FK
+    }
+    
+    SaleItem {
+        int id PK
+        int sale_id FK
+        int product_id FK
+        int quantity
+        decimal price_at_purchase
+    }
+    
+    Product {
+        int id PK
+        string name UK
+        decimal price
+        boolean is_active
+    }
+    
+    Reminder {
+        int id PK
+        int member_id FK
+        string reminder_type
+        string reason
+        date due_date
+        boolean is_resolved
+        datetime resolved_date
+    }
+    
+    ClassInstance {
+        int id PK
+        int class_schedule_id FK
+        date date
+        time start_time
+        time end_time
+        string status
+    }
+    
+    ClassSchedule {
+        int id PK
+        int class_id FK
+        int day_of_week
+        time start_time
+        time end_time
+    }
+    
+    Class {
+        int id PK
+        string name
+        text description
+        int max_members
+    }
+    
+    Equipment {
+        int id PK
+        string name UK
+        string slug UK
+        text description
+        string video_link
+        json additional_videos
+        string muscle_group
+        int total_views
+    }
+    
+    User {
+        int id PK
+        string username UK
+        string user_type
+        boolean is_staff
+    }
+    
+    ClassBooking {
+        int id PK
+        int member_id FK
+        int class_instance_id FK
+        string status
+    }
+```
+
 ## Infrastructure & Deployment
 
 ### DNS & SSL Setup
