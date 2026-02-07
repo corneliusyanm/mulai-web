@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.core.cache import cache
 from django import forms
+from django.db.models import Sum
 from .models import Equipment
 from visits.admin import admin_site  # Import the custom admin site
 
@@ -89,6 +90,7 @@ class EquipmentAdminForm(forms.ModelForm):
 
 class EquipmentAdmin(admin.ModelAdmin):
     form = EquipmentAdminForm
+    change_list_template = "admin/equipment/equipment/change_list.html"
     list_display = (
         "name",
         "muscle_group",
@@ -153,6 +155,12 @@ class EquipmentAdmin(admin.ModelAdmin):
         super().delete_queryset(request, queryset)
         # Clear equipment list cache when multiple equipment are deleted
         cache.delete("equipment_grouped_list")
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        total_views_sum = Equipment.objects.aggregate(total=Sum("total_views"))["total"] or 0
+        extra_context["total_views_sum"] = total_views_sum
+        return super().changelist_view(request, extra_context=extra_context)
 
 
 # Register the model with the custom admin site instead of the default one

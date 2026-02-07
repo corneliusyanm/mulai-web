@@ -1,0 +1,10 @@
+{% extends "admin/change_list.html" %}
+{% load i18n humanize %}
+
+{% block content %}
+<div style="display: inline-flex; align-items: center; gap: 12px; margin-bottom: 16px; padding: 12px 20px; background: #4B4BEC; border-radius: 8px; color: #fff;">
+    <span style="font-size: 14px; opacity: 0.85;">Total Views (all equipment)</span>
+    <span style="font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">{{ total_views_sum|default:0|intcomma }}</span>
+</div>
+{{ block.super }}
+{% endblock %}

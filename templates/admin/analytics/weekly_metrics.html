@@ -1,5 +1,5 @@
 {% extends "admin/base_site.html" %}
-{% load static %}
+{% load static humanize %}
 
 {% block title %}{{ title }} | {{ site_title|default:"Django site admin" }}{% endblock %}
 
@@ -169,6 +169,14 @@
         <div class="stat-card">
             <div class="stat-number">{{ total_missed_installment }}</div>
             <div class="stat-label">Missed Installment</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ total_equipment_views|intcomma }}</div>
+            <div class="stat-label">Sum of Equipment Seen</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ total_active_members }}</div>
+            <div class="stat-label">Total Current Active Members</div>
         </div>
     </div>
 

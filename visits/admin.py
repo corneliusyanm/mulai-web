@@ -27,6 +27,7 @@ from .models import Visit
 from accounts.models import Member, Tamu
 from payments.models import Payment, Package
 from purchases.models import Sale, Product, SaleItem
+from equipment.models import Equipment
 
 
 class DecimalEncoder(json.JSONEncoder):
@@ -958,6 +959,11 @@ def weekly_metrics_view(request):
     total_asked_google_review = Member.objects.filter(asked_google_review=True).count()
     total_missed_installment = Member.objects.filter(missed_installment=True).count()
 
+    # Additional all-time metrics
+    total_equipment_views = Equipment.objects.aggregate(total=Sum("total_views"))["total"] or 0
+    today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    total_active_members = Member.objects.filter(active_until__gte=today_start).count()
+
     context = {
         **admin_site.each_context(request),
         "title": "Weekly Metrics Tracker",
@@ -987,6 +993,8 @@ def weekly_metrics_view(request):
         "total_asked_referral": total_asked_referral,
         "total_asked_google_review": total_asked_google_review,
         "total_missed_installment": total_missed_installment,
+        "total_equipment_views": total_equipment_views,
+        "total_active_members": total_active_members,
     }
 
     return render(request, "admin/analytics/weekly_metrics.html", context)
