@@ -270,7 +270,7 @@ erDiagram
 - **Toggle**: `RAMADAN_MODE` env var (or GitHub vars) controls all Ramadan content.
 - **Date range**: 2026-02-18 to 2026-03-20 (`RAMADAN_START` / `RAMADAN_END` in settings).
 - **Homepage**: Hero banner "Ramadan Aktif" (with sparkles), promo carousel (4 slides), giveaway, jadwal kelas, tips carousel, CTA. Scroll-triggered reveal animations.
-- **Class list**: "Light · Ramadan" ribbon + subtitle on Kelas Pemula before 09:00, only during Ramadan dates.
+- **Class list**: "Light · Ramadan" ribbon + subtitle on Kelas Pemula before 10:00, only during Ramadan dates.
 - **Images**: Compressed via `scripts/compress_ramadan_images.py` to `static/images/ramadan/`.
 - **Deploy**: `RAMADAN_MODE` passed in `deploy.yml`; set `vars.RAMADAN_MODE` for production.
 

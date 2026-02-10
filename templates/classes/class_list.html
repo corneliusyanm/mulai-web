@@ -18,7 +18,7 @@
         <h3 class="mt-4">{{ group.grouper|indonesian_day }}</h3>
         <div class="list-group">
             {% for instance in group.list %}
-                {% if RAMADAN_MODE and "Kelas Pemula" in instance.class_schedule.class_obj.name and instance.start_time.hour < 9 and instance.date >= RAMADAN_START and instance.date <= RAMADAN_END %}
+                {% if RAMADAN_MODE and "Kelas Pemula" in instance.class_schedule.class_obj.name and instance.start_time.hour < 10 and instance.date >= RAMADAN_START and instance.date <= RAMADAN_END %}
                     <div class="list-group-item border-0 mb-3 shadow-lg ramadan-light-card" style="border-radius: 12px;">
                         <div class="ramadan-light-ribbon">
                             <i class="fas fa-moon"></i> Light &middot; Ramadan
