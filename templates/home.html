@@ -31,15 +31,194 @@
                     {% endif %}
                 </div>
                 
+                {% if RAMADAN_MODE %}
+                <a href="#ramadan" class="ramadan-hero-banner">
+                    <span class="ramadan-hero-banner-glow"></span>
+                    <span class="ramadan-hero-sparkle" style="top: 8px; right: 60px; animation-delay: 0s;"></span>
+                    <span class="ramadan-hero-sparkle" style="top: 50%; right: 12px; transform: translateY(-50%); animation-delay: 0.7s;"></span>
+                    <span class="ramadan-hero-sparkle" style="bottom: 10px; left: 40px; animation-delay: 1.4s;"></span>
+                    <span class="ramadan-hero-sparkle" style="top: 12px; left: 50px; animation-delay: 2.1s;"></span>
+                    <span class="ramadan-hero-sparkle" style="bottom: 6px; right: 90px; animation-delay: 2.8s;"></span>
+                    <span class="ramadan-hero-banner-content">
+                        <span class="ramadan-hero-banner-crescent">&#9790;</span>
+                        <span class="ramadan-hero-banner-body">
+                            <span class="ramadan-hero-banner-title">Ramadan Aktif</span>
+                            <span class="ramadan-hero-banner-sub">Promo, giveaway &amp; kelas spesial</span>
+                        </span>
+                        <span class="ramadan-hero-banner-arrow"><i class="fas fa-chevron-down"></i></span>
+                    </span>
+                </a>
+                {% endif %}
+
                 <div style="margin-top: 5vh;">
                     <div class="promo-box" style="background: linear-gradient(90deg, #bef006, #ffffff); color: #4B4BEC; border-radius: 2vh; padding: 1.5vh 3vh; display: inline-block; font-weight: bold; font-style: italic;">
-                        <div style="font-style: italic; text-align: left;">PROMO KHUSUS PEMULA</div>
+                        <div style="font-style: italic; text-align: left;">GYM #1 UNTUK PEMULA DI BANDUNG</div>
                         <div style="font-size: 2vh; text-align: left; font-style: italic; color: #a6a6a6;">mulai dari</div>
                         <div style="font-size: 4vh; font-weight: bold; text-align: left; font-style: italic;">Rp 195,000 <span style="font-size: 2vh; font-style: italic;">/bulan</span></div>
                     </div>
                 </div>
             </div>
         </section>
+
+        {% if RAMADAN_MODE %}
+        <!-- Ramadan Section -->
+        <section id="ramadan" class="ramadan-section">
+            <div class="container-fluid px-4">
+
+                <!-- Promo Ramadan Carousel -->
+                <div class="ramadan-carousel-block ramadan-reveal">
+                    <div class="ramadan-section-header">
+                        <span class="ramadan-section-label">Promo Ramadan</span>
+                        <span class="ramadan-counter" data-carousel="promoCarousel">1/4</span>
+                    </div>
+                    <div id="promoCarousel" class="carousel slide ramadan-carousel" data-bs-touch="true">
+                        <div class="carousel-inner">
+                            <div class="carousel-item active">
+                                <img src="{% static 'images/ramadan/promo_overview.png' %}" alt="Ramadan Aktif" class="d-block w-100 ramadan-carousel-img" loading="lazy">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{% static 'images/ramadan/promo_detail.png' %}" alt="Diskon hingga 10%% - Gym, Kelas Pemula, Semi Privat, Privat" class="d-block w-100 ramadan-carousel-img" loading="lazy">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{% static 'images/ramadan/promo_ramadan_pass.png' %}" alt="Ramadan Pass" class="d-block w-100 ramadan-carousel-img" loading="lazy">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{% static 'images/ramadan/promo_happy_hour.png' %}" alt="Happy Hour" class="d-block w-100 ramadan-carousel-img" loading="lazy">
+                            </div>
+                        </div>
+                        <div class="ramadan-carousel-nav">
+                            <button class="ramadan-nav-btn" type="button" data-bs-target="#promoCarousel" data-bs-slide="prev" aria-label="Previous">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <div class="ramadan-dots">
+                                <span class="ramadan-dot active" data-bs-target="#promoCarousel" data-bs-slide-to="0"></span>
+                                <span class="ramadan-dot" data-bs-target="#promoCarousel" data-bs-slide-to="1"></span>
+                                <span class="ramadan-dot" data-bs-target="#promoCarousel" data-bs-slide-to="2"></span>
+                                <span class="ramadan-dot" data-bs-target="#promoCarousel" data-bs-slide-to="3"></span>
+                            </div>
+                            <button class="ramadan-nav-btn" type="button" data-bs-target="#promoCarousel" data-bs-slide="next" aria-label="Next">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Giveaway -->
+                <div class="ramadan-image-block ramadan-reveal">
+                    <div class="ramadan-section-header">
+                        <span class="ramadan-section-label">Giveaway</span>
+                    </div>
+                    <img src="{% static 'images/ramadan/giveaway.png' %}" alt="Giveaway Ramadan" class="img-fluid ramadan-img" loading="lazy">
+                </div>
+
+                <!-- Jadwal Kelas -->
+                <div class="ramadan-image-block ramadan-reveal">
+                    <div class="ramadan-section-header">
+                        <span class="ramadan-section-label">Jadwal Kelas</span>
+                    </div>
+                    <a href="{% url 'classes:class_list' %}">
+                        <img src="{% static 'images/ramadan/jadwal_kelas.png' %}" alt="Jadwal Kelas Ramadan" class="img-fluid ramadan-img" loading="lazy">
+                    </a>
+                    <div class="ramadan-link-row">
+                        <a href="{% url 'classes:class_list' %}" class="ramadan-text-link">Lihat jadwal lengkap <i class="fas fa-arrow-right"></i></a>
+                    </div>
+                </div>
+
+                <!-- Puasa kok malah gendutan Carousel -->
+                <div class="ramadan-carousel-block ramadan-reveal">
+                    <div class="ramadan-section-header">
+                        <span class="ramadan-section-label">Tips Ramadan</span>
+                        <span class="ramadan-counter" data-carousel="puasaCarousel">1/4</span>
+                    </div>
+                    <div id="puasaCarousel" class="carousel slide ramadan-carousel" data-bs-touch="true">
+                        <div class="carousel-inner">
+                            <div class="carousel-item active">
+                                <img src="{% static 'images/ramadan/puasa_gendutan_1.png' %}" alt="Puasa kok malah gendutan?" class="d-block w-100 ramadan-carousel-img" loading="lazy">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{% static 'images/ramadan/puasa_gendutan_2.png' %}" alt="Ini yang sering kejadian" class="d-block w-100 ramadan-carousel-img" loading="lazy">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{% static 'images/ramadan/puasa_gendutan_3.png' %}" alt="Strategi Sahur dan Buka" class="d-block w-100 ramadan-carousel-img" loading="lazy">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{% static 'images/ramadan/puasa_gendutan_4.png' %}" alt="Tetap aktif olahraga" class="d-block w-100 ramadan-carousel-img" loading="lazy">
+                            </div>
+                        </div>
+                        <div class="ramadan-carousel-nav">
+                            <button class="ramadan-nav-btn" type="button" data-bs-target="#puasaCarousel" data-bs-slide="prev" aria-label="Previous">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <div class="ramadan-dots">
+                                <span class="ramadan-dot active" data-bs-target="#puasaCarousel" data-bs-slide-to="0"></span>
+                                <span class="ramadan-dot" data-bs-target="#puasaCarousel" data-bs-slide-to="1"></span>
+                                <span class="ramadan-dot" data-bs-target="#puasaCarousel" data-bs-slide-to="2"></span>
+                                <span class="ramadan-dot" data-bs-target="#puasaCarousel" data-bs-slide-to="3"></span>
+                            </div>
+                            <button class="ramadan-nav-btn" type="button" data-bs-target="#puasaCarousel" data-bs-slide="next" aria-label="Next">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CTA -->
+                <div class="ramadan-cta-block ramadan-reveal">
+                    <p class="ramadan-cta-text">Ada pertanyaan tentang program Ramadan?</p>
+                    <a href="https://wa.me/+628996940908?text=Halo%20Mulai%20Gym%2C%20mau%20tanya%20tentang%20program%20Ramadan" class="ramadan-wa-btn" target="_blank" rel="noopener noreferrer">
+                        <i class="fab fa-whatsapp"></i> Chat kami
+                    </a>
+                </div>
+
+            </div>
+        </section>
+
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Carousel counter & dot sync
+            document.querySelectorAll('.ramadan-carousel').forEach(function(el) {
+                var id = el.id;
+                var counterEl = document.querySelector('[data-carousel="' + id + '"]');
+                if (!counterEl) return;
+                var total = el.querySelectorAll('.carousel-item').length;
+                var dotsContainer = el.closest('.ramadan-carousel-block').querySelector('.ramadan-dots');
+
+                el.addEventListener('slid.bs.carousel', function(e) {
+                    var current = e.to + 1;
+                    counterEl.textContent = current + '/' + total;
+                    if (dotsContainer) {
+                        dotsContainer.querySelectorAll('.ramadan-dot').forEach(function(dot, i) {
+                            dot.classList.toggle('active', i === e.to);
+                        });
+                    }
+                });
+
+                if (dotsContainer) {
+                    dotsContainer.querySelectorAll('.ramadan-dot').forEach(function(dot) {
+                        dot.addEventListener('click', function() {
+                            var slideTo = parseInt(this.getAttribute('data-bs-slide-to'));
+                            bootstrap.Carousel.getOrCreateInstance(el).to(slideTo);
+                        });
+                    });
+                }
+            });
+
+            // Scroll-triggered reveal animations
+            var observer = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('ramadan-visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.15 });
+
+            document.querySelectorAll('.ramadan-reveal').forEach(function(el) {
+                observer.observe(el);
+            });
+        });
+        </script>
+        {% endif %}
 
         <!-- Kenapa Mulai Gym Section -->
         <section id="kenapa-mulai" class="feature-section" style="min-height: 100vh; padding-top: 25px; padding-bottom: 0; text-align: center; color: white; position: relative; overflow: hidden;">

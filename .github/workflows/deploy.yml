@@ -56,6 +56,7 @@ jobs:
         env:
           DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
           DJANGO_DEBUG: ${{ vars.DJANGO_DEBUG }}
+          RAMADAN_MODE: ${{ vars.RAMADAN_MODE }}
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           DB_NAME: ${{ vars.DB_NAME }}
           DB_USER: ${{ vars.DB_USER }}
@@ -68,7 +69,7 @@ jobs:
           username: ${{ secrets.DROPLET_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           command_timeout: 30m
-          envs: DJANGO_SECRET_KEY,DJANGO_DEBUG,GH_TOKEN,DB_NAME,DB_USER,DB_PASSWORD,DB_HOST,DB_PORT,CHATBOT_API_KEY
+          envs: DJANGO_SECRET_KEY,DJANGO_DEBUG,RAMADAN_MODE,GH_TOKEN,DB_NAME,DB_USER,DB_PASSWORD,DB_HOST,DB_PORT,CHATBOT_API_KEY
           script: |
             cd /root/mulai_web
             
@@ -124,6 +125,7 @@ jobs:
               --health-timeout=2s \
               -e "DJANGO_SECRET_KEY=$DJANGO_SECRET_KEY" \
               -e "DJANGO_DEBUG=$DJANGO_DEBUG" \
+              -e "RAMADAN_MODE=$RAMADAN_MODE" \
               -e "DB_NAME=$DB_NAME" \
               -e "DB_USER=$DB_USER" \
               -e "DB_PASSWORD=$DB_PASSWORD" \

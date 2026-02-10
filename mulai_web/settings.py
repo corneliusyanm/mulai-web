@@ -64,6 +64,12 @@ INSTALLED_APPS = [
 # Chatbot API Key (for securing chatbot endpoints)
 CHATBOT_API_KEY = os.environ.get("CHATBOT_API_KEY", "")
 
+RAMADAN_MODE = os.environ.get("RAMADAN_MODE", "false").lower() == "true"
+
+# Ramadan 2026 date range (1 Ramadan - 1 Syawal 1447 H)
+RAMADAN_START = "2026-02-11"
+RAMADAN_END = "2026-03-20"
+
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",

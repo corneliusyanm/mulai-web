@@ -563,3 +563,486 @@ section {
 .tier-diamond .tier-dot, .tier-diamond-strong .tier-dot {
   background-color: #b9f2ff;
 }
+
+/* ==========================================
+   Ramadan Section Styles
+   ========================================== */
+
+/* Hero Ramadan banner - tappable teaser in the hero */
+.ramadan-hero-banner {
+  display: block;
+  margin: 3vh auto 0;
+  max-width: 320px;
+  padding: 12px 18px;
+  background: linear-gradient(135deg, rgba(190, 240, 6, 0.18) 0%, rgba(255, 255, 255, 0.08) 100%);
+  border: 1.5px solid rgba(190, 240, 6, 0.45);
+  border-radius: 14px;
+  text-decoration: none;
+  color: white;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.ramadan-hero-banner::before,
+.ramadan-hero-banner::after {
+  content: '✦';
+  position: absolute;
+  font-size: 0.55rem;
+  color: var(--secondary);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 2;
+  animation: ramadanSparkle 2.8s ease-in-out infinite;
+}
+
+.ramadan-hero-banner::before {
+  top: 10px;
+  right: 48px;
+  animation-delay: 0s;
+}
+
+.ramadan-hero-banner::after {
+  bottom: 8px;
+  left: 28px;
+  font-size: 0.4rem;
+  animation-delay: 1.4s;
+}
+
+.ramadan-hero-sparkle {
+  position: absolute;
+  font-size: 0.5rem;
+  color: var(--secondary);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 2;
+  animation: ramadanSparkle 2.8s ease-in-out infinite;
+}
+
+.ramadan-hero-sparkle::before {
+  content: '✦';
+}
+
+.ramadan-hero-sparkle:nth-child(4) { font-size: 0.6rem; }
+.ramadan-hero-sparkle:nth-child(5) { font-size: 0.35rem; }
+.ramadan-hero-sparkle:nth-child(6) { font-size: 0.45rem; }
+.ramadan-hero-sparkle:nth-child(7) { font-size: 0.4rem; }
+
+.ramadan-hero-banner:hover {
+  transform: translateY(-2px);
+  border-color: var(--secondary);
+  color: white;
+}
+
+.ramadan-hero-banner:active {
+  transform: scale(0.98);
+}
+
+.ramadan-hero-banner-glow {
+  position: absolute;
+  top: -50%;
+  left: -60%;
+  width: 80%;
+  height: 200%;
+  background: linear-gradient(90deg, transparent, rgba(190, 240, 6, 0.12), transparent);
+  transform: skewX(-20deg);
+  animation: ramadanShimmer 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes ramadanShimmer {
+  0% { left: -60%; }
+  100% { left: 140%; }
+}
+
+@keyframes ramadanSparkle {
+  0%, 100% { opacity: 0; transform: scale(0.5) rotate(0deg); }
+  15%      { opacity: 1; transform: scale(1.2) rotate(20deg); }
+  30%      { opacity: 0.9; transform: scale(1) rotate(-10deg); }
+  50%      { opacity: 0; transform: scale(0.4) rotate(0deg); }
+}
+
+.ramadan-hero-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  z-index: 1;
+}
+
+.ramadan-hero-banner-crescent {
+  font-size: 1.8rem;
+  color: var(--secondary);
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.ramadan-hero-banner-body {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  flex: 1;
+  min-width: 0;
+}
+
+.ramadan-hero-banner-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--secondary);
+  letter-spacing: 0.3px;
+}
+
+.ramadan-hero-banner-sub {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.65);
+  margin-top: 1px;
+}
+
+.ramadan-hero-banner-arrow {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(190, 240, 6, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--secondary);
+  font-size: 0.65rem;
+  animation: ramadanArrowBounce 2s ease-in-out infinite;
+}
+
+@keyframes ramadanArrowBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(3px); }
+}
+
+.ramadan-section {
+  background: var(--primary);
+  padding: 48px 0 24px;
+  text-align: center;
+  color: white;
+}
+
+/* Section header (Gojek-style: label left, counter right) */
+.ramadan-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding: 0 2px;
+}
+
+.ramadan-section-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--secondary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.ramadan-counter {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Shared block spacing */
+.ramadan-carousel-block,
+.ramadan-image-block {
+  max-width: 500px;
+  margin: 0 auto 36px;
+}
+
+/* Standalone images */
+.ramadan-img {
+  width: 100%;
+  display: block;
+  border-radius: 16px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+/* Link row below image */
+.ramadan-link-row {
+  text-align: right;
+  margin-top: 10px;
+  padding-right: 2px;
+}
+
+.ramadan-text-link {
+  color: var(--secondary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.ramadan-text-link:hover {
+  opacity: 0.8;
+  color: var(--secondary);
+}
+
+.ramadan-text-link i {
+  font-size: 0.7rem;
+  margin-left: 4px;
+  transition: transform 0.2s;
+}
+
+.ramadan-text-link:hover i {
+  transform: translateX(3px);
+}
+
+/* Carousel */
+.ramadan-carousel {
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  position: relative;
+}
+
+.ramadan-carousel .carousel-inner {
+  border-radius: 16px;
+}
+
+.ramadan-carousel .carousel-item {
+  transition: transform 0.4s ease-in-out, opacity 0.4s ease-in-out;
+}
+
+.ramadan-carousel-img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Nav bar below carousel (prev / dots / next) */
+.ramadan-carousel-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 14px 0 4px;
+}
+
+.ramadan-nav-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid rgba(190, 240, 6, 0.3);
+  background: transparent;
+  color: var(--secondary);
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.ramadan-nav-btn:hover {
+  background: rgba(190, 240, 6, 0.15);
+  border-color: var(--secondary);
+}
+
+.ramadan-nav-btn:active {
+  transform: scale(0.92);
+}
+
+/* Dots */
+.ramadan-dots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ramadan-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  transition: background 0.25s, width 0.25s, border-radius 0.25s;
+}
+
+.ramadan-dot.active {
+  width: 24px;
+  border-radius: 4px;
+  background: var(--secondary);
+}
+
+/* CTA block */
+.ramadan-cta-block {
+  max-width: 500px;
+  margin: 8px auto 0;
+  padding: 0 2px;
+}
+
+.ramadan-cta-text {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.55);
+  margin-bottom: 14px;
+}
+
+.ramadan-wa-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #25D366;
+  color: white;
+  font-weight: 700;
+  font-size: 0.9rem;
+  padding: 12px 28px;
+  border-radius: 100px;
+  text-decoration: none;
+  transition: background 0.15s, transform 0.15s;
+  box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
+}
+
+.ramadan-wa-btn:hover {
+  background: #1fb855;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(37, 211, 102, 0.4);
+}
+
+.ramadan-wa-btn:active {
+  transform: translateY(0);
+}
+
+/* Ramadan Light class card */
+.ramadan-light-card {
+  background: linear-gradient(135deg, #f0f0ff 0%, #e8e8f8 25%, #dcdcf5 50%, #e0e0fa 75%, #eaeaff 100%);
+  border: 2px solid var(--primary);
+  box-shadow: 0 8px 24px rgba(75, 75, 236, 0.25), inset 0 1px 4px rgba(255, 255, 255, 0.8);
+  position: relative;
+  overflow: hidden;
+  padding-top: 38px !important;
+}
+
+.ramadan-light-card::before,
+.ramadan-light-card::after {
+  content: '✦';
+  position: absolute;
+  font-size: 0.5rem;
+  color: var(--primary);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 2;
+  animation: ramadanSparkleLight 3s ease-in-out infinite;
+}
+
+.ramadan-light-card::before {
+  top: 44px;
+  right: 14px;
+  animation-delay: 0.5s;
+}
+
+.ramadan-light-card::after {
+  top: 46px;
+  left: 18px;
+  font-size: 0.35rem;
+  animation-delay: 2s;
+}
+
+@keyframes ramadanSparkleLight {
+  0%, 100% { opacity: 0; transform: scale(0.4) rotate(0deg); }
+  20%      { opacity: 0.9; transform: scale(1.1) rotate(15deg); }
+  35%      { opacity: 0.8; transform: scale(0.9) rotate(-8deg); }
+  55%      { opacity: 0; transform: scale(0.3) rotate(0deg); }
+}
+
+.ramadan-light-ribbon {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(90deg, var(--primary), #6B6BFF);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  padding: 5px 12px;
+  text-align: center;
+  overflow: hidden;
+}
+
+.ramadan-light-ribbon::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -60%;
+  width: 50%;
+  height: 200%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+  transform: skewX(-20deg);
+  animation: ramadanRibbonShimmer 3.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes ramadanRibbonShimmer {
+  0%   { left: -60%; }
+  100% { left: 160%; }
+}
+
+.ramadan-light-ribbon i {
+  font-size: 0.6rem;
+  margin-right: 4px;
+}
+
+.ramadan-light-subtitle {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--primary);
+  font-weight: 500;
+  margin-top: 2px;
+  font-style: italic;
+}
+
+/* Scroll-triggered reveal animations */
+.ramadan-reveal {
+  opacity: 0;
+  transform: translateY(32px);
+  transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ramadan-reveal.ramadan-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Stagger each block: 2nd +100ms, 3rd +200ms, etc. */
+.ramadan-reveal:nth-child(2) { transition-delay: 0.1s; }
+.ramadan-reveal:nth-child(3) { transition-delay: 0.2s; }
+.ramadan-reveal:nth-child(4) { transition-delay: 0.3s; }
+.ramadan-reveal:nth-child(5) { transition-delay: 0.4s; }
+
+/* Carousel image subtle scale-in on slide */
+.ramadan-carousel .carousel-item.active .ramadan-carousel-img {
+  animation: ramadanSlideIn 0.4s ease-out;
+}
+
+@keyframes ramadanSlideIn {
+  from { opacity: 0.7; transform: scale(0.97); }
+  to   { opacity: 1;   transform: scale(1); }
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .ramadan-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .ramadan-carousel .carousel-item.active .ramadan-carousel-img,
+  .ramadan-hero-banner::before,
+  .ramadan-hero-banner::after,
+  .ramadan-hero-sparkle,
+  .ramadan-hero-banner-glow,
+  .ramadan-light-card::before,
+  .ramadan-light-card::after,
+  .ramadan-light-ribbon::after {
+    animation: none;
+  }
+}

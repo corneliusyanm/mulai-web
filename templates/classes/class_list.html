@@ -18,7 +18,12 @@
         <h3 class="mt-4">{{ group.grouper|indonesian_day }}</h3>
         <div class="list-group">
             {% for instance in group.list %}
-                {% if "Kelas Pemula" in instance.class_schedule.class_obj.name %}
+                {% if RAMADAN_MODE and "Kelas Pemula" in instance.class_schedule.class_obj.name and instance.start_time.hour < 9 and instance.date >= RAMADAN_START and instance.date <= RAMADAN_END %}
+                    <div class="list-group-item border-0 mb-3 shadow-lg ramadan-light-card" style="border-radius: 12px;">
+                        <div class="ramadan-light-ribbon">
+                            <i class="fas fa-moon"></i> Light &middot; Ramadan
+                        </div>
+                {% elif "Kelas Pemula" in instance.class_schedule.class_obj.name %}
                     <div class="list-group-item border-0 mb-3 shadow-lg tier-silver-strong" style="border-radius: 12px;">
                 {% elif "Semi Private" in instance.class_schedule.class_obj.name %}
                     <div class="list-group-item border-0 mb-3 shadow-lg tier-gold-strong" style="border-radius: 12px;">
@@ -26,7 +31,12 @@
                     <div class="list-group-item border-0 mb-3 shadow-sm" style="border-radius: 12px; background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
                 {% endif %}
                     <div class="d-flex w-100 justify-content-between align-items-start mb-2">
-                        <h5 class="mb-0 fw-bold text-dark">{{ instance.class_schedule.class_obj.name }}</h5>
+                        <div>
+                            <h5 class="mb-0 fw-bold text-dark">{{ instance.class_schedule.class_obj.name }}</h5>
+                            {% if RAMADAN_MODE and "Kelas Pemula" in instance.class_schedule.class_obj.name and instance.start_time.hour < 9 and instance.date >= RAMADAN_START and instance.date <= RAMADAN_END %}
+                                <span class="ramadan-light-subtitle">Latihan ringan untuk yang berpuasa</span>
+                            {% endif %}
+                        </div>
                         <div>
                             {% if instance.status == 'FULL' %}
                                 <span class="badge bg-danger text-white px-3 py-2 rounded-pill fw-bold">
