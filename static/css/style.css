@@ -534,6 +534,50 @@ section {
   box-shadow: 0 12px 35px rgba(244, 208, 63, 0.8), inset 0 2px 8px rgba(255, 255, 255, 0.7), inset 0 -2px 4px rgba(0, 0, 0, 0.1);
 }
 
+/* Semi Private - luxury/Gojek style (ribbon, bright gold gradient, sparkle) */
+.tier-gold-luxury {
+  background: linear-gradient(135deg, #fffde7 0%, #fef9c3 25%, #fef08a 50%, #fde047 75%, #fef3c7 100%);
+  border: 2px solid #eab308;
+  box-shadow: 0 10px 30px rgba(250, 204, 21, 0.35), inset 0 1px 4px rgba(255, 255, 255, 0.8);
+  position: relative;
+  overflow: hidden;
+  padding-top: 36px !important;
+}
+
+.tier-gold-luxury-ribbon {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(90deg, #ca8a04, #eab308, #facc15);
+  color: #1c1917;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  padding: 5px 12px;
+  text-align: center;
+  overflow: hidden;
+}
+
+.tier-gold-luxury-ribbon::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -60%;
+  width: 50%;
+  height: 200%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  transform: skewX(-20deg);
+  animation: ramadanRibbonShimmer 4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.tier-gold-luxury-ribbon i {
+  font-size: 0.55rem;
+  margin-right: 4px;
+}
+
 /* Diamond/Blue Tier - Private Trainer */
 .tier-diamond {
   background: linear-gradient(135deg, #f0f8ff 0%, #d6ebff 25%, #b9f2ff 50%, #9de8ff 75%, #d1f0ff 100%);
@@ -636,6 +680,25 @@ section {
 
 .ramadan-hero-banner:active {
   transform: scale(0.98);
+}
+
+.ramadan-hero-banner-large {
+  margin-top: 4vh;
+  max-width: 340px;
+  padding: 16px 22px;
+  border-radius: 16px;
+}
+
+.ramadan-hero-banner-large .ramadan-hero-banner-title {
+  font-size: 1.05rem;
+}
+
+.ramadan-hero-banner-large .ramadan-hero-banner-sub {
+  font-size: 0.8rem;
+}
+
+.ramadan-hero-banner-large .ramadan-hero-banner-crescent {
+  font-size: 2rem;
 }
 
 .ramadan-hero-banner-glow {
@@ -911,37 +974,12 @@ section {
 
 /* Ramadan Light class card */
 .ramadan-light-card {
-  background: linear-gradient(135deg, #f0f0ff 0%, #e8e8f8 25%, #dcdcf5 50%, #e0e0fa 75%, #eaeaff 100%);
-  border: 2px solid var(--primary);
-  box-shadow: 0 8px 24px rgba(75, 75, 236, 0.25), inset 0 1px 4px rgba(255, 255, 255, 0.8);
+  background: linear-gradient(135deg, #f7ffd9 0%, #e8f5a0 50%, #d4eb6a 100%);
+  border: 2px solid var(--secondary);
+  box-shadow: 0 8px 24px rgba(190, 240, 6, 0.35), inset 0 1px 4px rgba(255, 255, 255, 0.8);
   position: relative;
   overflow: hidden;
   padding-top: 38px !important;
-}
-
-.ramadan-light-card::before,
-.ramadan-light-card::after {
-  content: '✦';
-  position: absolute;
-  font-size: 0.5rem;
-  color: var(--primary);
-  opacity: 0;
-  pointer-events: none;
-  z-index: 2;
-  animation: ramadanSparkleLight 3s ease-in-out infinite;
-}
-
-.ramadan-light-card::before {
-  top: 44px;
-  right: 14px;
-  animation-delay: 0.5s;
-}
-
-.ramadan-light-card::after {
-  top: 46px;
-  left: 18px;
-  font-size: 0.35rem;
-  animation-delay: 2s;
 }
 
 @keyframes ramadanSparkleLight {
@@ -956,8 +994,8 @@ section {
   top: 0;
   left: 0;
   right: 0;
-  background: linear-gradient(90deg, var(--primary), #6B6BFF);
-  color: white;
+  background: var(--secondary);
+  color: var(--primary);
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.8px;
@@ -993,7 +1031,7 @@ section {
 .ramadan-light-subtitle {
   display: block;
   font-size: 0.75rem;
-  color: var(--primary);
+  color: #3d5a00;
   font-weight: 500;
   margin-top: 2px;
   font-style: italic;
@@ -1040,9 +1078,8 @@ section {
   .ramadan-hero-banner::after,
   .ramadan-hero-sparkle,
   .ramadan-hero-banner-glow,
-  .ramadan-light-card::before,
-  .ramadan-light-card::after,
-  .ramadan-light-ribbon::after {
+  .ramadan-light-ribbon::after,
+  .tier-gold-luxury-ribbon::after {
     animation: none;
   }
 }

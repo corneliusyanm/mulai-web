@@ -23,49 +23,113 @@
                         <div class="ramadan-light-ribbon">
                             <i class="fas fa-moon"></i> Light &middot; Ramadan
                         </div>
+                        <div class="d-flex w-100 justify-content-between align-items-start mb-2">
+                            <div>
+                                <h5 class="mb-0 fw-bold text-dark">{{ instance.class_schedule.class_obj.name }}</h5>
+                                <span class="ramadan-light-subtitle">Latihan ringan untuk yang berpuasa</span>
+                            </div>
+                            <div>
+                                {% if instance.status == 'FULL' %}
+                                    <span class="badge bg-danger text-white px-3 py-2 rounded-pill fw-bold"><i class="fas fa-times-circle me-1"></i>Penuh</span>
+                                {% else %}
+                                    <span class="badge bg-success text-white px-3 py-2 rounded-pill fw-bold"><i class="fas fa-check-circle me-1"></i>Tersedia</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-clock text-primary me-2"></i>
+                            <span class="text-muted fw-medium">{{ instance.start_time|time:"H:i" }} - {{ instance.end_time|time:"H:i" }}</span>
+                        </div>
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="fas fa-users text-info me-2"></i>
+                            <small class="text-muted">Sisa slot: <span class="fw-bold text-dark">{{ instance.available_slots }}</span></small>
+                        </div>
+                        <div class="d-flex justify-content-end">
+                            <a href="{% url 'classes:class_detail' instance.pk %}" class="btn btn-primary px-4 py-2 rounded-pill fw-bold shadow-sm"><i class="fas fa-eye me-2"></i>Lihat Detail</a>
+                        </div>
+                    </div>
                 {% elif "Kelas Pemula" in instance.class_schedule.class_obj.name %}
                     <div class="list-group-item border-0 mb-3 shadow-lg tier-silver-strong" style="border-radius: 12px;">
+                        <div class="d-flex w-100 justify-content-between align-items-start mb-2">
+                            <div>
+                                <h5 class="mb-0 fw-bold text-dark">{{ instance.class_schedule.class_obj.name }}</h5>
+                            </div>
+                            <div>
+                                {% if instance.status == 'FULL' %}
+                                    <span class="badge bg-danger text-white px-3 py-2 rounded-pill fw-bold"><i class="fas fa-times-circle me-1"></i>Penuh</span>
+                                {% else %}
+                                    <span class="badge bg-success text-white px-3 py-2 rounded-pill fw-bold"><i class="fas fa-check-circle me-1"></i>Tersedia</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-clock text-primary me-2"></i>
+                            <span class="text-muted fw-medium">{{ instance.start_time|time:"H:i" }} - {{ instance.end_time|time:"H:i" }}</span>
+                        </div>
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="fas fa-users text-info me-2"></i>
+                            <small class="text-muted">Sisa slot: <span class="fw-bold text-dark">{{ instance.available_slots }}</span></small>
+                        </div>
+                        <div class="d-flex justify-content-end">
+                            <a href="{% url 'classes:class_detail' instance.pk %}" class="btn btn-primary px-4 py-2 rounded-pill fw-bold shadow-sm"><i class="fas fa-eye me-2"></i>Lihat Detail</a>
+                        </div>
+                    </div>
                 {% elif "Semi Private" in instance.class_schedule.class_obj.name %}
-                    <div class="list-group-item border-0 mb-3 shadow-lg tier-gold-strong" style="border-radius: 12px;">
+                    <div class="list-group-item border-0 mb-3 shadow-lg tier-gold-luxury" style="border-radius: 12px;">
+                        <div class="tier-gold-luxury-ribbon">
+                            <i class="fas fa-star"></i> Semi Private
+                        </div>
+                        <div class="d-flex w-100 justify-content-between align-items-start mb-2">
+                            <div>
+                                <h5 class="mb-0 fw-bold text-dark">{{ instance.class_schedule.class_obj.name }}</h5>
+                            </div>
+                            <div>
+                                {% if instance.status == 'FULL' %}
+                                    <span class="badge bg-danger text-white px-3 py-2 rounded-pill fw-bold"><i class="fas fa-times-circle me-1"></i>Penuh</span>
+                                {% else %}
+                                    <span class="badge bg-success text-white px-3 py-2 rounded-pill fw-bold"><i class="fas fa-check-circle me-1"></i>Tersedia</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-clock text-primary me-2"></i>
+                            <span class="text-muted fw-medium">{{ instance.start_time|time:"H:i" }} - {{ instance.end_time|time:"H:i" }}</span>
+                        </div>
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="fas fa-users text-info me-2"></i>
+                            <small class="text-muted">Sisa slot: <span class="fw-bold text-dark">{{ instance.available_slots }}</span></small>
+                        </div>
+                        <div class="d-flex justify-content-end">
+                            <a href="{% url 'classes:class_detail' instance.pk %}" class="btn btn-primary px-4 py-2 rounded-pill fw-bold shadow-sm"><i class="fas fa-eye me-2"></i>Lihat Detail</a>
+                        </div>
+                    </div>
                 {% else %}
                     <div class="list-group-item border-0 mb-3 shadow-sm" style="border-radius: 12px; background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                        <div class="d-flex w-100 justify-content-between align-items-start mb-2">
+                            <div>
+                                <h5 class="mb-0 fw-bold text-dark">{{ instance.class_schedule.class_obj.name }}</h5>
+                            </div>
+                            <div>
+                                {% if instance.status == 'FULL' %}
+                                    <span class="badge bg-danger text-white px-3 py-2 rounded-pill fw-bold"><i class="fas fa-times-circle me-1"></i>Penuh</span>
+                                {% else %}
+                                    <span class="badge bg-success text-white px-3 py-2 rounded-pill fw-bold"><i class="fas fa-check-circle me-1"></i>Tersedia</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-clock text-primary me-2"></i>
+                            <span class="text-muted fw-medium">{{ instance.start_time|time:"H:i" }} - {{ instance.end_time|time:"H:i" }}</span>
+                        </div>
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="fas fa-users text-info me-2"></i>
+                            <small class="text-muted">Sisa slot: <span class="fw-bold text-dark">{{ instance.available_slots }}</span></small>
+                        </div>
+                        <div class="d-flex justify-content-end">
+                            <a href="{% url 'classes:class_detail' instance.pk %}" class="btn btn-primary px-4 py-2 rounded-pill fw-bold shadow-sm"><i class="fas fa-eye me-2"></i>Lihat Detail</a>
+                        </div>
+                    </div>
                 {% endif %}
-                    <div class="d-flex w-100 justify-content-between align-items-start mb-2">
-                        <div>
-                            <h5 class="mb-0 fw-bold text-dark">{{ instance.class_schedule.class_obj.name }}</h5>
-                            {% if RAMADAN_MODE and "Kelas Pemula" in instance.class_schedule.class_obj.name and instance.start_time.hour < 9 and instance.date >= RAMADAN_START and instance.date <= RAMADAN_END %}
-                                <span class="ramadan-light-subtitle">Latihan ringan untuk yang berpuasa</span>
-                            {% endif %}
-                        </div>
-                        <div>
-                            {% if instance.status == 'FULL' %}
-                                <span class="badge bg-danger text-white px-3 py-2 rounded-pill fw-bold">
-                                    <i class="fas fa-times-circle me-1"></i>Penuh
-                                </span>
-                            {% else %}
-                                <span class="badge bg-success text-white px-3 py-2 rounded-pill fw-bold">
-                                    <i class="fas fa-check-circle me-1"></i>Tersedia
-                                </span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    
-                    <div class="d-flex align-items-center mb-2">
-                        <i class="fas fa-clock text-primary me-2"></i>
-                        <span class="text-muted fw-medium">{{ instance.start_time|time:"H:i" }} - {{ instance.end_time|time:"H:i" }}</span>
-                    </div>
-                    
-                    <div class="d-flex align-items-center mb-3">
-                        <i class="fas fa-users text-info me-2"></i>
-                        <small class="text-muted">Sisa slot: <span class="fw-bold text-dark">{{ instance.available_slots }}</span></small>
-                    </div>
-                    
-                    <div class="d-flex justify-content-end">
-                        <a href="{% url 'classes:class_detail' instance.pk %}" class="btn btn-primary px-4 py-2 rounded-pill fw-bold shadow-sm">
-                            <i class="fas fa-eye me-2"></i>Lihat Detail
-                        </a>
-                    </div>
-                </div>
             {% endfor %}
         </div>
     {% empty %}
