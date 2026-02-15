@@ -4,8 +4,26 @@
 {% block title %}Jadwal Kelas - Mulai Gym{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
+<div class="container mt-5 classes-list-page">
     <h1 class="text-center mb-4">Jadwal Kelas</h1>
+
+    <!-- Filter chips - 1-tap toggle, click again to clear -->
+    <div class="class-filter-bar mb-4">
+        <div class="class-filter-row">
+            <span class="class-filter-label">Kelas</span>
+            <div class="class-filter-chips">
+                <button type="button" class="class-filter-chip" data-filter="class" data-value="semi_private"><i class="fas fa-star"></i> Semi Private</button>
+                <button type="button" class="class-filter-chip" data-filter="class" data-value="pemula"><i class="fas fa-users"></i> Kelas Pemula</button>
+            </div>
+        </div>
+        <div class="class-filter-row">
+            <span class="class-filter-label">Waktu</span>
+            <div class="class-filter-chips">
+                <button type="button" class="class-filter-chip" data-filter="time" data-value="pagi"><i class="fas fa-sun"></i> Pagi</button>
+                <button type="button" class="class-filter-chip" data-filter="time" data-value="sore"><i class="fas fa-moon"></i> Sore</button>
+            </div>
+        </div>
+    </div>
 
     {% if messages %}
         {% for message in messages %}
@@ -15,11 +33,13 @@
 
     {% regroup class_instances by date as grouped_classes %}
     {% for group in grouped_classes %}
+        <div class="class-date-group" data-date="{{ group.grouper|date:'Y-m-d' }}">
         <h3 class="mt-4">{{ group.grouper|indonesian_day }}</h3>
         <div class="list-group">
             {% for instance in group.list %}
                 {% if RAMADAN_MODE and "Kelas Pemula" in instance.class_schedule.class_obj.name and instance.start_time.hour < 10 and instance.date >= RAMADAN_START and instance.date <= RAMADAN_END %}
-                    <div class="list-group-item border-0 mb-3 shadow-lg ramadan-light-card" style="border-radius: 12px;">
+                    <div class="class-card-wrapper list-group-item border-0 p-0 mb-3" data-class-type="{% if 'Semi Private' in instance.class_schedule.class_obj.name %}semi_private{% elif 'Kelas Pemula' in instance.class_schedule.class_obj.name %}pemula{% else %}other{% endif %}" data-time-slot="{% if instance.start_time.hour <= 12 %}pagi{% else %}sore{% endif %}">
+                    <div class="ramadan-light-card p-3" style="border-radius: 12px; margin: 0;">
                         <div class="ramadan-light-ribbon">
                             <i class="fas fa-moon"></i> Light &middot; Ramadan
                         </div>
@@ -48,8 +68,10 @@
                             <a href="{% url 'classes:class_detail' instance.pk %}" class="btn btn-primary px-4 py-2 rounded-pill fw-bold shadow-sm"><i class="fas fa-eye me-2"></i>Lihat Detail</a>
                         </div>
                     </div>
+                    </div>
                 {% elif "Kelas Pemula" in instance.class_schedule.class_obj.name %}
-                    <div class="list-group-item border-0 mb-3 shadow-lg tier-silver-strong" style="border-radius: 12px;">
+                    <div class="class-card-wrapper list-group-item border-0 p-0 mb-3" data-class-type="pemula" data-time-slot="{% if instance.start_time.hour <= 12 %}pagi{% else %}sore{% endif %}">
+                    <div class="tier-silver-strong shadow-lg p-3" style="border-radius: 12px; margin: 0;">
                         <div class="d-flex w-100 justify-content-between align-items-start mb-2">
                             <div>
                                 <h5 class="mb-0 fw-bold text-dark">{{ instance.class_schedule.class_obj.name }}</h5>
@@ -74,8 +96,10 @@
                             <a href="{% url 'classes:class_detail' instance.pk %}" class="btn btn-primary px-4 py-2 rounded-pill fw-bold shadow-sm"><i class="fas fa-eye me-2"></i>Lihat Detail</a>
                         </div>
                     </div>
+                    </div>
                 {% elif "Semi Private" in instance.class_schedule.class_obj.name %}
-                    <div class="list-group-item border-0 mb-3 shadow-lg tier-gold-luxury" style="border-radius: 12px;">
+                    <div class="class-card-wrapper list-group-item border-0 p-0 mb-3" data-class-type="semi_private" data-time-slot="{% if instance.start_time.hour <= 12 %}pagi{% else %}sore{% endif %}">
+                    <div class="tier-gold-luxury shadow-lg p-3" style="border-radius: 12px; margin: 0;">
                         <div class="tier-gold-luxury-ribbon">
                             <i class="fas fa-star"></i> Semi Private
                         </div>
@@ -103,8 +127,10 @@
                             <a href="{% url 'classes:class_detail' instance.pk %}" class="btn btn-primary px-4 py-2 rounded-pill fw-bold shadow-sm"><i class="fas fa-eye me-2"></i>Lihat Detail</a>
                         </div>
                     </div>
+                    </div>
                 {% else %}
-                    <div class="list-group-item border-0 mb-3 shadow-sm" style="border-radius: 12px; background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                    <div class="class-card-wrapper list-group-item border-0 p-0 mb-3" data-class-type="other" data-time-slot="{% if instance.start_time.hour <= 12 %}pagi{% else %}sore{% endif %}">
+                    <div class="shadow-sm p-3" style="border-radius: 12px; margin: 0; background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
                         <div class="d-flex w-100 justify-content-between align-items-start mb-2">
                             <div>
                                 <h5 class="mb-0 fw-bold text-dark">{{ instance.class_schedule.class_obj.name }}</h5>
@@ -129,11 +155,69 @@
                             <a href="{% url 'classes:class_detail' instance.pk %}" class="btn btn-primary px-4 py-2 rounded-pill fw-bold shadow-sm"><i class="fas fa-eye me-2"></i>Lihat Detail</a>
                         </div>
                     </div>
+                    </div>
                 {% endif %}
             {% endfor %}
+        </div>
         </div>
     {% empty %}
         <p class="text-center">Tidak ada kelas yang tersedia untuk saat ini.</p>
     {% endfor %}
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var classChips = document.querySelectorAll('.class-filter-chip[data-filter="class"]');
+  var timeChips = document.querySelectorAll('.class-filter-chip[data-filter="time"]');
+  var cards = document.querySelectorAll('.class-card-wrapper');
+  var dateGroups = document.querySelectorAll('.class-date-group');
+
+  function applyFilters() {
+    var ac = document.querySelector('.class-filter-chip[data-filter="class"].active');
+    var at = document.querySelector('.class-filter-chip[data-filter="time"].active');
+    var classVal = ac ? ac.dataset.value : 'all';
+    var timeVal = at ? at.dataset.value : 'all';
+
+    cards.forEach(function(card) {
+      var ct = card.dataset.classType;
+      var ts = card.dataset.timeSlot;
+      var matchClass = classVal === 'all' || ct === classVal;
+      var matchTime = timeVal === 'all' || ts === timeVal;
+      card.style.display = (matchClass && matchTime) ? '' : 'none';
+    });
+
+    dateGroups.forEach(function(group) {
+      var wrappers = group.querySelectorAll('.class-card-wrapper');
+      var hasVisible = false;
+      wrappers.forEach(function(w) {
+        if (w.style.display !== 'none') hasVisible = true;
+      });
+      group.style.display = hasVisible ? '' : 'none';
+    });
+  }
+
+  function toggleChip(chips, clicked) {
+    var filter = clicked.dataset.filter;
+    var wasActive = clicked.classList.contains('active');
+    chips.forEach(function(c) {
+      if (c.dataset.filter === filter) {
+        c.classList.remove('active');
+        c.setAttribute('aria-pressed', 'false');
+      }
+    });
+    if (!wasActive) {
+      clicked.classList.add('active');
+      clicked.setAttribute('aria-pressed', 'true');
+    }
+    applyFilters();
+  }
+
+  classChips.forEach(function(c) {
+    c.addEventListener('click', function() { toggleChip(classChips, c); });
+  });
+  timeChips.forEach(function(c) {
+    c.addEventListener('click', function() { toggleChip(timeChips, c); });
+  });
+});
+</script>
 {% endblock %} 
