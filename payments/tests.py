@@ -140,7 +140,7 @@ class PaymentAdminFormTest(TestCase):
             know_mulai_gym_from="friends",
         )
         self.package = Package.objects.create(
-            code="M1", default_price=150000, description="1 Month Membership"
+            code="0-BRONZE-1", default_price=150000, description="1 Month Membership"
         )
 
     def test_payment_admin_form_fields(self):
@@ -209,6 +209,40 @@ class PaymentAdminFormTest(TestCase):
         )
         self.assertEqual(skip_field.initial, False)
         self.assertEqual(skip_field.widget.choices, [(True, "Ya"), (False, "Tidak")])
+
+    def test_cicilan_forces_skip_membership_update_disabled(self):
+        """When apakah_nyicil=Ya, skip_membership_update is auto Ya and non-editable."""
+        payment = Payment(
+            member=self.member,
+            package=self.package,
+            amount=150000,
+            payment_date=timezone.now(),
+            apakah_nyicil=True,
+        )
+        form = PaymentAdminForm(instance=payment)
+        skip_field = form.fields["skip_membership_update"]
+
+        self.assertTrue(skip_field.disabled)
+        self.assertEqual(skip_field.initial, True)
+
+    def test_cicilan_form_clean_forces_skip_membership_update(self):
+        """Form clean() forces skip_membership_update=True when cicilan."""
+        now = timezone.now()
+        form = PaymentAdminForm(
+            data={
+                "member": self.member.id,
+                "package": self.package.id,
+                "amount": 150000,
+                "payment_date_0": now.strftime("%Y-%m-%d"),
+                "payment_date_1": now.strftime("%H:%M"),
+                "payment_method": "TRANSFER",
+                "apakah_nyicil": True,
+                "skip_membership_update": False,
+                "notes": "",
+            },
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertTrue(form.cleaned_data["skip_membership_update"])
 
 
 class PackageBasedPaymentTest(TestCase):
@@ -416,6 +450,24 @@ class PackageBasedPaymentTest(TestCase):
 
         self.member.refresh_from_db()
         # Member should not have been updated because skip was True
+        self.assertIsNone(self.member.active_until)
+
+    def test_cicilan_enforces_skip_membership_update_model(self):
+        """When apakah_nyicil=True, model save enforces skip_membership_update=True."""
+        Payment.objects.create(
+            member=self.member,
+            package=self.bronze_1_month,
+            amount=400000,
+            payment_date=timezone.now(),
+            apakah_nyicil=True,
+            skip_membership_update=False,
+        )
+
+        payment = Payment.objects.filter(member=self.member).latest("payment_date")
+        self.assertTrue(payment.apakah_nyicil)
+        self.assertTrue(payment.skip_membership_update)
+
+        self.member.refresh_from_db()
         self.assertIsNone(self.member.active_until)
 
     def test_membership_stacking_with_packages(self):

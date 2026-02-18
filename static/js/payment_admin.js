@@ -1,4 +1,30 @@
 document.addEventListener('DOMContentLoaded', function() {
+    // Cicilan: when "Apakah bagian dari cicilan?" = Ya, lock "Skip otomatis update membership?" to Ya
+    const apakahNyicilRadios = document.querySelectorAll('input[name="apakah_nyicil"]');
+    const skipMembershipRadios = document.querySelectorAll('input[name="skip_membership_update"]');
+    const skipMembershipRow = document.querySelector('.field-skip_membership_update');
+
+    function toggleSkipMembershipForCicilan() {
+        const isCicilan = document.querySelector('input[name="apakah_nyicil"]:checked')?.value === 'True';
+        skipMembershipRadios.forEach(function(radio) {
+            radio.disabled = isCicilan;
+            if (isCicilan && radio.value === 'True') {
+                radio.checked = true;
+            }
+        });
+        if (skipMembershipRow) {
+            skipMembershipRow.style.pointerEvents = isCicilan ? 'none' : '';
+            skipMembershipRow.style.opacity = isCicilan ? '0.7' : '1';
+        }
+    }
+
+    if (apakahNyicilRadios.length && skipMembershipRadios.length) {
+        apakahNyicilRadios.forEach(function(radio) {
+            radio.addEventListener('change', toggleSkipMembershipForCicilan);
+        });
+        toggleSkipMembershipForCicilan();
+    }
+
     // Get all duration choice radio buttons
     const durationChoiceRadios = document.querySelectorAll('input[name="duration_choice"]');
     const durationDaysField = document.getElementById('id_duration_days');

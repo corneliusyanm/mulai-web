@@ -267,6 +267,10 @@ class Payment(models.Model):
         # No automatic member field updates - admin handles manually
 
     def save(self, *args, **kwargs):
+        # Cicilan payments: admin must manually update membership (enforce at model level)
+        if self.apakah_nyicil:
+            self.skip_membership_update = True
+
         # Only calculate membership end date for new payments or if explicitly needed
         calculate_end_date = not self.pk or not self.membership_end_date
 

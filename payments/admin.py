@@ -5,6 +5,8 @@ from .models import Payment
 
 
 class PaymentAdminForm(forms.ModelForm):
+    payment_date = forms.SplitDateTimeField(widget=widgets.AdminSplitDateTime())
+
     class Meta:
         model = Payment
         fields = (
@@ -18,7 +20,6 @@ class PaymentAdminForm(forms.ModelForm):
             "notes",
         )
         widgets = {
-            "payment_date": widgets.AdminSplitDateTime(),
             "payment_method": forms.Select(attrs={"class": "form-control"}),
             "apakah_nyicil": forms.RadioSelect(
                 choices=[(True, "Ya"), (False, "Tidak")]
@@ -56,3 +57,25 @@ class PaymentAdminForm(forms.ModelForm):
                 (False, "Tidak"),
             ]
             self.fields["skip_membership_update"].initial = False
+
+            # When cicilan: auto Ya, non-editable (admin must manually update membership)
+            is_cicilan = False
+            if self.instance and self.instance.apakah_nyicil:
+                is_cicilan = True
+            elif self.is_bound and self.data.get("apakah_nyicil") in (True, "True", "true"):
+                is_cicilan = True
+            if is_cicilan:
+                self.fields["skip_membership_update"].initial = True
+                self.fields["skip_membership_update"].disabled = True
+                self.fields["skip_membership_update"].help_text = (
+                    "Otomatis Ya untuk cicilan — admin wajib update membership manual"
+                )
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned is None:
+            return cleaned
+        # When cicilan, enforce skip_membership_update=True (disabled fields don't submit)
+        if cleaned.get("apakah_nyicil"):
+            cleaned["skip_membership_update"] = True
+        return cleaned

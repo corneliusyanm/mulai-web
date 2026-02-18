@@ -684,6 +684,7 @@ The `Package` code is structured as `TYPE-LEVEL-DURATION`, which dictates how a 
 - **Manual Control**:
   - For payments without a package, the "Membership Type" column will display "Legacy - Manual Update Required".
   - The `skip_membership_update` checkbox is available for one-off manual adjustments.
+  - **Cicilan (installment) payments**: When "Apakah bagian dari cicilan?" is "Ya", `skip_membership_update` is automatically set to "Ya" and cannot be changed from the FE. Admin must manually update the member's `active_until` etc. after each installment.
 
 ### Membership Logic (`Payment.save()`)
 
