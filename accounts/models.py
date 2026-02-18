@@ -76,6 +76,12 @@ class Member(models.Model):
         help_text="Status pemula member - bisa true, false, atau kosong",
     )
 
+    notes = models.TextField(
+        blank=True,
+        default="",
+        help_text="Catatan internal admin saja, tidak ditampilkan ke member",
+    )
+
     # Admin tracking flags
     asked_referral = models.BooleanField(
         default=False,

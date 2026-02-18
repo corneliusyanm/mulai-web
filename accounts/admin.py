@@ -278,6 +278,13 @@ class MemberAdmin(WhatsAppLinkMixin, admin.ModelAdmin):
             "Class Booking History",
             {"fields": ("class_booking_history_panel",)},
         ),
+        (
+            "Admin Note",
+            {
+                "fields": ("notes",),
+                "description": "Catatan internal admin saja, tidak ditampilkan ke member.",
+            },
+        ),
     )
 
     def formatted_active_until(self, obj):
