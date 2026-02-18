@@ -605,6 +605,8 @@ python manage.py generate_class_instances 7
 
 ### User Interface
 - **Class List**: Shows upcoming classes only (`/kelas/`) - members only
+- **1-tap Filters**: Kelas (Semi Private, Kelas Pemula) and Waktu (Pagi ≤12:00, Sore >12:00); tap to filter, tap again to clear
+- **Card Styles**: Light Ramadan (neon/Mulai brand) for morning Kelas Pemula during Ramadan; Semi Private (gold luxury with ribbon)
 - **Time-Based Filtering**: Automatically hides classes that have already started
 - **Real-Time Updates**: Classes disappear from list as their start time passes
 - **Class Detail**: Individual class pages with booking functionality (`/kelas/<id>/`)
