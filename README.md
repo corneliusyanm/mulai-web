@@ -137,6 +137,7 @@ erDiagram
         boolean asked_referral
         boolean asked_google_review
         boolean missed_installment
+        boolean skip_auto_reminder
     }
     
     Visit {
@@ -294,12 +295,13 @@ erDiagram
     - `asked_referral`: Flag to track members who have been asked for referrals (contacts who might be interested in joining the gym)
     - `asked_google_review`: Flag to track members who have been asked to leave a Google review
     - `missed_installment`: Flag to track members who have installment payments but missed/stopped paying
+    - `skip_auto_reminder`: Flag to exclude a member from all automatic reminder generation (admin will handle reminders manually for these members)
 
 ### Admin (`visits/admin_init.py`)
 - **`MemberAdmin`** (`/admin/accounts/member/`)
   - Displays name, email, phone, `active_until`, status, and admin tracking flags.
   - `membership_status` method calculates Active/Expired.
-  - **Admin Tracking Flags** columns (`asked_referral`, `asked_google_review`, `missed_installment`) are editable directly in the list view via checkboxes.
+  - **Admin Tracking Flags** columns (`asked_referral`, `asked_google_review`, `missed_installment`, `skip_auto_reminder`) are editable directly in the list view via checkboxes.
   - **CSV Export**: Download all members data as CSV via "Download All Members CSV" button.
 - **`ActiveMemberAdmin`** (`/admin/accounts/activemember/`)
   - Proxy model admin showing only active members (where `active_until >= today`).
@@ -472,6 +474,7 @@ The reminder system is designed to help gym staff follow up with members at the 
 - **New Member Protection**: Payment and expiry reminders only sent to members who joined ≥14 days ago
 - **Active Member Focus**: NO_VISIT reminders only for members with active memberships
 - **One-Time Logic**: NO_VISIT reminders created once per 14-day gap (prevents daily spam)
+- **Manual Override**: Members with `skip_auto_reminder=True` are excluded from all automatic reminder generation. Admin can still create reminders manually for these members via the admin panel.
 
 #### **Auto-Resolution**
 Reminders automatically resolve when conditions change:
@@ -1149,7 +1152,7 @@ The `accounts` app includes tests for:
 - **Admin Inline Tests**: Verification of `PaymentInline` and `SaleInline` registration within `MemberAdmin`.
 - **SaleInline Display Logic**: Ensures the `items_list` method correctly formats and displays product purchase details in the admin.
 - **Total Calculations**: Tests for `total_payments` and `total_sales` methods in `MemberAdmin`, including zero balance scenarios and proper Rupiah formatting.
-- **Member Tracking Flags Tests**: Tests for `asked_referral`, `asked_google_review`, `missed_installment` default values, setting, and updating.
+- **Member Tracking Flags Tests**: Tests for `asked_referral`, `asked_google_review`, `missed_installment`, `skip_auto_reminder` default values, setting, and updating.
 - **ActiveMember Proxy Model Tests**: Tests for the proxy model, verifying it correctly inherits from Member.
 - **ActiveMemberAdmin Tests**: Tests for queryset filtering (only active members), inheritance from MemberAdmin, list_editable flags, and CSV export functionality.
 - **CSV Export Tests**: Tests for exporting all members and active members to CSV with correct headers and data.
@@ -1160,6 +1163,7 @@ The `reminders` app includes comprehensive tests for:
 - **Management Command Tests**: Auto-resolution logic, business rules (14-day member protection), and reminder generation for all three types
 - **Admin Tests**: Current reminders view, reminder history view, resolve actions, and error handling
 - **Edge Case Coverage**: New members, inactive members, duplicate prevention, and member visit patterns
+- **Skip Auto Reminder**: Tests that members with `skip_auto_reminder=True` are excluded from all three reminder types (payment, no-visit, expiry)
 - **Multi-Phase Validation**: Comprehensive test ensuring all three phases of membership expiry reminders are generated correctly ("3 hari lagi", "hari ini", "3 hari lalu")
 
 ### Payment Tests

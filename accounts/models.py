@@ -95,6 +95,10 @@ class Member(models.Model):
         default=False,
         help_text="Flag: member yang cicilan tapi tidak melanjutkan pembayaran",
     )
+    skip_auto_reminder = models.BooleanField(
+        default=False,
+        help_text="Flag: jangan buat reminder otomatis untuk member ini",
+    )
 
     def __str__(self):
         return f"{self.name} ({self.email})"

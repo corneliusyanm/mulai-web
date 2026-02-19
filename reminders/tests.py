@@ -1,4 +1,5 @@
 from datetime import date, timedelta, datetime
+from dateutil.relativedelta import relativedelta
 from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
 from django.urls import reverse
@@ -545,3 +546,125 @@ class ReminderAdminTest(TestCase):
 
         # Should redirect with error message
         self.assertEqual(response.status_code, 302)
+
+
+class SkipAutoReminderTest(TestCase):
+    """Tests that members with skip_auto_reminder=True are excluded from auto-generation"""
+
+    def setUp(self):
+        old_created_date = timezone.now() - timedelta(days=30)
+
+        self.normal_member = Member.objects.create(
+            name="Normal Member",
+            email="normal@example.com",
+            phone_number="628111111111",
+            gender="M",
+            age=25,
+            height=170.0,
+            weight=70.0,
+            years_of_working_out="1-2 years",
+            goals="Get fit",
+            know_mulai_gym_from="Instagram",
+            active_until=timezone.now() + timedelta(days=3),
+        )
+        self.normal_member.created_at = old_created_date
+        self.normal_member.save()
+
+        self.skipped_member = Member.objects.create(
+            name="Skipped Member",
+            email="skipped@example.com",
+            phone_number="628222222222",
+            gender="F",
+            age=22,
+            height=165.0,
+            weight=60.0,
+            years_of_working_out="Beginner",
+            goals="Stay healthy",
+            know_mulai_gym_from="Friend",
+            skip_auto_reminder=True,
+            active_until=timezone.now() + timedelta(days=3),
+        )
+        self.skipped_member.created_at = old_created_date
+        self.skipped_member.save()
+
+        self.package = Package.objects.create(
+            code="M1", default_price=500000, description="Monthly"
+        )
+
+    def test_skip_auto_reminder_excludes_membership_expiry(self):
+        """Flagged members should not get MEMBERSHIP_EXPIRING reminders"""
+        expiry = timezone.now()
+        self.normal_member.active_until = expiry
+        self.normal_member.save()
+        self.skipped_member.active_until = expiry
+        self.skipped_member.save()
+
+        out = StringIO()
+        call_command("generate_reminders", stdout=out)
+        output = out.getvalue()
+
+        reminders = Reminder.objects.filter(reminder_type="MEMBERSHIP_EXPIRING")
+        member_ids = set(reminders.values_list("member_id", flat=True))
+
+        self.assertIn(self.normal_member.id, member_ids)
+        self.assertNotIn(self.skipped_member.id, member_ids)
+
+    def test_skip_auto_reminder_excludes_no_visit(self):
+        """Flagged members should not get NO_VISIT reminders"""
+        future = timezone.now() + timedelta(days=60)
+        self.normal_member.active_until = future
+        self.normal_member.save()
+        self.skipped_member.active_until = future
+        self.skipped_member.save()
+
+        visit_time = timezone.now() - timedelta(days=14)
+        for member in [self.normal_member, self.skipped_member]:
+            Visit.objects.create(
+                member=member,
+                check_in_time=visit_time,
+                check_out_time=visit_time + timedelta(hours=1),
+            )
+
+        out = StringIO()
+        call_command("generate_reminders", stdout=out)
+
+        reminders = Reminder.objects.filter(reminder_type="NO_VISIT")
+        member_ids = set(reminders.values_list("member_id", flat=True))
+
+        self.assertNotIn(self.skipped_member.id, member_ids)
+
+    def test_skip_auto_reminder_excludes_payment_due(self):
+        """Flagged members should not get PAYMENT_DUE reminders"""
+        payment_date = timezone.now() - relativedelta(months=1)
+        for member in [self.normal_member, self.skipped_member]:
+            Payment.objects.create(
+                member=member,
+                package=self.package,
+                amount=500000,
+                payment_date=payment_date,
+                apakah_nyicil=True,
+            )
+
+        out = StringIO()
+        call_command("generate_reminders", stdout=out)
+
+        reminders = Reminder.objects.filter(reminder_type="PAYMENT_DUE")
+        member_ids = set(reminders.values_list("member_id", flat=True))
+
+        self.assertNotIn(self.skipped_member.id, member_ids)
+
+    def test_default_skip_auto_reminder_is_false(self):
+        """New members should have skip_auto_reminder=False by default"""
+        member = Member.objects.create(
+            name="Default Member",
+            email="default@example.com",
+            phone_number="628333333333",
+            gender="M",
+            age=30,
+            height=175.0,
+            weight=80.0,
+            years_of_working_out="3 years",
+            goals="Maintain",
+            know_mulai_gym_from="Website",
+        )
+        self.assertFalse(member.skip_auto_reminder)

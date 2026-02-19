@@ -96,7 +96,9 @@ class Command(BaseCommand):
 
         # Get all installment payments for members who joined at least 14 days ago
         installment_payments = Payment.objects.filter(
-            apakah_nyicil=True, member__created_at__date__lte=two_weeks_ago
+            apakah_nyicil=True,
+            member__created_at__date__lte=two_weeks_ago,
+            member__skip_auto_reminder=False,
         ).select_related("member")
 
         for payment in installment_payments:
@@ -160,7 +162,9 @@ class Command(BaseCommand):
         two_weeks_ago = today - timedelta(days=14)
 
         # Get all active members
-        active_members = Member.objects.filter(active_until__date__gte=today)
+        active_members = Member.objects.filter(
+            active_until__date__gte=today, skip_auto_reminder=False
+        )
 
         for member in active_members:
             # Get member's last visit
@@ -201,7 +205,9 @@ class Command(BaseCommand):
 
         # Get members with active_until dates who joined at least 14 days ago
         members_with_expiry = Member.objects.filter(
-            active_until__isnull=False, created_at__date__lte=two_weeks_ago
+            active_until__isnull=False,
+            created_at__date__lte=two_weeks_ago,
+            skip_auto_reminder=False,
         )
 
         for member in members_with_expiry:

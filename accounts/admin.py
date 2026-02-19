@@ -197,6 +197,7 @@ class MemberAdmin(WhatsAppLinkMixin, admin.ModelAdmin):
         "asked_referral",
         "asked_google_review",
         "missed_installment",
+        "skip_auto_reminder",
         "membership_status",
         "created_at",
     )
@@ -206,9 +207,10 @@ class MemberAdmin(WhatsAppLinkMixin, admin.ModelAdmin):
         "asked_referral",
         "asked_google_review",
         "missed_installment",
+        "skip_auto_reminder",
         "created_at",
     )
-    list_editable = ("asked_referral", "asked_google_review", "missed_installment")
+    list_editable = ("asked_referral", "asked_google_review", "missed_installment", "skip_auto_reminder")
     search_fields = ("name", "email", "phone_number")
     change_list_template = "admin/accounts/member/change_list.html"
     readonly_fields = (
@@ -254,6 +256,7 @@ class MemberAdmin(WhatsAppLinkMixin, admin.ModelAdmin):
                     "asked_referral",
                     "asked_google_review",
                     "missed_installment",
+                    "skip_auto_reminder",
                 )
             },
         ),
@@ -527,6 +530,7 @@ class MemberAdmin(WhatsAppLinkMixin, admin.ModelAdmin):
                 "asked_referral",
                 "asked_google_review",
                 "missed_installment",
+                "skip_auto_reminder",
                 "created_at",
             ]
         )
@@ -573,6 +577,7 @@ class MemberAdmin(WhatsAppLinkMixin, admin.ModelAdmin):
                     m.asked_referral,
                     m.asked_google_review,
                     m.missed_installment,
+                    m.skip_auto_reminder,
                     timezone.localtime(m.created_at).strftime("%Y-%m-%d %H:%M:%S"),
                 ]
             )
@@ -651,6 +656,7 @@ class ActiveMemberAdmin(MemberAdmin):
                 "asked_referral",
                 "asked_google_review",
                 "missed_installment",
+                "skip_auto_reminder",
                 "created_at",
             ]
         )
@@ -696,6 +702,7 @@ class ActiveMemberAdmin(MemberAdmin):
                     m.asked_referral,
                     m.asked_google_review,
                     m.missed_installment,
+                    m.skip_auto_reminder,
                     timezone.localtime(m.created_at).strftime("%Y-%m-%d %H:%M:%S"),
                 ]
             )
