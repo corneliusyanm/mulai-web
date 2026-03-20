@@ -4,6 +4,9 @@ It's a Django project, for Gym Management System. The Gym name is called Mulai G
 https://www.instagram.com/mulaigym.id
 https://mulaigym.id
 
+The main plus point of my gym is "gym paling nyaman & paling cocok untuk pemula, & paling ramah sesama member suasananya"
+Few key taglines: "Karena Hidup Sehatmu Mulai Dari Sini", "Gym terbaik untuk Pemula", "Gym Paling Nyaman di Bandung"
+
 Insights:
 1. Around 80% of the members are still newbies, Mulai Gym being their first ever gym. Which is really good, truly according to my expectation, my initial goal why I wanted to build this gym: To make as many people to start working out in a Gym regurlarly.
 2. However, since it's their first time, they also mostly only want to take the 1 month membership plan, instead of 3/6/12 months, even though it's more expensive per month. This makes us challenging to predict, and need to put a lot of effort / care to make them repurchase.
