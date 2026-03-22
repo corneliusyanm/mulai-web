@@ -954,6 +954,43 @@ def weekly_metrics_view(request):
         created_at__date__lte=end_date,
     ).order_by("created_at")
 
+    # 6. New Members logic - members who did their first membership package payment (not *-0) within the date range
+    new_members_payments = []
+    
+    # Get all payments for membership packages (not *-0) within the date range
+    membership_payments_in_week = Payment.objects.filter(
+        payment_date__date__gte=start_date,
+        payment_date__date__lte=end_date,
+        package__code__isnull=False,
+    ).exclude(package__code__endswith="-0").select_related("member", "package")
+    
+    # For each payment, check if this is the member's first membership package payment
+    for payment in membership_payments_in_week:
+        member = payment.member
+        
+        # Check if this member had any membership package payments before this date
+        previous_membership_payments = Payment.objects.filter(
+            member=member,
+            package__code__isnull=False,
+        ).exclude(package__code__endswith="-0").filter(
+            payment_date__lt=payment.payment_date
+        ).exists()
+        
+        # If no previous membership payments, this is a new member
+        if not previous_membership_payments:
+            new_members_payments.append({
+                "member": member,
+                "payment_date": payment.payment_date,
+                "payment_amount": payment.amount,
+                "package_code": payment.package.code if payment.package else "N/A",
+                "payment_note": payment.notes or "",
+                "is_pemula": member.is_pemula,
+                "address": member.address,
+                "goals": member.goals,
+                "know_mulai_gym_from": member.know_mulai_gym_from,
+                "why_choose_mulai": member.why_choose_mulai,
+            })
+
     # Member tracking flags counts (irrespective of date)
     total_asked_referral = Member.objects.filter(asked_referral=True).count()
     total_asked_google_review = Member.objects.filter(asked_google_review=True).count()
@@ -989,6 +1026,7 @@ def weekly_metrics_view(request):
         "total_weekly_visits": total_weekly_visits,
         "total_weekly_tamu": total_weekly_tamu,
         "weekly_tamu_details": weekly_tamu_details,
+        "new_members_payments": new_members_payments,
         # Member tracking flags (all-time counts)
         "total_asked_referral": total_asked_referral,
         "total_asked_google_review": total_asked_google_review,

@@ -341,6 +341,48 @@
         </table>
     </div>
 
+    <!-- New Members Section -->
+    <div class="table-container">
+        <h2>New Members ({{ new_members_payments|length }})</h2>
+        <p style="color: #666; font-style: italic; margin-bottom: 15px;">Members who made their first membership package payment (not single-visit passes) during this period</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Member Name</th>
+                    <th>Payment Date</th>
+                    <th>Payment Amount</th>
+                    <th>Package Code</th>
+                    <th>Payment Note</th>
+                    <th>Is Pemula</th>
+                    <th>Address</th>
+                    <th>Goals</th>
+                    <th>Know Mulai Gym From</th>
+                    <th>Why Choose Mulai</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in new_members_payments %}
+                <tr>
+                    <td><a href="{% url 'admin:accounts_member_change' item.member.id %}">{{ item.member.name }}</a></td>
+                    <td>{{ item.payment_date|date:"d M Y H:i" }}</td>
+                    <td>Rp {{ item.payment_amount|floatformat:0 }}</td>
+                    <td>{{ item.package_code }}</td>
+                    <td>{{ item.payment_note|default:"-" }}</td>
+                    <td>{{ item.is_pemula|yesno:"Yes,No,Unknown" }}</td>
+                    <td>{{ item.address|default:"-" }}</td>
+                    <td>{{ item.goals|default:"-" }}</td>
+                    <td>{{ item.know_mulai_gym_from|default:"-" }}</td>
+                    <td>{{ item.why_choose_mulai|default:"-" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="10">No new members in this period.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
     <!-- Weekly Tamu (Guests) Table -->
     <div class="table-container">
         <h2>Weekly Tamu (Guests)</h2>

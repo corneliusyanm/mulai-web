@@ -456,3 +456,163 @@ class WeeklyMetricsViewTest(TestCase):
         # Should fall back to default dates (today - 6 days to today)
         self.assertIsInstance(context.get("start_date"), date)
         self.assertIsInstance(context.get("end_date"), date)
+
+    def test_new_members_section(self):
+        """Test that new members (first membership package payments) are correctly identified"""
+        # Create a new member who makes their first membership package payment
+        new_member = Member.objects.create(
+            name="Andi",
+            email="andi@test.com",
+            phone_number="6281111111116",
+            gender="M",
+            age=26,
+            height=175,
+            weight=70,
+            years_of_working_out="Beginner",
+            goals="Weight loss",
+            know_mulai_gym_from="Facebook",
+            why_choose_mulai="Good facilities",
+            address="Jakarta",
+            is_pemula=True,
+        )
+
+        # Create a single-visit package (should be excluded)
+        single_visit_package = Package.objects.create(
+            code="0-BRONZE-0",
+            default_price=50000,
+            description="Single visit pass",
+        )
+
+        # Andi makes a single-visit payment first (should not count as new member)
+        self.create_weekly_payment(
+            new_member,
+            single_visit_package,
+            date(2025, 9, 14),
+            notes="Single visit",
+        )
+
+        # Then Andi makes his first membership package payment (should count as new member)
+        self.create_weekly_payment(
+            new_member,
+            self.silver_3_months,
+            date(2025, 9, 15),
+            notes="First membership package",
+        )
+
+        # Create another member who had previous membership payments before
+        existing_member = Member.objects.create(
+            name="Budi",
+            email="budi@test.com",
+            phone_number="6281111111117",
+            gender="M",
+            age=30,
+            height=170,
+            weight=65,
+            years_of_working_out="2 years",
+            goals="Fitness",
+            know_mulai_gym_from="Friends",
+            why_choose_mulai="Good trainer",
+            address="Bandung",
+            is_pemula=False,
+        )
+
+        # Budi had a previous membership payment before the test week
+        Payment.objects.create(
+            member=existing_member,
+            package=self.bronze_1_month,
+            amount=self.bronze_1_month.default_price,
+            payment_date=timezone.make_aware(datetime(2025, 8, 1, 10, 0, 0)),
+        )
+
+        # Budi makes another payment during test week (should not count as new member)
+        self.create_weekly_payment(
+            existing_member,
+            self.bronze_3_months,
+            date(2025, 9, 16),
+            notes="Renewal payment",
+        )
+
+        # Use Django test client
+        from django.test import Client
+
+        client = Client()
+        client.force_login(self.staff_user)
+
+        response = client.get(
+            "/admin/analytics/weekly-metrics/",
+            {"start_date": "2025-09-13", "end_date": "2025-09-19"},
+        )
+        context = response.context
+
+        # Check new members
+        new_members = context.get("new_members_payments", [])
+        self.assertEqual(len(new_members), 1)
+        
+        # Should be Andi (the one who made first membership package payment)
+        self.assertEqual(new_members[0]["member"].name, "Andi")
+        self.assertEqual(new_members[0]["package_code"], "1-SILVER-3")
+        self.assertEqual(new_members[0]["payment_amount"], self.silver_3_months.default_price)
+        self.assertEqual(new_members[0]["payment_note"], "First membership package")
+        self.assertEqual(new_members[0]["is_pemula"], True)
+        self.assertEqual(new_members[0]["address"], "Jakarta")
+        self.assertEqual(new_members[0]["goals"], "Weight loss")
+        self.assertEqual(new_members[0]["know_mulai_gym_from"], "Facebook")
+        self.assertEqual(new_members[0]["why_choose_mulai"], "Good facilities")
+
+        # Budi should not be in new members (he had previous membership payments)
+        new_member_names = [nm["member"].name for nm in new_members]
+        self.assertNotIn("Budi", new_member_names)
+
+    def test_new_members_excludes_single_visit_packages(self):
+        """Test that single-visit packages (*-0) are excluded from new members calculation"""
+        # Create a new member who only buys single-visit passes
+        single_visit_only_member = Member.objects.create(
+            name="Citra",
+            email="citra@test.com",
+            phone_number="6281111111118",
+            gender="F",
+            age=24,
+            height=165,
+            weight=55,
+            years_of_working_out="Beginner",
+            goals="Try gym",
+            know_mulai_gym_from="Instagram",
+        )
+
+        # Create single-visit package
+        single_visit_package = Package.objects.create(
+            code="0-BRONZE-0",
+            default_price=50000,
+            description="Single visit pass",
+        )
+
+        # Citra only buys single-visit passes during the week
+        self.create_weekly_payment(
+            single_visit_only_member,
+            single_visit_package,
+            date(2025, 9, 14),
+            notes="Single visit 1",
+        )
+        
+        self.create_weekly_payment(
+            single_visit_only_member,
+            single_visit_package,
+            date(2025, 9, 16),
+            notes="Single visit 2",
+        )
+
+        # Use Django test client
+        from django.test import Client
+
+        client = Client()
+        client.force_login(self.staff_user)
+
+        response = client.get(
+            "/admin/analytics/weekly-metrics/",
+            {"start_date": "2025-09-13", "end_date": "2025-09-19"},
+        )
+        context = response.context
+
+        # Should have no new members (single-visit passes don't count)
+        new_members = context.get("new_members_payments", [])
+        self.assertEqual(len(new_members), 0)
