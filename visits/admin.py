@@ -962,7 +962,14 @@ def weekly_metrics_view(request):
         payment_date__date__gte=start_date,
         payment_date__date__lte=end_date,
         package__code__isnull=False,
-    ).exclude(package__code__endswith="-0").select_related("member", "package")
+    ).exclude(
+    package__code__endswith="0"  # Excludes: 0-BRONZE-0, REG0
+    ).exclude(
+    package__code__contains="VISIT"  # Excludes: KELASAVISIT, KELASBVISIT
+    ).exclude(
+package__code__startswith="PT"  # Excludes all PT packages
+).select_related("member", "package")
+
     
     # For each payment, check if this is the member's first membership package payment
     for payment in membership_payments_in_week:
@@ -972,7 +979,13 @@ def weekly_metrics_view(request):
         previous_membership_payments = Payment.objects.filter(
             member=member,
             package__code__isnull=False,
-        ).exclude(package__code__endswith="-0").filter(
+        ).exclude(
+            package__code__endswith="0"  # Excludes: 0-BRONZE-0, REG0
+        ).exclude(
+            package__code__contains="VISIT"  # Excludes: KELASAVISIT, KELASBVISIT
+        ).exclude(
+            package__code__startswith="PT"  # Excludes all PT packages
+        ).filter(
             payment_date__lt=payment.payment_date
         ).exists()
         
