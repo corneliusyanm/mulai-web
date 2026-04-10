@@ -294,7 +294,7 @@ def membership_analytics_view(request):
         "weeks_count": len(weeks_data),
         "alerts": alerts,
         "insights": insights,
-        "revenue_projections": revenue_projections,
+        "revenue_projections": json.dumps(revenue_projections),
         "current_stats": current_stats,
         "weeks_ahead": weeks_ahead,
         "start_date": today.strftime("%Y-%m-%d"),
@@ -963,34 +963,48 @@ def weekly_metrics_view(request):
         payment_date__date__lte=end_date,
         package__code__isnull=False,
     ).exclude(
-    package__code__endswith="0"  # Excludes: 0-BRONZE-0, REG0
+        package__code__endswith="-0"  # Excludes: 0-BRONZE-0, REG0
     ).exclude(
-    package__code__contains="VISIT"  # Excludes: KELASAVISIT, KELASBVISIT
+        package__code__contains="VISIT"  # Excludes: KELASAVISIT, KELASBVISIT
     ).exclude(
-package__code__startswith="PT"  # Excludes all PT packages
-).select_related("member", "package")
+        package__code__startswith="PT"  # Excludes all PT packages
+    ).select_related("member", "package").order_by("payment_date")
 
+    # Pre-fetch all previous membership payments to avoid N+1 queries
+    # Get all member IDs who had any membership payments before the start of this week
+    members_with_prior_payments = set(
+        Payment.objects.filter(
+            payment_date__date__lt=start_date,
+            package__code__isnull=False,
+        )
+        .exclude(package__code__endswith="-0")
+        .exclude(package__code__contains="VISIT")
+        .exclude(package__code__startswith="PT")
+        .values_list("member_id", flat=True)
+        .distinct()
+    )
     
     # For each payment, check if this is the member's first membership package payment
+    # Also build a mapping of member_id -> earliest_payment_date_in_week
+    member_first_payment_in_week = {}
     for payment in membership_payments_in_week:
         member = payment.member
         
+        # Build mapping of member_id -> earliest_payment_date_in_week
+        member_id = payment.member_id
+        if member_id not in member_first_payment_in_week:
+            member_first_payment_in_week[member_id] = payment.payment_date
+        elif payment.payment_date < member_first_payment_in_week[member_id]:
+            member_first_payment_in_week[member_id] = payment.payment_date
+        
         # Check if this member had any membership package payments before this date
-        previous_membership_payments = Payment.objects.filter(
-            member=member,
-            package__code__isnull=False,
-        ).exclude(
-            package__code__endswith="0"  # Excludes: 0-BRONZE-0, REG0
-        ).exclude(
-            package__code__contains="VISIT"  # Excludes: KELASAVISIT, KELASBVISIT
-        ).exclude(
-            package__code__startswith="PT"  # Excludes all PT packages
-        ).filter(
-            payment_date__lt=payment.payment_date
-        ).exists()
+        has_prior_payment = (
+            payment.member_id in members_with_prior_payments or
+            payment.payment_date > member_first_payment_in_week.get(payment.member_id, payment.payment_date)
+        )
         
         # If no previous membership payments, this is a new member
-        if not previous_membership_payments:
+        if not has_prior_payment:
             new_members_payments.append({
                 "member": member,
                 "payment_date": payment.payment_date,
@@ -1003,6 +1017,143 @@ package__code__startswith="PT"  # Excludes all PT packages
                 "know_mulai_gym_from": member.know_mulai_gym_from,
                 "why_choose_mulai": member.why_choose_mulai,
             })
+
+    # Step 3: Categorize payments into expiring renewals vs early renewals
+    expiring_renewals_info = []
+    early_renewals_info = []
+    installment_payments_info = []
+    expiring_renewed_member_ids = set()
+
+    for payment in renewal_payments:
+        member = payment.member
+
+        # Calculate what the member's original expiry date was BEFORE this payment
+        original_expiry_date = None
+        package_duration_months = payment.get_duration_from_package()
+
+        if package_duration_months is not None and payment.membership_end_date:
+            # Work backwards: original_expiry = new_expiry - package_duration
+            from dateutil.relativedelta import relativedelta
+
+            original_expiry_date = payment.membership_end_date - relativedelta(
+                months=package_duration_months
+            )
+            original_expiry_date = original_expiry_date.date()
+
+        # Determine if this member's original membership was expiring during target week
+        if original_expiry_date and start_date <= original_expiry_date <= end_date:
+            # This is an expiring member renewal (membership was going to expire this week)
+            expiring_renewals_info.append(
+                {
+                    "member": member,
+                    "payment_date": payment.payment_date,
+                    "amount": payment.amount,
+                    "package_code": payment.package.code if payment.package else "N/A",
+                    "notes": payment.notes,
+                    "renewal_type": "expiring",
+                    "original_expiry": original_expiry_date,
+                }
+            )
+            expiring_renewed_member_ids.add(member.id)
+        else:
+            # This is an early renewal (membership was not expiring this week)
+            early_renewals_info.append(
+                {
+                    "member": member,
+                    "payment_date": payment.payment_date,
+                    "amount": payment.amount,
+                    "package_code": payment.package.code if payment.package else "N/A",
+                    "notes": payment.notes,
+                    "renewal_type": "early",
+                    "current_expiry": (
+                        member.active_until.date()
+                        if member.active_until
+                        else "No expiry set"
+                    ),
+                    "original_expiry": original_expiry_date,
+                }
+            )
+
+    # Step 3.5: Process installment payments
+    for payment in installment_payments:
+        installment_payments_info.append(
+            {
+                "member": payment.member,
+                "payment_date": payment.payment_date,
+                "amount": payment.amount,
+                "package_code": payment.package.code if payment.package else "N/A",
+                "notes": payment.notes,
+                "payment_type": "installment",
+            }
+        )
+
+    # Step 4: Members who didn't repurchase (expired but no renewal)
+    did_not_repurchase_members = actual_expiring_members.exclude(
+        id__in=expiring_renewed_member_ids
+    )
+
+    # Step 5: Calculate statistics
+    total_expiring = actual_expiring_members.count()
+    total_expiring_renewed = len(expiring_renewed_member_ids)
+    total_early_renewals = len(early_renewals_info)
+    total_installment_payments = len(installment_payments_info)
+    total_all_renewals = total_expiring_renewed + total_early_renewals
+
+    # Ensure we don't have more renewals than expiring members (logic consistency)
+    # If we have renewals for members who weren't in our original expiring list,
+    # we should count them as expiring for the rate calculation
+    effective_total_expiring = max(total_expiring, total_expiring_renewed)
+
+    expiring_repurchase_rate = (
+        (total_expiring_renewed / effective_total_expiring) * 100
+        if effective_total_expiring > 0
+        else 0
+    )
+
+    # Combine all renewals for backward compatibility
+    repurchased_members_info = expiring_renewals_info + early_renewals_info
+    total_repurchased = total_all_renewals
+    repurchase_rate = (
+        expiring_repurchase_rate  # Keep original meaning: expiring renewal rate
+    )
+
+# Additional weekly queries
+    # 1. All payments for the week with member details (equivalent to first SQL query)
+    weekly_payments = (
+        Payment.objects.filter(
+            payment_date__date__gte=start_date,
+            payment_date__date__lte=end_date,
+        )
+        .select_related("member", "package")
+        .order_by("id")
+    )
+
+    # 2. Total revenue for the week
+    total_weekly_revenue = (
+        Payment.objects.filter(
+            payment_date__date__gte=start_date,
+            payment_date__date__lte=end_date,
+        ).aggregate(total=Sum("amount"))["total"]
+        or 0
+    )
+
+    # 3. Total visits for the week
+    total_weekly_visits = Visit.objects.filter(
+        check_in_time__date__gte=start_date,
+        check_in_time__date__lte=end_date,
+    ).count()
+
+    # 4. Total tamu (guests) for the week
+    total_weekly_tamu = Tamu.objects.filter(
+        created_at__date__gte=start_date,
+        created_at__date__lte=end_date,
+    ).count()
+
+    # 5. Detailed tamu list for the week
+    weekly_tamu_details = Tamu.objects.filter(
+        created_at__date__gte=start_date,
+        created_at__date__lte=end_date,
+    ).order_by("created_at")
 
     # Member tracking flags counts (irrespective of date)
     total_asked_referral = Member.objects.filter(asked_referral=True).count()
