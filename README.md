@@ -8,9 +8,13 @@ The main plus point of my gym is "gym paling nyaman & paling cocok untuk pemula,
 Few key taglines: "Karena Hidup Sehatmu Mulai Dari Sini", "Gym terbaik untuk Pemula", "Gym Paling Nyaman di Bandung"
 
 Insights:
-1. Around 80% of the members are still newbies, Mulai Gym being their first ever gym. Which is really good, truly according to my expectation, my initial goal why I wanted to build this gym: To make as many people to start working out in a Gym regurlarly.
-2. However, since it's their first time, they also mostly only want to take the 1 month membership plan, instead of 3/6/12 months, even though it's more expensive per month. This makes us challenging to predict, and need to put a lot of effort / care to make them repurchase.
-3. Around 50% of them takes classes, either Kelas Pemula (Silver) or Semi Private (Gold).
+- Around 80% of the members are still newbies, Mulai Gym being their first ever gym. Which is really good, truly according to my expectation, my initial goal why I wanted to build this gym: To make as many people to start working out in a Gym regurlarly.
+- Around 50% of them takes classes, either Kelas Pemula (Silver) or Semi Private (Gold).
+- I have 2 fulltime employees as admin (which includes front office, gym keeper, chat admin, and content creation, so can imagine split task) and 1 part time for same role. 1 full time personal trainer that teach classes, 1 part time trainer. EVERYONE is working EXTREMELY happily.
+- The employees-to-members relation are so good, I feel, so many members feel like second home at gym, they give food to each other, play outside gym, basically a literal small local community now. once a new member actually joins like a class, the others kindly approach them so they  feel comfortable, so nice. of course some people still prefer to be "leave me alone I just want to work out", but that's not the majority.
+- The business profitability isn't that well, churn rate still not that good, some people leave unfortunately due to moving job, city, house, etc., but they still befriends.
+- The marketing & sales side isn't that optimal as well I think, somehow.
+- Created quite a lot of short videos already in instagram, youtube, tiktok, but low engagement, low reach, etc. Basically, we don't have a dedicated content strategy yet, nobody knows how to do it properly yet.
 
 Mulai Gym was opened since June 28, 2025.
 

@@ -94,3 +94,5 @@ qr/generated_qr/
 
 data/
 mockup/
+.cursor/
+docs/content_creation/
