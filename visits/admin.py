@@ -985,26 +985,14 @@ def weekly_metrics_view(request):
     )
     
     # For each payment, check if this is the member's first membership package payment
-    # Also build a mapping of member_id -> earliest_payment_date_in_week
-    member_first_payment_in_week = {}
+    # Since membership_payments_in_week is ordered by payment_date ASC, the first encounter per member IS their earliest payment
+    seen_new_member_ids = set()
     for payment in membership_payments_in_week:
         member = payment.member
         
-        # Build mapping of member_id -> earliest_payment_date_in_week
-        member_id = payment.member_id
-        if member_id not in member_first_payment_in_week:
-            member_first_payment_in_week[member_id] = payment.payment_date
-        elif payment.payment_date < member_first_payment_in_week[member_id]:
-            member_first_payment_in_week[member_id] = payment.payment_date
-        
-        # Check if this member had any membership package payments before this date
-        has_prior_payment = (
-            payment.member_id in members_with_prior_payments or
-            payment.payment_date > member_first_payment_in_week.get(payment.member_id, payment.payment_date)
-        )
-        
-        # If no previous membership payments, this is a new member
-        if not has_prior_payment:
+        # If no prior membership payments and we haven't seen this member yet, this is a new member
+        if payment.member_id not in members_with_prior_payments and payment.member_id not in seen_new_member_ids:
+            seen_new_member_ids.add(payment.member_id)
             new_members_payments.append({
                 "member": member,
                 "payment_date": payment.payment_date,
@@ -1018,7 +1006,6 @@ def weekly_metrics_view(request):
                 "why_choose_mulai": member.why_choose_mulai,
             })
 
-    
     # Member tracking flags counts (irrespective of date)
     total_asked_referral = Member.objects.filter(asked_referral=True).count()
     total_asked_google_review = Member.objects.filter(asked_google_review=True).count()
