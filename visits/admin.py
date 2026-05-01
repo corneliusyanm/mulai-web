@@ -28,6 +28,7 @@ from accounts.models import Member, Tamu
 from payments.models import Payment, Package
 from purchases.models import Sale, Product, SaleItem
 from equipment.models import Equipment
+from classes.models import ClassInstance
 
 
 class DecimalEncoder(json.JSONEncoder):
@@ -133,6 +134,13 @@ class CustomAdminSite(admin.AdminSite):
                         "view_only": True,
                         "perms": {"view": True},
                     },
+                    {
+                        "name": "Class No-Show Tracker",
+                        "object_name": "Class No-Show Tracker",
+                        "admin_url": reverse("admin:class-no-shows"),
+                        "view_only": True,
+                        "perms": {"view": True},
+                    },
                 ],
             }
             app_list.append(analytics_app)
@@ -161,6 +169,11 @@ def get_custom_admin_urls():
             "analytics/weekly-metrics/",
             weekly_metrics_view,
             name="weekly-metrics",
+        ),
+        path(
+            "analytics/class-no-shows/",
+            class_no_shows_view,
+            name="class-no-shows",
         ),
         path(
             "analytics/members-by-date/",
@@ -1052,6 +1065,161 @@ def weekly_metrics_view(request):
     }
 
     return render(request, "admin/analytics/weekly_metrics.html", context)
+
+
+def member_whatsapp_url(member):
+    """Build wa.me URL using the same phone normalization as elsewhere in admin."""
+    phone = member.phone_number or ""
+    cleaned = "".join(filter(str.isdigit, phone))
+    if cleaned.startswith("0"):
+        cleaned = "62" + cleaned[1:]
+    return f"https://wa.me/{cleaned}" if cleaned else ""
+
+
+def compute_class_no_show_data(start_date, end_date, today=None):
+    """
+    Bookings are ClassInstance.booked_members; cancelled instances excluded.
+    No-show: booked member, instance date <= today, no visit on that local calendar date.
+    """
+    if today is None:
+        today = timezone.localdate()
+
+    if start_date > end_date:
+        start_date, end_date = end_date, start_date
+
+    instances = (
+        ClassInstance.objects.filter(date__gte=start_date, date__lte=end_date)
+        .exclude(status="CANCELLED")
+        .select_related("class_schedule__class_obj")
+        .prefetch_related("booked_members")
+        .order_by("-date", "-start_time")
+    )
+
+    visit_dates_by_member = {}
+    visit_qs = Visit.objects.filter(
+        check_in_time__date__gte=start_date,
+        check_in_time__date__lte=end_date,
+    ).only("member_id", "check_in_time")
+    for visit in visit_qs.iterator():
+        local_date = timezone.localtime(visit.check_in_time).date()
+        visit_dates_by_member.setdefault(visit.member_id, set()).add(local_date)
+
+    confirmed_bookings_past = 0
+    rows = []
+    for instance in instances:
+        class_name = instance.class_schedule.class_obj.name
+        if instance.date <= today:
+            confirmed_bookings_past += instance.booked_members.count()
+
+        if instance.date > today:
+            continue
+
+        for member in instance.booked_members.all():
+            visited_dates = visit_dates_by_member.get(member.id)
+            if visited_dates and instance.date in visited_dates:
+                continue
+            rows.append(
+                {
+                    "class_name": class_name,
+                    "class_date": instance.date,
+                    "start_time": instance.start_time,
+                    "member": member,
+                    "member_name": member.name,
+                    "phone": member.phone_number or "",
+                    "whatsapp_url": member_whatsapp_url(member),
+                }
+            )
+
+    member_no_show_counts = {}
+    for row in rows:
+        mid = row["member"].id
+        member_no_show_counts[mid] = member_no_show_counts.get(mid, 0) + 1
+
+    for row in rows:
+        row["no_show_count_in_range"] = member_no_show_counts[row["member"].id]
+
+    rows.sort(
+        key=lambda r: (r["class_date"], r["start_time"]),
+        reverse=True,
+    )
+
+    total_no_shows = len(rows)
+    unique_members = len(member_no_show_counts)
+
+    if confirmed_bookings_past > 0:
+        no_show_rate = (total_no_shows / confirmed_bookings_past) * 100
+    else:
+        no_show_rate = 0.0
+
+    return {
+        "rows": rows,
+        "total_no_shows": total_no_shows,
+        "unique_members_who_no_showed": unique_members,
+        "no_show_rate": no_show_rate,
+        "confirmed_bookings_past": confirmed_bookings_past,
+    }
+
+
+def class_no_shows_view(request):
+    """Admin report: class bookings without a visit on the class date."""
+    if not request.user.is_staff:
+        raise PermissionDenied
+
+    today = timezone.localdate()
+    week_start = today - timedelta(days=today.weekday())
+    week_end = week_start + timedelta(days=6)
+
+    start_raw = request.GET.get("start_date", week_start.strftime("%Y-%m-%d"))
+    end_raw = request.GET.get("end_date", week_end.strftime("%Y-%m-%d"))
+
+    try:
+        start_date = datetime.strptime(start_raw, "%Y-%m-%d").date()
+        end_date = datetime.strptime(end_raw, "%Y-%m-%d").date()
+    except ValueError:
+        start_date = week_start
+        end_date = week_end
+
+    data = compute_class_no_show_data(start_date, end_date, today=today)
+
+    if request.GET.get("export") == "csv":
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = (
+            f'attachment; filename="class_no_shows_{start_date}_{end_date}.csv"'
+        )
+        writer = csv.writer(response)
+        writer.writerow(
+            [
+                "Class name",
+                "Class date",
+                "Class start time",
+                "Member name",
+                "Phone",
+                "WhatsApp URL",
+                "Member no-show count (range)",
+            ]
+        )
+        for row in data["rows"]:
+            writer.writerow(
+                [
+                    row["class_name"],
+                    row["class_date"].isoformat(),
+                    row["start_time"].strftime("%H:%M"),
+                    row["member_name"],
+                    row["phone"],
+                    row["whatsapp_url"],
+                    row["no_show_count_in_range"],
+                ]
+            )
+        return response
+
+    context = {
+        **admin_site.each_context(request),
+        "title": "Class No-Show Tracker",
+        "start_date": start_date,
+        "end_date": end_date,
+        **data,
+    }
+    return render(request, "admin/analytics/class_no_shows.html", context)
 
 
 def calculate_business_metrics(start_date, end_date):
