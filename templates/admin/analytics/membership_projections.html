@@ -484,7 +484,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Get data from Django context
     const weeksData = {{ weeks_data|safe }};
-    const revenueData = {{ revenue_projections|safe }};
+    const revenueData = {{ revenue_projections_json|safe }};
     
     // Extract data for charts
     const labels = weeksData.map(week => week.week_label);
