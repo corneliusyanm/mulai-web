@@ -58,12 +58,8 @@ INSTALLED_APPS = [
     "equipment",
     "reminders",
     "classes",
-    "chatbot_api",
     "announcements",
 ]
-
-# Chatbot API Key (for securing chatbot endpoints)
-CHATBOT_API_KEY = os.environ.get("CHATBOT_API_KEY", "")
 
 RAMADAN_MODE = os.environ.get("RAMADAN_MODE", "false").lower() == "true"
 
