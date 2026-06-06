@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     "reminders",
     "classes",
     "chatbot_api",
+    "announcements",
 ]
 
 # Chatbot API Key (for securing chatbot endpoints)

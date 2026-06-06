@@ -282,6 +282,39 @@ erDiagram
 - **Images**: Compressed via `scripts/compress_ramadan_images.py` to `static/images/ramadan/`.
 - **Deploy**: `RAMADAN_MODE` passed in `deploy.yml`; set `vars.RAMADAN_MODE` for production.
 
+## Announcements (Pengumuman)
+
+A site-wide banner for short, time-boxed messages to visitors (e.g. "Besok libur, gym tutup", "Minggu buka 12:00 karena ada event", "Trainer cuti, kelas ditiadakan"). Admins manage them via CRUD; visitors see an auto-rotating bar on every public page.
+
+### Model (`announcements/models.py`)
+- **`Announcement`**:
+  - `message`: CharField (max 280, the banner text)
+  - `level`: CharField choices — `INFO` (hijau, cocok untuk promo), `IMPORTANT`/Penting (kuning), `URGENT`/Darurat (merah). Drives the banner color and icon.
+  - `starts_at` / `ends_at`: DateTimeField (display window, entered in WIB; `USE_TZ=True`)
+  - `is_active`: BooleanField — manual on/off switch, **separate** from the time window (pre-stage, instant kill switch, hide without deleting)
+  - `priority`: IntegerField — higher shows first / earlier in the rotation when several are live
+  - `created_at` / `updated_at`: timestamps
+  - **`is_live`** (property): `is_active` AND now within `starts_at`..`ends_at`
+  - **`get_live()`** (classmethod): queryset of currently-visible announcements, `-priority, -starts_at`
+  - **`clean()`**: rejects `ends_at <= starts_at` (enforced on the admin form)
+
+### Admin (`announcements/admin.py`)
+- Registered on the custom admin site (`admin_site`), appears under the **Pengumuman** app in the sidebar.
+- List view shows message, level, a colored **Status** badge (Tayang / Terjadwal / Berakhir / Nonaktif), window, priority.
+- `priority` and `is_active` are editable directly in the list view; filter by level / active; search by message.
+
+### Public Banner (`templates/base.html`)
+- **Placement**: thin full-width bar at the top of the content area (just below the navbar) on every page that extends `base.html` — home, classes, profile, equipment, login, check-in, etc. Admin pages use a different base template, so they are unaffected.
+- **Style**: a floating, rounded gradient card with an icon chip and a soft shadow (not a flat full-bleed bar); pops in on load; the icon pulses for Darurat.
+- **Auto-rotating**: when **2+** are live, shows one at a time and slides up to the next every ~5s; pauses on hover/tap; clickable dots jump between them; respects `prefers-reduced-motion`. With a single announcement there's nothing to rotate (no motion by design).
+- **Color-coded** by `level`: Info = green (megaphone, for promos), Penting = amber (warning), Darurat = red (alert, pulsing icon).
+- **Dismissible per session**: a close (×) button hides an announcement for the current browser session (`sessionStorage`, keyed by id + `updated_at` so an edited message reappears). It returns on the next session.
+- **Collapsed when empty**: no live announcements → the bar takes no space (no layout shift).
+
+### Why client-side rendering (`announcements/views.py`)
+The banner is fetched via a tiny JSON endpoint instead of a context processor so it stays **fresh even on response-cached pages** — notably the equipment list (`@cache_page(4h)`), where a server-rendered banner would otherwise be frozen for hours. The endpoint sends `Cache-Control: no-store`.
+- **`active_announcements`** (`/pengumuman/aktif/`): returns `{"announcements": [{id, message, level, updated_at}, ...]}` for currently-live announcements only.
+
 ## Visits & Check-in/Out
 
 ### Session
@@ -1148,7 +1181,13 @@ The member detail page in the admin panel now provides a comprehensive overview 
 
 ## Testing
 
-This project uses Django's built-in `TestCase` for unit testing. The tests are located in the `tests.py` file within each application directory (`accounts`, `visits`, `payments`, `equipment`, `purchases`, and `reminders`).
+This project uses Django's built-in `TestCase` for unit testing. The tests are located in the `tests.py` file within each application directory (`accounts`, `visits`, `payments`, `equipment`, `purchases`, `reminders`, and `announcements`).
+
+### Announcements Tests
+The `announcements` app includes tests covering:
+- **Model Tests**: `is_live` for all on/off and in/out-of-window combinations, `get_live()` filtering and `-priority` ordering, `__str__`, and `clean()` rejecting `ends_at <= starts_at`.
+- **View Tests**: `/pengumuman/aktif/` returns only live announcements as JSON with the expected fields, sends `Cache-Control: no-store`, and returns an empty list when nothing is live.
+- **Admin Tests**: `Announcement` is registered on the custom admin site.
 
 ### Accounts Tests
 The `accounts` app includes tests for:

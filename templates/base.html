@@ -96,6 +96,109 @@
             height: auto;
             display: block;
         }
+
+        /* Announcement bar (rendered client-side from /pengumuman/aktif/) */
+        .announcement-bar {
+            width: 100%;
+            padding: 10px 12px 2px;
+            position: relative;
+            z-index: 1040;
+        }
+        .announcement-bar[hidden] { display: none; }
+        .announcement-bar .ann-card {
+            position: relative;
+            max-width: 680px;
+            margin: 0 auto;
+            border-radius: 16px;
+            color: #fff;
+            box-shadow: 0 10px 28px rgba(20, 20, 80, .22);
+            overflow: hidden;
+            animation: annPopIn .5s cubic-bezier(.16, 1, .3, 1);
+        }
+        @keyframes annPopIn {
+            from { opacity: 0; transform: translateY(-14px) scale(.97); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        /* soft top sheen */
+        .announcement-bar .ann-card::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(255, 255, 255, .16), rgba(255, 255, 255, 0) 55%);
+            pointer-events: none;
+        }
+        .announcement-bar .ann-inner {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 11px 13px;
+        }
+        .announcement-bar .ann-icon-wrap {
+            flex-shrink: 0;
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, .22);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .announcement-bar .ann-icon { font-size: 15px; color: #fff; }
+        .announcement-bar .ann-msg-wrap { flex: 1; min-width: 0; overflow: hidden; }
+        .announcement-bar .ann-msg {
+            display: block;
+            font-weight: 600;
+            font-size: 14.5px;
+            line-height: 1.4;
+            letter-spacing: .1px;
+            will-change: transform, opacity;
+        }
+        .announcement-bar .ann-dots {
+            display: inline-flex;
+            gap: 6px;
+            flex-shrink: 0;
+            align-items: center;
+        }
+        .announcement-bar .ann-dot {
+            width: 7px; height: 7px;
+            padding: 0;
+            border: none;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, .45);
+            cursor: pointer;
+            transition: background .2s ease, transform .2s ease;
+        }
+        .announcement-bar .ann-dot.active { background: #fff; transform: scale(1.3); }
+        .announcement-bar .ann-close {
+            flex-shrink: 0;
+            width: 26px; height: 26px;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(255, 255, 255, .15);
+            border: none;
+            border-radius: 50%;
+            color: #fff;
+            font-size: 16px;
+            line-height: 1;
+            opacity: .9;
+            cursor: pointer;
+            transition: background .2s ease, opacity .2s ease;
+        }
+        .announcement-bar .ann-close:hover { background: rgba(255, 255, 255, .3); opacity: 1; }
+
+        .announcement-bar .ann-card.ann-info { background: linear-gradient(135deg, #2fc36b, #16a34a); }
+        .announcement-bar .ann-card.ann-important { background: linear-gradient(135deg, #f5a623, #e08600); }
+        .announcement-bar .ann-card.ann-urgent { background: linear-gradient(135deg, #ff5a5f, #e02d3c); }
+        .announcement-bar .ann-card.ann-urgent .ann-icon-wrap {
+            animation: annPulse 1.8s ease-in-out infinite;
+        }
+        @keyframes annPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, .5); }
+            50%      { box-shadow: 0 0 0 7px rgba(255, 255, 255, 0); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .announcement-bar .ann-card,
+            .announcement-bar .ann-card.ann-urgent .ann-icon-wrap { animation: none; }
+            .announcement-bar .ann-msg { transition: none !important; }
+        }
     </style>
 </head>
 <body>
@@ -112,6 +215,7 @@
     <!-- Main content -->
     <div id="content" class="container-fluid p-0" style="background-color: #4B4BEC;">
         <div class="content-spacer"></div> <!-- Spacer div -->
+        <div id="announcement-bar" class="announcement-bar" hidden></div>
         {% block content %}
         {% endblock %}
     </div>
@@ -231,6 +335,147 @@
             });
         });
     });
+    </script>
+
+    <!-- Announcement bar: fetched client-side so it stays fresh even on cached pages -->
+    <script>
+    (function () {
+        var bar = document.getElementById('announcement-bar');
+        if (!bar || !window.fetch) return;
+
+        var LEVEL_CLASS = { INFO: 'ann-info', IMPORTANT: 'ann-important', URGENT: 'ann-urgent' };
+        var LEVEL_ICON = { INFO: 'fa-bullhorn', IMPORTANT: 'fa-triangle-exclamation', URGENT: 'fa-circle-exclamation' };
+
+        function dismissKey(a) { return 'mg_ann_' + a.id + '_' + a.updated_at; }
+        function isDismissed(a) {
+            try { return sessionStorage.getItem(dismissKey(a)) === '1'; } catch (e) { return false; }
+        }
+        function setDismissed(a) {
+            try { sessionStorage.setItem(dismissKey(a), '1'); } catch (e) {}
+        }
+
+        fetch('{% url "announcements:active" %}')
+            .then(function (r) { return r.ok ? r.json() : { announcements: [] }; })
+            .then(function (data) {
+                var items = (data.announcements || []).filter(function (a) { return !isDismissed(a); });
+                if (items.length) render(items);
+            })
+            .catch(function () { /* fail silently — banner is non-critical */ });
+
+        function render(items) {
+            var idx = 0, timer = null, animating = false, animTimer = null;
+            var reduceMotion = window.matchMedia &&
+                window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            // Touch devices have no reliable hover-out, so don't pause on them.
+            var canHover = !(window.matchMedia &&
+                window.matchMedia('(hover: none)').matches);
+
+            bar.innerHTML =
+                '<div class="ann-card">' +
+                    '<div class="ann-inner">' +
+                        '<span class="ann-icon-wrap"><i class="ann-icon fas"></i></span>' +
+                        '<div class="ann-msg-wrap"><span class="ann-msg"></span></div>' +
+                        '<span class="ann-dots"></span>' +
+                        '<button type="button" class="ann-close" aria-label="Tutup pengumuman">&times;</button>' +
+                    '</div>' +
+                '</div>';
+            var cardEl = bar.querySelector('.ann-card');
+            var iconEl = bar.querySelector('.ann-icon');
+            var msgEl = bar.querySelector('.ann-msg');
+            var dotsEl = bar.querySelector('.ann-dots');
+
+            function setContent(i) {
+                var a = items[i];
+                cardEl.className = 'ann-card ' + (LEVEL_CLASS[a.level] || 'ann-info');
+                iconEl.className = 'ann-icon fas ' + (LEVEL_ICON[a.level] || 'fa-circle-info');
+                msgEl.textContent = a.message;
+                renderDots();
+            }
+
+            function renderDots() {
+                if (items.length < 2) { dotsEl.innerHTML = ''; return; }
+                var html = '';
+                for (var i = 0; i < items.length; i++) {
+                    html += '<button type="button" class="ann-dot' + (i === idx ? ' active' : '') +
+                            '" data-i="' + i + '" aria-label="Pengumuman ' + (i + 1) + '"></button>';
+                }
+                dotsEl.innerHTML = html;
+            }
+
+            function resetMsgStyle() {
+                msgEl.style.transition = '';
+                msgEl.style.transform = '';
+                msgEl.style.opacity = '';
+            }
+            function cancelAnim() {
+                if (animTimer) { clearTimeout(animTimer); animTimer = null; }
+                animating = false;
+            }
+
+            // Slide current message up & out, bring the next one up from below.
+            function goTo(nextIdx) {
+                if (nextIdx === idx) return;
+                if (animating || reduceMotion) {
+                    cancelAnim(); resetMsgStyle();
+                    idx = nextIdx; setContent(idx);
+                    return;
+                }
+                animating = true;
+                msgEl.style.transition = 'transform .35s ease, opacity .35s ease';
+                msgEl.style.transform = 'translateY(-110%)';
+                msgEl.style.opacity = '0';
+                animTimer = setTimeout(function () {
+                    idx = nextIdx;
+                    setContent(idx);
+                    msgEl.style.transition = 'none';
+                    msgEl.style.transform = 'translateY(110%)';
+                    msgEl.style.opacity = '0';
+                    void msgEl.offsetWidth; // force reflow so the next transition runs
+                    msgEl.style.transition = 'transform .35s ease, opacity .35s ease';
+                    msgEl.style.transform = 'translateY(0)';
+                    msgEl.style.opacity = '1';
+                    animTimer = setTimeout(function () { animating = false; animTimer = null; }, 360);
+                }, 350);
+            }
+
+            function next() { goTo((idx + 1) % items.length); }
+            function start() {
+                if (items.length > 1 && !reduceMotion && !timer) {
+                    timer = setInterval(next, 5000);
+                }
+            }
+            function stop() { if (timer) { clearInterval(timer); timer = null; } }
+
+            dotsEl.addEventListener('click', function (e) {
+                var dot = e.target.closest('.ann-dot');
+                if (!dot) return;
+                stop();
+                goTo(parseInt(dot.getAttribute('data-i'), 10));
+                start();
+            });
+
+            bar.querySelector('.ann-close').addEventListener('click', function () {
+                cancelAnim();
+                resetMsgStyle();
+                setDismissed(items[idx]);
+                items.splice(idx, 1);
+                if (items.length < 2) stop(); // nothing left to rotate
+                if (!items.length) { bar.hidden = true; return; }
+                if (idx >= items.length) idx = 0;
+                setContent(idx);
+            });
+
+            setContent(idx);
+            bar.hidden = false;
+            start();
+            // Pause on hover only where hover is real (desktop). On touch devices
+            // there's no reliable hover-out, so let it keep rotating.
+            if (canHover) {
+                bar.addEventListener('mouseenter', stop);
+                bar.addEventListener('mouseleave', start);
+            }
+        }
+    })();
     </script>
 </body>
 </html> 
