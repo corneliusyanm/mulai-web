@@ -616,3 +616,370 @@ class WeeklyMetricsViewTest(TestCase):
         # Should have no new members (single-visit passes don't count)
         new_members = context.get("new_members_payments", [])
         self.assertEqual(len(new_members), 0)
+
+    def test_referral_source_breakdown_with_mixed_sources(self):
+        """Test that referral source breakdown correctly normalizes and counts mixed source values"""
+        from django.test import Client
+
+        # Create new members with various referral sources
+        member1 = Member.objects.create(
+            name="User1",
+            email="user1@test.com",
+            phone_number="6281111111119",
+            gender="M",
+            age=25,
+            height=170,
+            weight=65,
+            years_of_working_out="Beginner",
+            goals="Fitness",
+            know_mulai_gym_from="ig",  # Should normalize to "Instagram"
+        )
+
+        member2 = Member.objects.create(
+            name="User2",
+            email="user2@test.com",
+            phone_number="6281111111120",
+            gender="F",
+            age=26,
+            height=165,
+            weight=55,
+            years_of_working_out="Beginner",
+            goals="Health",
+            know_mulai_gym_from="Instagram",  # Should normalize to "Instagram"
+        )
+
+        member3 = Member.objects.create(
+            name="User3",
+            email="user3@test.com",
+            phone_number="6281111111121",
+            gender="M",
+            age=27,
+            height=175,
+            weight=70,
+            years_of_working_out="Beginner",
+            goals="Muscle",
+            know_mulai_gym_from="insta",  # Should normalize to "Instagram"
+        )
+
+        member4 = Member.objects.create(
+            name="User4",
+            email="user4@test.com",
+            phone_number="6281111111122",
+            gender="F",
+            age=24,
+            height=160,
+            weight=50,
+            years_of_working_out="Beginner",
+            goals="Weight loss",
+            know_mulai_gym_from="tik tok",  # Should normalize to "TikTok"
+        )
+
+        member5 = Member.objects.create(
+            name="User5",
+            email="user5@test.com",
+            phone_number="6281111111123",
+            gender="M",
+            age=28,
+            height=180,
+            weight=75,
+            years_of_working_out="Beginner",
+            goals="Strength",
+            know_mulai_gym_from="teman",  # Should normalize to "Referral / Friend"
+        )
+
+        # Create first membership package payments for all members during test week
+        for member in [member1, member2, member3, member4, member5]:
+            self.create_weekly_payment(
+                member,
+                self.silver_3_months,
+                date(2025, 9, 15),
+            )
+
+        client = Client()
+        client.force_login(self.staff_user)
+
+        response = client.get(
+            "/admin/analytics/weekly-metrics/",
+            {"start_date": "2025-09-13", "end_date": "2025-09-19"},
+        )
+        context = response.context
+
+        # Check referral source breakdown
+        breakdown = context.get("referral_source_breakdown", [])
+        
+        # Should have 3 unique sources after normalization: Instagram (3), TikTok (1), Referral / Friend (1)
+        self.assertEqual(len(breakdown), 3)
+        
+        # Check Instagram count (should be 3: ig, Instagram, insta)
+        instagram_entry = next((item for item in breakdown if item["source"] == "Instagram"), None)
+        self.assertIsNotNone(instagram_entry)
+        self.assertEqual(instagram_entry["count"], 3)
+        
+        # Check TikTok count (should be 1: tik tok)
+        tiktok_entry = next((item for item in breakdown if item["source"] == "TikTok"), None)
+        self.assertIsNotNone(tiktok_entry)
+        self.assertEqual(tiktok_entry["count"], 1)
+        
+        # Check Referral / Friend count (should be 1: teman)
+        friend_entry = next((item for item in breakdown if item["source"] == "Referral / Friend"), None)
+        self.assertIsNotNone(friend_entry)
+        self.assertEqual(friend_entry["count"], 1)
+
+    def test_referral_source_breakdown_empty_null_grouped(self):
+        """Test that empty/null/whitespace sources are grouped under '(Tidak diisi)'"""
+        from django.test import Client
+
+        # Create members with empty/null referral sources
+        member1 = Member.objects.create(
+            name="User1",
+            email="user1@test.com",
+            phone_number="6281111111124",
+            gender="M",
+            age=25,
+            height=170,
+            weight=65,
+            years_of_working_out="Beginner",
+            goals="Fitness",
+            know_mulai_gym_from="",  # Empty string
+        )
+
+        member2 = Member.objects.create(
+            name="User2",
+            email="user2@test.com",
+            phone_number="6281111111125",
+            gender="F",
+            age=26,
+            height=165,
+            weight=55,
+            years_of_working_out="Beginner",
+            goals="Health",
+            know_mulai_gym_from="",  # Empty string (field doesn't allow NULL)
+        )
+
+        member3 = Member.objects.create(
+            name="User3",
+            email="user3@test.com",
+            phone_number="6281111111126",
+            gender="M",
+            age=27,
+            height=175,
+            weight=70,
+            years_of_working_out="Beginner",
+            goals="Muscle",
+            know_mulai_gym_from="   ",  # Whitespace only
+        )
+
+        member3b = Member.objects.create(
+            name="User3b",
+            email="user3b@test.com",
+            phone_number="6281111111131",
+            gender="M",
+            age=27,
+            height=175,
+            weight=70,
+            years_of_working_out="Beginner",
+            goals="Muscle",
+            know_mulai_gym_from="-",  # Placeholder
+        )
+
+        member3c = Member.objects.create(
+            name="User3c",
+            email="user3c@test.com",
+            phone_number="6281111111132",
+            gender="M",
+            age=27,
+            height=175,
+            weight=70,
+            years_of_working_out="Beginner",
+            goals="Muscle",
+            know_mulai_gym_from="_",  # Placeholder
+        )
+
+        member3d = Member.objects.create(
+            name="User3d",
+            email="user3d@test.com",
+            phone_number="6281111111133",
+            gender="M",
+            age=27,
+            height=175,
+            weight=70,
+            years_of_working_out="Beginner",
+            goals="Muscle",
+            know_mulai_gym_from="n/a",  # Placeholder
+        )
+
+        member4 = Member.objects.create(
+            name="User4",
+            email="user4@test.com",
+            phone_number="6281111111127",
+            gender="F",
+            age=24,
+            height=160,
+            weight=50,
+            years_of_working_out="Beginner",
+            goals="Weight loss",
+            know_mulai_gym_from="Instagram",  # Valid source
+        )
+
+        # Create first membership package payments for all members during test week
+        for member in [member1, member2, member3, member3b, member3c, member3d, member4]:
+            self.create_weekly_payment(
+                member,
+                self.silver_3_months,
+                date(2025, 9, 15),
+            )
+
+        client = Client()
+        client.force_login(self.staff_user)
+
+        response = client.get(
+            "/admin/analytics/weekly-metrics/",
+            {"start_date": "2025-09-13", "end_date": "2025-09-19"},
+        )
+        context = response.context
+
+        # Check referral source breakdown
+        breakdown = context.get("referral_source_breakdown", [])
+        
+        # Should have 2 unique sources: "(Tidak diisi)" (6) and "Instagram" (1)
+        self.assertEqual(len(breakdown), 2)
+        
+        # Check "(Tidak diisi)" count (should be 6: empty, None, whitespace, -, _, n/a)
+        not_filled_entry = next((item for item in breakdown if item["source"] == "(Tidak diisi)"), None)
+        self.assertIsNotNone(not_filled_entry)
+        self.assertEqual(not_filled_entry["count"], 6)
+
+    def test_referral_source_breakdown_ignores_outside_date_range(self):
+        """Test that members whose first qualifying payment falls outside date range are ignored"""
+        from django.test import Client
+
+        # Create a member with payment BEFORE the test week
+        member_before = Member.objects.create(
+            name="BeforeMember",
+            email="before@test.com",
+            phone_number="6281111111128",
+            gender="M",
+            age=25,
+            height=170,
+            weight=65,
+            years_of_working_out="Beginner",
+            goals="Fitness",
+            know_mulai_gym_from="Instagram",
+        )
+
+        # Create payment BEFORE test week (Sept 10, outside Sept 13-19 range)
+        self.create_weekly_payment(
+            member_before,
+            self.silver_3_months,
+            date(2025, 9, 10),
+        )
+
+        # Create a member with payment AFTER the test week
+        member_after = Member.objects.create(
+            name="AfterMember",
+            email="after@test.com",
+            phone_number="6281111111129",
+            gender="F",
+            age=26,
+            height=165,
+            weight=55,
+            years_of_working_out="Beginner",
+            goals="Health",
+            know_mulai_gym_from="TikTok",
+        )
+
+        # Create payment AFTER test week (Sept 20, outside Sept 13-19 range)
+        self.create_weekly_payment(
+            member_after,
+            self.silver_3_months,
+            date(2025, 9, 20),
+        )
+
+        # Create a member with payment DURING the test week
+        member_during = Member.objects.create(
+            name="DuringMember",
+            email="during@test.com",
+            phone_number="6281111111130",
+            gender="M",
+            age=27,
+            height=175,
+            weight=70,
+            years_of_working_out="Beginner",
+            goals="Muscle",
+            know_mulai_gym_from="Friend",
+        )
+
+        # Create payment DURING test week (Sept 15, inside Sept 13-19 range)
+        self.create_weekly_payment(
+            member_during,
+            self.silver_3_months,
+            date(2025, 9, 15),
+        )
+
+        client = Client()
+        client.force_login(self.staff_user)
+
+        response = client.get(
+            "/admin/analytics/weekly-metrics/",
+            {"start_date": "2025-09-13", "end_date": "2025-09-19"},
+        )
+        context = response.context
+
+        # Check referral source breakdown
+        breakdown = context.get("referral_source_breakdown", [])
+        
+        # Should only have 1 source: "Referral / Friend" (from member_during)
+        # The before and after members should be excluded
+        self.assertEqual(len(breakdown), 1)
+        self.assertEqual(breakdown[0]["source"], "Referral / Friend")
+        self.assertEqual(breakdown[0]["count"], 1)
+
+    def test_referral_source_breakdown_percentages_sum_to_100(self):
+        """Test that percentages in referral source breakdown sum to 100 (within rounding tolerance)"""
+        from django.test import Client
+
+        # Create new members with different referral sources
+        members_data = [
+            ("User1", "Instagram"),
+            ("User2", "TikTok"),
+            ("User3", "Friend"),
+            ("User4", "Google"),
+            ("User5", "Instagram"),  # Duplicate source
+        ]
+
+        for i, (name, source) in enumerate(members_data):
+            member = Member.objects.create(
+                name=name,
+                email=f"user{i+1}@test.com",
+                phone_number=f"628111111113{i+1}",
+                gender="M",
+                age=25 + i,
+                height=170,
+                weight=65,
+                years_of_working_out="Beginner",
+                goals="Fitness",
+                know_mulai_gym_from=source,
+            )
+            self.create_weekly_payment(
+                member,
+                self.silver_3_months,
+                date(2025, 9, 15),
+            )
+
+        client = Client()
+        client.force_login(self.staff_user)
+
+        response = client.get(
+            "/admin/analytics/weekly-metrics/",
+            {"start_date": "2025-09-13", "end_date": "2025-09-19"},
+        )
+        context = response.context
+
+        # Check referral source breakdown
+        breakdown = context.get("referral_source_breakdown", [])
+        
+        # Sum all percentages
+        total_percentage = sum(item["percentage"] for item in breakdown)
+        
+        # Should be approximately 100 (within 0.1 tolerance for rounding)
+        self.assertAlmostEqual(total_percentage, 100.0, places=1)
