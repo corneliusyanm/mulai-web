@@ -383,6 +383,37 @@
         </table>
     </div>
 
+    <!-- Referral Source Breakdown -->
+    <div class="table-container">
+        <h2>Referral Source Breakdown</h2>
+        <p style="color: #666; font-style: italic; margin-bottom: 15px;">Aggregated referral sources for new members during this period</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Source Label</th>
+                    <th>Count</th>
+                    <th>Percentage</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in referral_source_breakdown %}
+                <tr>
+                    <td>{{ item.source }}</td>
+                    <td>{{ item.count }}</td>
+                    <td>{{ item.percentage|floatformat:1 }}%</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3">No new members in this period.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <p style="margin-top: 15px; color: #666;">
+            <strong>Summary:</strong> {{ total_new_members_in_range }} new members in range, {{ total_unique_sources }} unique sources
+        </p>
+    </div>
+
     <!-- Weekly Tamu (Guests) Table -->
     <div class="table-container">
         <h2>Weekly Tamu (Guests)</h2>

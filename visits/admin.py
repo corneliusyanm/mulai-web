@@ -31,6 +31,72 @@ from equipment.models import Equipment
 from classes.models import ClassInstance
 
 
+def normalize_referral_source(raw_value):
+    """
+    Normalize referral source values to group similar sources together.
+    
+    Rules:
+    - Case-insensitive
+    - Trim leading/trailing whitespace
+    - Group common aliases into a single canonical label
+    - Empty/null/whitespace-only values return None
+    - Unknown values are preserved as-is (after trimming)
+    """
+    if not raw_value:
+        return None
+    
+    # Trim and convert to lowercase for comparison
+    value = str(raw_value).strip().lower()
+    
+    # Handle empty/whitespace-only values
+    if not value:
+        return None
+    
+    # Handle placeholder values that should be treated as empty
+    placeholder_values = ["-", "_", "n/a", "na", "none"]
+    if value in placeholder_values:
+        return None
+    
+    # Normalization mapping
+    normalization_map = {
+        # Instagram variants
+        "ig": "Instagram",
+        "instagram": "Instagram",
+        "insta": "Instagram",
+        
+        # TikTok variants
+        "tiktok": "TikTok",
+        "tik tok": "TikTok",
+        
+        # Friend/referral variants
+        "friend": "Referral / Friend",
+        "friends": "Referral / Friend",
+        "teman": "Referral / Friend",
+        "temen": "Referral / Friend",
+        "referral": "Referral / Friend",
+        
+        # Google variants
+        "google": "Google",
+        "google search": "Google",
+        
+        # Facebook variants
+        "facebook": "Facebook",
+        "fb": "Facebook",
+        
+        # Social media general
+        "social media": "Social Media",
+        "social": "Social Media",
+        
+        # Advertisement
+        "advertisement": "Advertisement",
+        "ads": "Advertisement",
+        "iklan": "Advertisement",
+    }
+    
+    # Return normalized value if found, otherwise return original trimmed value
+    return normalization_map.get(value, raw_value.strip())
+
+
 class DecimalEncoder(json.JSONEncoder):
     """Custom JSON encoder to handle Decimal, date, and datetime objects"""
 
@@ -1020,6 +1086,40 @@ def weekly_metrics_view(request):
                 "why_choose_mulai": member.why_choose_mulai,
             })
 
+    # Referral Source Breakdown - aggregate know_mulai_gym_from from new members
+    referral_source_breakdown = {}
+    for new_member in new_members_payments:
+        raw_source = new_member.get("know_mulai_gym_from")
+        normalized_source = normalize_referral_source(raw_source)
+        
+        # Use "(Tidak diisi)" for empty/null/whitespace values
+        if not normalized_source:
+            display_label = "(Tidak diisi)"
+        else:
+            display_label = normalized_source
+        
+        if display_label not in referral_source_breakdown:
+            referral_source_breakdown[display_label] = 0
+        referral_source_breakdown[display_label] += 1
+    
+    # Convert to sorted list with percentages
+    total_new_members = len(new_members_payments)
+    referral_source_list = []
+    for source, count in referral_source_breakdown.items():
+        percentage = (count / total_new_members * 100) if total_new_members > 0 else 0
+        referral_source_list.append({
+            "source": source,
+            "count": count,
+            "percentage": percentage,
+        })
+    
+    # Sort by count descending
+    referral_source_list.sort(key=lambda x: x["count"], reverse=True)
+    
+    # Calculate summary stats
+    total_unique_sources = len(referral_source_breakdown)
+
+    
     # Member tracking flags counts (irrespective of date)
     total_asked_referral = Member.objects.filter(asked_referral=True).count()
     total_asked_google_review = Member.objects.filter(asked_google_review=True).count()
@@ -1056,6 +1156,10 @@ def weekly_metrics_view(request):
         "total_weekly_tamu": total_weekly_tamu,
         "weekly_tamu_details": weekly_tamu_details,
         "new_members_payments": new_members_payments,
+        # Referral Source Breakdown
+        "referral_source_breakdown": referral_source_list,
+        "total_new_members_in_range": total_new_members,
+        "total_unique_sources": total_unique_sources,
         # Member tracking flags (all-time counts)
         "total_asked_referral": total_asked_referral,
         "total_asked_google_review": total_asked_google_review,
@@ -2579,4 +2683,3 @@ def visits_by_hour_view(request):
             "visits": visit_list,
         }
     )
-    
