@@ -34,67 +34,72 @@ from classes.models import ClassInstance
 def normalize_referral_source(raw_value):
     """
     Normalize referral source values to group similar sources together.
-    
+
     Rules:
     - Case-insensitive
     - Trim leading/trailing whitespace
     - Group common aliases into a single canonical label
     - Empty/null/whitespace-only values return None
-    - Unknown values are preserved as-is (after trimming)
+    - Unknown values are title-cased (after trimming) so casing variants group
     """
     if not raw_value:
         return None
-    
+
     # Trim and convert to lowercase for comparison
     value = str(raw_value).strip().lower()
-    
+
     # Handle empty/whitespace-only values
     if not value:
         return None
-    
+
     # Handle placeholder values that should be treated as empty
     placeholder_values = ["-", "_", "n/a", "na", "none"]
     if value in placeholder_values:
         return None
-    
+
     # Normalization mapping
     normalization_map = {
         # Instagram variants
         "ig": "Instagram",
         "instagram": "Instagram",
         "insta": "Instagram",
-        
+
         # TikTok variants
         "tiktok": "TikTok",
         "tik tok": "TikTok",
-        
+
         # Friend/referral variants
         "friend": "Referral / Friend",
         "friends": "Referral / Friend",
         "teman": "Referral / Friend",
         "temen": "Referral / Friend",
         "referral": "Referral / Friend",
-        
+
         # Google variants
         "google": "Google",
         "google search": "Google",
-        
+
         # Facebook variants
         "facebook": "Facebook",
         "fb": "Facebook",
-        
+
         # Social media general
         "social media": "Social Media",
         "social": "Social Media",
-        
+
         # Advertisement
         "advertisement": "Advertisement",
         "ads": "Advertisement",
         "iklan": "Advertisement",
     }
-    
-    # Return normalized value if found, otherwise return original trimmed value
-    return normalization_map.get(value, raw_value.strip())
+
+    # Known aliases collapse to a canonical label. Unknown values are free
+    # text; only exact matches normalize (so "dari instagram" still gets its
+    # own row), and we title-case them so casing variants like "whatsapp" /
+    # "Whatsapp" group together instead of splitting into separate rows.
+    if value in normalization_map:
+        return normalization_map[value]
+    return raw_value.strip().title()
 
 
 class DecimalEncoder(json.JSONEncoder):
@@ -1087,39 +1092,40 @@ def weekly_metrics_view(request):
             })
 
     # Referral Source Breakdown - aggregate know_mulai_gym_from from new members
-    referral_source_breakdown = {}
+    # source_counts maps display label -> number of new members; the list below
+    # is what the template consumes.
+    source_counts = {}
     for new_member in new_members_payments:
         raw_source = new_member.get("know_mulai_gym_from")
         normalized_source = normalize_referral_source(raw_source)
-        
+
         # Use "(Tidak diisi)" for empty/null/whitespace values
         if not normalized_source:
             display_label = "(Tidak diisi)"
         else:
             display_label = normalized_source
-        
-        if display_label not in referral_source_breakdown:
-            referral_source_breakdown[display_label] = 0
-        referral_source_breakdown[display_label] += 1
-    
+
+        if display_label not in source_counts:
+            source_counts[display_label] = 0
+        source_counts[display_label] += 1
+
     # Convert to sorted list with percentages
     total_new_members = len(new_members_payments)
     referral_source_list = []
-    for source, count in referral_source_breakdown.items():
+    for source, count in source_counts.items():
         percentage = (count / total_new_members * 100) if total_new_members > 0 else 0
         referral_source_list.append({
             "source": source,
             "count": count,
             "percentage": percentage,
         })
-    
+
     # Sort by count descending
     referral_source_list.sort(key=lambda x: x["count"], reverse=True)
-    
-    # Calculate summary stats
-    total_unique_sources = len(referral_source_breakdown)
 
-    
+    # Calculate summary stats
+    total_unique_sources = len(source_counts)
+
     # Member tracking flags counts (irrespective of date)
     total_asked_referral = Member.objects.filter(asked_referral=True).count()
     total_asked_google_review = Member.objects.filter(asked_google_review=True).count()
