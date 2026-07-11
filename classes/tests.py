@@ -1003,3 +1003,153 @@ class BookingValidationTest(TestCase):
         self.assertContains(response, "Berhasil booking kelas")
         future_instance.refresh_from_db()
         self.assertIn(member_active_long, future_instance.booked_members.all())
+
+
+class CancelledInstanceStatusGuardTest(TestCase):
+    """
+    Regression tests for the bug where an admin-cancelled class instance
+    re-appeared as OPEN the next day. Root cause: update_status() (called by
+    book_class / cancel_class / move_from_waitlist) unconditionally reset the
+    status based on headcount, overwriting a CANCELLED status back to OPEN when
+    a still-booked member later touched the class.
+    """
+
+    def setUp(self):
+        self.yoga_class = Class.objects.create(
+            name="Yoga", description="A relaxing yoga class.", max_members=2
+        )
+        self.schedule = ClassSchedule.objects.create(
+            class_obj=self.yoga_class,
+            day_of_week=0,
+            start_time="09:00:00",
+            end_time="10:00:00",
+        )
+        # A future-dated instance the admin has cancelled.
+        self.instance = ClassInstance.objects.create(
+            class_schedule=self.schedule,
+            date=timezone.now().date() + timedelta(days=2),
+            start_time=self.schedule.start_time,
+            end_time=self.schedule.end_time,
+            status="CANCELLED",
+        )
+        self.member = Member.objects.create(
+            name="Booked Member",
+            email="booked@example.com",
+            phone_number="628999999901",
+            age=25,
+            height=170.0,
+            weight=70.0,
+            gender="M",
+            goals="Stay fit",
+            years_of_working_out="1-2 years",
+        )
+        # Member was booked before the admin cancelled the class.
+        self.instance.booked_members.add(self.member)
+
+    def test_update_status_does_not_resurrect_cancelled(self):
+        """update_status() must leave a CANCELLED instance CANCELLED."""
+        self.instance.update_status()
+        self.instance.refresh_from_db()
+        self.assertEqual(self.instance.status, "CANCELLED")
+
+    def test_update_status_does_not_touch_completed(self):
+        """update_status() must leave a COMPLETED instance COMPLETED."""
+        self.instance.status = "COMPLETED"
+        self.instance.save()
+        self.instance.update_status()
+        self.instance.refresh_from_db()
+        self.assertEqual(self.instance.status, "COMPLETED")
+
+    def test_move_from_waitlist_does_not_resurrect_cancelled(self):
+        """
+        Promoting from the waitlist on a cancelled class must not flip it OPEN
+        (move_from_waitlist calls update_status internally).
+        """
+        waitlister = Member.objects.create(
+            name="Waitlister",
+            email="waitlister@example.com",
+            phone_number="628999999902",
+            age=30,
+            height=165.0,
+            weight=60.0,
+            gender="F",
+            goals="Stay fit",
+            years_of_working_out="Beginner",
+        )
+        self.instance.booked_members.clear()
+        self.instance.waitlisted_members.add(waitlister)
+
+        self.instance.move_from_waitlist()
+
+        self.instance.refresh_from_db()
+        self.assertEqual(self.instance.status, "CANCELLED")
+
+    def test_cancel_booking_via_view_keeps_class_cancelled(self):
+        """
+        Reproduces the reported bug end-to-end: a booked member cancelling their
+        booking on a cancelled class must remove the member but keep the class
+        CANCELLED (not re-open it).
+        """
+        session = self.client.session
+        session["member_email"] = self.member.email
+        session.save()
+
+        url = reverse("classes:cancel_class", args=[self.instance.id])
+        self.client.post(url, follow=True)
+
+        self.instance.refresh_from_db()
+        self.assertEqual(self.instance.status, "CANCELLED")
+        self.assertNotIn(self.member, self.instance.booked_members.all())
+
+    def test_book_via_view_keeps_class_cancelled(self):
+        """Booking a cancelled class (e.g. via a stale link) must not re-open it."""
+        other = Member.objects.create(
+            name="Other Member",
+            email="other@example.com",
+            phone_number="628999999903",
+            age=28,
+            height=175.0,
+            weight=72.0,
+            gender="M",
+            goals="Stay fit",
+            years_of_working_out="1-2 years",
+        )
+        session = self.client.session
+        session["member_email"] = other.email
+        session.save()
+
+        url = reverse("classes:book_class", args=[self.instance.id])
+        self.client.post(url, follow=True)
+
+        self.instance.refresh_from_db()
+        self.assertEqual(self.instance.status, "CANCELLED")
+
+    def test_update_status_still_toggles_open_and_full(self):
+        """Regression guard: OPEN/FULL toggling still works for live classes."""
+        live = ClassInstance.objects.create(
+            class_schedule=self.schedule,
+            date=timezone.now().date() + timedelta(days=3),
+            start_time=self.schedule.start_time,
+            end_time=self.schedule.end_time,
+            status="OPEN",
+        )
+        m1 = Member.objects.create(
+            name="M1", email="m1@example.com", phone_number="628999999911",
+            age=25, height=170.0, weight=70.0, gender="M",
+            goals="Stay fit", years_of_working_out="1-2 years",
+        )
+        m2 = Member.objects.create(
+            name="M2", email="m2@example.com", phone_number="628999999912",
+            age=25, height=170.0, weight=70.0, gender="M",
+            goals="Stay fit", years_of_working_out="1-2 years",
+        )
+        live.booked_members.add(m1, m2)  # max_members = 2
+        live.update_status()
+        live.refresh_from_db()
+        self.assertEqual(live.status, "FULL")
+
+        live.booked_members.remove(m1)
+        live.update_status()
+        live.refresh_from_db()
+        self.assertEqual(live.status, "OPEN")
+

@@ -93,6 +93,11 @@ class ClassInstance(models.Model):
         """
         Updates the status of the class instance based on the number of booked members.
         """
+        # Never resurrect an instance an admin cancelled, or one already completed.
+        # Booking/cancellation activity from still-booked members must not flip
+        # a CANCELLED class back to OPEN.
+        if self.status in ("CANCELLED", "COMPLETED"):
+            return
         if self.booked_members.count() >= self.class_schedule.class_obj.max_members:
             self.status = "FULL"
         else:
