@@ -343,6 +343,14 @@ def membership_analytics_view(request):
         semi_private_count = Member.objects.filter(
             semi_private_active_until__gte=week_end_datetime
         ).count()
+        # Bronze = active members without an active Pemula (Silver) or
+        # Semi-Private (Gold) membership, i.e. basic gym-only access.
+        bronze_count = (
+            Member.objects.filter(active_until__gte=week_end_datetime)
+            .exclude(pemula_active_until__gte=week_end_datetime)
+            .exclude(semi_private_active_until__gte=week_end_datetime)
+            .count()
+        )
 
         weeks_data.append(
             {
@@ -351,6 +359,7 @@ def membership_analytics_view(request):
                 "active_count": active_count,
                 "pemula_count": pemula_count,
                 "semi_private_count": semi_private_count,
+                "bronze_count": bronze_count,
             }
         )
 
@@ -368,6 +377,12 @@ def membership_analytics_view(request):
         "semi_private_active": Member.objects.filter(
             semi_private_active_until__gte=now
         ).count(),
+        "bronze_active": (
+            Member.objects.filter(active_until__gte=now)
+            .exclude(pemula_active_until__gte=now)
+            .exclude(semi_private_active_until__gte=now)
+            .count()
+        ),
         "pt_active": Member.objects.filter(pt_session_count__gt=0).count(),
     }
 
@@ -523,6 +538,12 @@ def members_by_date_view(request):
             members = Member.objects.filter(
                 semi_private_active_until__gte=target_datetime
             )
+        elif membership_type == "bronze":
+            members = (
+                Member.objects.filter(active_until__gte=target_datetime)
+                .exclude(pemula_active_until__gte=target_datetime)
+                .exclude(semi_private_active_until__gte=target_datetime)
+            )
         else:  # default to 'active'
             members = Member.objects.filter(active_until__gte=target_datetime)
 
@@ -658,6 +679,12 @@ def export_members_view(request):
             elif membership_type == "semi_private":
                 members = Member.objects.filter(
                     semi_private_active_until__gte=target_datetime
+                )
+            elif membership_type == "bronze":
+                members = (
+                    Member.objects.filter(active_until__gte=target_datetime)
+                    .exclude(pemula_active_until__gte=target_datetime)
+                    .exclude(semi_private_active_until__gte=target_datetime)
                 )
             else:
                 members = Member.objects.filter(active_until__gte=target_datetime)

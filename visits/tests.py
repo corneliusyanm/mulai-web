@@ -327,6 +327,21 @@ class AnalyticsViewsTest(TestCase):
             active_until=timezone.now() - timedelta(days=10),
         )
 
+        # Bronze = active gym-only member (no active Pemula/Semi-Private)
+        self.member_bronze = Member.objects.create(
+            name="Bronze Only",
+            email="bronze@example.com",
+            phone_number="6281234567893",
+            gender="M",
+            age=28,
+            height=178,
+            weight=75,
+            years_of_working_out="3",
+            goals="Stay fit",
+            know_mulai_gym_from="friends",
+            active_until=timezone.now() + timedelta(days=90),
+        )
+
         # Create some visits for testing
         Visit.objects.create(
             member=self.member_active_long,
@@ -391,11 +406,15 @@ class AnalyticsViewsTest(TestCase):
         self.assertGreaterEqual(
             first_week["pemula_count"], 1
         )  # At least 1 pemula member
+        self.assertGreaterEqual(
+            first_week["bronze_count"], 1
+        )  # At least 1 bronze (gym-only) member
 
         # Check current stats
         current_stats = context["current_stats"]
         self.assertGreaterEqual(current_stats["active_members"], 2)
         self.assertGreaterEqual(current_stats["total_members"], 3)
+        self.assertGreaterEqual(current_stats["bronze_active"], 1)
 
     def test_members_by_date_ajax_view(self):
         """Test the AJAX endpoint for getting members by date"""
@@ -444,10 +463,24 @@ class AnalyticsViewsTest(TestCase):
         )
         semi_private_data = response.json()
 
+        # Test bronze members (active but not pemula/semi-private)
+        response = self.client.get(
+            reverse("admin:members-by-date"), {"date": today, "type": "bronze"}
+        )
+        bronze_data = response.json()
+
         # Verify different counts for different types
         self.assertGreaterEqual(active_data["count"], 1)
         self.assertGreaterEqual(pemula_data["count"], 1)
         self.assertGreaterEqual(semi_private_data["count"], 1)
+        self.assertGreaterEqual(bronze_data["count"], 1)
+
+        # Bronze list should include the gym-only member and exclude
+        # members who still hold an active Pemula or Semi-Private membership
+        bronze_emails = [m["email"] for m in bronze_data["members"]]
+        self.assertIn(self.member_bronze.email, bronze_emails)
+        self.assertNotIn(self.member_active_long.email, bronze_emails)
+        self.assertNotIn(self.member_expiring_soon.email, bronze_emails)
 
     def test_member_details_ajax_view(self):
         """Test the AJAX endpoint for member details"""
@@ -483,6 +516,16 @@ class AnalyticsViewsTest(TestCase):
         content = response.content.decode("utf-8")
         self.assertIn("Name,Email,Phone", content)
         self.assertIn(self.member_active_long.name, content)
+
+        # Bronze export should include the gym-only member and exclude
+        # members with an active Pemula/Semi-Private membership
+        response = self.client.get(
+            reverse("admin:export-members"), {"date": today, "type": "bronze"}
+        )
+        self.assertEqual(response.status_code, 200)
+        bronze_content = response.content.decode("utf-8")
+        self.assertIn(self.member_bronze.name, bronze_content)
+        self.assertNotIn(self.member_active_long.name, bronze_content)
 
     def test_smart_alerts_generation(self):
         """Test that smart alerts are properly generated"""

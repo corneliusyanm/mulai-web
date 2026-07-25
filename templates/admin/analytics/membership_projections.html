@@ -393,6 +393,10 @@
             <div class="stat-number">{{ current_stats.semi_private_active }}</div>
             <div class="stat-label">Currently Active Semi-Private</div>
         </div>
+        <div class="stat-card" onclick="showCurrentMembers('bronze')">
+            <div class="stat-number">{{ current_stats.bronze_active }}</div>
+            <div class="stat-label">Currently Active Bronze</div>
+        </div>
         <div class="stat-card">
             <div class="stat-number">{{ current_stats.pt_active }}</div>
             <div class="stat-label">PT Sessions Remaining</div>
@@ -452,6 +456,16 @@
         </div>
         <canvas id="semiPrivateChart"></canvas>
     </div>
+
+    <div class="chart-container">
+        <div class="chart-title">
+            Bronze Members Projection
+            <div class="chart-actions">
+                <button onclick="exportChart('bronze')">Export CSV</button>
+            </div>
+        </div>
+        <canvas id="bronzeChart"></canvas>
+    </div>
 </div>
 
 <!-- Member List Modal -->
@@ -491,6 +505,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const activeData = weeksData.map(week => week.active_count);
     const pemulaData = weeksData.map(week => week.pemula_count);
     const semiPrivateData = weeksData.map(week => week.semi_private_count);
+    const bronzeData = weeksData.map(week => week.bronze_count);
     
     // Chart configuration with click handlers
     const chartConfig = {
@@ -538,6 +553,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function getChartType(canvasId) {
         if (canvasId === 'pemulaChart') return 'pemula';
         if (canvasId === 'semiPrivateChart') return 'semi_private';
+        if (canvasId === 'bronzeChart') return 'bronze';
         return 'active';
     }
     
@@ -586,7 +602,22 @@ document.addEventListener('DOMContentLoaded', function() {
             }]
         }
     });
-    
+
+    new Chart(document.getElementById('bronzeChart'), {
+        ...chartConfig,
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Bronze Members',
+                data: bronzeData,
+                borderColor: '#CD7F32',
+                backgroundColor: 'rgba(205, 127, 50, 0.1)',
+                fill: true,
+                tension: 0.3
+            }]
+        }
+    });
+
     // Revenue chart
     if (revenueData.length > 0) {
         new Chart(document.getElementById('revenueChart'), {
@@ -689,7 +720,8 @@ function displayMemberList(data) {
     const typeNames = {
         'active': 'Active Members',
         'pemula': 'Pemula Members',
-        'semi_private': 'Semi-Private Members'
+        'semi_private': 'Semi-Private Members',
+        'bronze': 'Bronze Members'
     };
     
     title.textContent = `${typeNames[data.type]} on ${data.date} (${data.count} members)`;
