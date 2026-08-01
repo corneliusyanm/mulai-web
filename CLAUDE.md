@@ -26,7 +26,7 @@ Django app running mulaigym.id, the site and admin system for Mulai Gym in Bandu
 | `reminders` | `Reminder` | Staff follow-up queue, auto-generated daily |
 | `equipment` | `Equipment` | Panduan Alat guides + view analytics |
 | `announcements` | `Announcement` | Site-wide banner |
-| `homepage` | `ReviewSummary`, `Testimonial` | Curated Google reviews + the Instagram tile list |
+| `homepage` | `ReviewSummary`, `Testimonial` | Curated Google reviews shown on the homepage |
 | `grand_opening` | `GrandOpeningRegistration` | One-off launch event |
 
 ## Commands
@@ -63,7 +63,7 @@ User-facing copy is **Indonesian**, informal and warm ("Kamu", "Yuk", "biar ngga
 - Member pages extend `base.html`; admin pages extend the admin base.
 - **The class list has 4 near-identical card variants** (Ramadan light / Kelas Pemula / Semi Private / other). Anything that goes on a card belongs in a partial (`templates/classes/_booking_actions.html`, `_class_capacity.html`) and is `{% include %}`d, never copied 4 times.
 - **Bump the CSS cache-buster** in `base.html` (`style.css?v=NN`) whenever you touch `static/css/style.css`, or members keep the old file for a year (`WHITENOISE_MAX_AGE`).
-- **A wrong `{% static %}` path is a 500, not a broken image.** Production uses `CompressedManifestStaticFilesStorage`, which raises on a file that is not in the manifest. Anywhere a static path comes from data or config rather than being written inline (e.g. `homepage/instagram.py`), check it resolves with `staticfiles.finders.find()` and skip it if it does not, and add a test that walks the configured paths.
+- **A wrong `{% static %}` path is a 500, not a broken image.** Production uses `CompressedManifestStaticFilesStorage`, which raises on a file that is not in the manifest. Anywhere a static path comes from data or config rather than being written inline, check it resolves with `staticfiles.finders.find()` and skip it if it does not, and add a test that walks the configured paths.
 - **There is nothing serving `/media/`.** `MEDIA_URL` and `MEDIA_ROOT` are set, but `urls.py` only serves static and WhiteNoise does not cover media, so no model has ever used an `ImageField`. Anything upload-shaped needs an Nginx location block on the droplet first. Until then, images ship in `static/` with the deploy.
 
 ### Views
