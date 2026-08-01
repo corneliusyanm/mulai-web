@@ -22,7 +22,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         dry_run = options["dry_run"]
-        today = timezone.now().date()
+        today = timezone.localdate()
 
         if dry_run:
             self.stdout.write(
@@ -57,7 +57,7 @@ class Command(BaseCommand):
                 new_payments = Payment.objects.filter(
                     member=reminder.member,
                     apakah_nyicil=True,
-                    payment_date__date__gte=reminder.created_date.date(),
+                    payment_date__date__gte=timezone.localdate(reminder.created_date),
                 )
                 if new_payments.exists():
                     should_resolve = True
@@ -66,7 +66,7 @@ class Command(BaseCommand):
                 # Resolve if member visited after the reminder was created
                 new_visits = Visit.objects.filter(
                     member=reminder.member,
-                    check_in_time__date__gte=reminder.created_date.date(),
+                    check_in_time__date__gte=timezone.localdate(reminder.created_date),
                 )
                 if new_visits.exists():
                     should_resolve = True
@@ -75,7 +75,7 @@ class Command(BaseCommand):
                 # Resolve if member's active_until was extended beyond the reminder date
                 if (
                     reminder.member.active_until
-                    and reminder.member.active_until.date() > reminder.due_date
+                    and timezone.localdate(reminder.member.active_until) > reminder.due_date
                 ):
                     should_resolve = True
 
@@ -102,7 +102,7 @@ class Command(BaseCommand):
         ).select_related("member")
 
         for payment in installment_payments:
-            payment_date = payment.payment_date.date()
+            payment_date = timezone.localdate(payment.payment_date)
 
             # Calculate next due dates (monthly)
             months_passed = 1
@@ -173,7 +173,7 @@ class Command(BaseCommand):
             )
 
             # Only create a reminder if a last visit exists and it was exactly 14 days ago
-            if last_visit and last_visit.check_in_time.date() == two_weeks_ago:
+            if last_visit and timezone.localdate(last_visit.check_in_time) == two_weeks_ago:
                 # For EXACT date reminders, check if a reminder already exists for this specific date (ignore resolved)
                 existing = Reminder.objects.filter(
                     member=member,
@@ -211,7 +211,7 @@ class Command(BaseCommand):
         )
 
         for member in members_with_expiry:
-            expiry_date = member.active_until.date()
+            expiry_date = timezone.localdate(member.active_until)
 
             # Generate reminders for 3 days before, on day, and 3 days after expiry
             reminder_dates = [

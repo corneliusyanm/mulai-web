@@ -62,7 +62,7 @@ class ReminderAdmin(admin.ModelAdmin):
     def current_reminders_view(self, request):
         from django.utils import timezone
 
-        today = timezone.now().date()
+        today = timezone.localdate()
         reminders = Reminder.objects.filter(
             is_resolved=False, due_date__lte=today
         ).order_by("due_date", "-created_date")

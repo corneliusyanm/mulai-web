@@ -322,9 +322,9 @@ def membership_analytics_view(request):
         try:
             today = datetime.strptime(start_date, "%Y-%m-%d").date()
         except ValueError:
-            today = timezone.now().date()
+            today = timezone.localdate()
     else:
-        today = timezone.now().date()
+        today = timezone.localdate()
 
     # Calculate weekly projections
     weeks_data = []
@@ -810,7 +810,7 @@ def business_analytics_view(request):
     # Get date range from request - simplified like weekly_metrics_view
     analysis_type = request.GET.get("type", "overview")
 
-    today = timezone.now().date()
+    today = timezone.localdate()
     end_date_str = request.GET.get("end_date", today.strftime("%Y-%m-%d"))
     start_date_str = request.GET.get(
         "start_date", (today - timedelta(days=7)).strftime("%Y-%m-%d")
@@ -866,7 +866,7 @@ def weekly_metrics_view(request):
     if not request.user.is_staff:
         raise PermissionDenied
 
-    today = timezone.now().date()
+    today = timezone.localdate()
     end_date_str = request.GET.get("end_date", today.strftime("%Y-%m-%d"))
     start_date_str = request.GET.get(
         "start_date", (today - timedelta(days=6)).strftime("%Y-%m-%d")
@@ -949,7 +949,7 @@ def weekly_metrics_view(request):
             original_expiry_date = payment.membership_end_date - relativedelta(
                 months=package_duration_months
             )
-            original_expiry_date = original_expiry_date.date()
+            original_expiry_date = timezone.localdate(original_expiry_date)
 
         # Determine if this member's original membership was expiring during target week
         if original_expiry_date and start_date <= original_expiry_date <= end_date:
@@ -977,7 +977,7 @@ def weekly_metrics_view(request):
                     "notes": payment.notes,
                     "renewal_type": "early",
                     "current_expiry": (
-                        member.active_until.date()
+                        timezone.localdate(member.active_until)
                         if member.active_until
                         else "No expiry set"
                     ),

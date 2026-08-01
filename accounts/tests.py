@@ -1,5 +1,5 @@
 import json
-from datetime import timedelta, time
+from datetime import date, datetime, time, timedelta, timezone as dt_timezone
 from urllib.parse import quote
 
 from django.conf import settings
@@ -7,7 +7,7 @@ from django.contrib.staticfiles import finders
 from django.test import TestCase, RequestFactory
 from django.utils import timezone
 from django.urls import resolve, reverse
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from .models import Member, ActiveMember, Tamu, Masukkan, Prospect
 from .admin import ProspectAdmin, MemberAdmin, ActiveMemberAdmin, SaleInline
@@ -2180,3 +2180,79 @@ class PaymentRowTest(TestCase):
         response = self.client.get(reverse("member_details"))
 
         self.assertNotContains(response, "Cicilan")
+
+
+class LocalDateOnTheAccountPageTest(TestCase):
+    """Jakarta is UTC+7, so from midnight until 07:00 the UTC date is still
+    yesterday. The page used to ask for `timezone.now().date()`, so for those
+    seven hours every morning a class from yesterday sat under "Kelas yang Akan
+    Datang" and today's history counted the wrong day.
+    """
+
+    # 18:30 UTC is 01:30 the next morning in Jakarta, inside the broken window.
+    NOW_UTC = datetime(2026, 3, 16, 18, 30, tzinfo=dt_timezone.utc)
+    JAKARTA_TODAY = date(2026, 3, 17)
+
+    def setUp(self):
+        from classes.models import Class, ClassSchedule
+
+        self.ClassSchedule = ClassSchedule
+        self.member = Member.objects.create(
+            name="Local Date Member",
+            email="localdate@example.com",
+            phone_number="628560000777",
+            gender="M",
+            age=25,
+            height=170,
+            weight=70,
+            years_of_working_out="1 tahun",
+            goals="Stay fit",
+            know_mulai_gym_from="friends",
+            active_until=timezone.now() + timedelta(days=30),
+        )
+        self.class_obj = Class.objects.create(
+            name="Kelas Pemula", description="Beginner", max_members=10
+        )
+        session = self.client.session
+        session["member_email"] = self.member.email
+        session.save()
+
+    def book_on(self, day):
+        from classes.models import ClassInstance
+
+        schedule, _ = self.ClassSchedule.objects.get_or_create(
+            class_obj=self.class_obj,
+            day_of_week=day.weekday(),
+            start_time=time(8, 0),
+            defaults={"end_time": time(9, 0)},
+        )
+        instance = ClassInstance.objects.create(
+            class_schedule=schedule,
+            date=day,
+            start_time=time(8, 0),
+            end_time=time(9, 0),
+        )
+        instance.booked_members.add(self.member)
+        return instance
+
+    @patch("django.utils.timezone.now")
+    def test_at_half_past_one_in_the_morning_today_is_still_today(self, now):
+        now.return_value = self.NOW_UTC
+        yesterday = self.book_on(self.JAKARTA_TODAY - timedelta(days=1))
+        today = self.book_on(self.JAKARTA_TODAY)
+
+        response = self.client.get(reverse("member_details"))
+        upcoming = [b.id for b in response.context["upcoming_booked_classes"]]
+        past = [b.id for b in response.context["past_booked_classes"]]
+
+        self.assertEqual(upcoming, [today.id])
+        self.assertEqual(past, [yesterday.id])
+
+    @patch("django.utils.timezone.now")
+    def test_yesterdays_class_is_not_bookable_at_half_past_one(self, now):
+        now.return_value = self.NOW_UTC
+        yesterday = self.book_on(self.JAKARTA_TODAY - timedelta(days=1))
+        today = self.book_on(self.JAKARTA_TODAY)
+
+        self.assertFalse(yesterday.is_bookable)
+        self.assertTrue(today.is_bookable)

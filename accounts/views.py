@@ -381,7 +381,7 @@ class MemberDetailView(MemberRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         member = self.get_object()
-        today = timezone.now().date()
+        today = timezone.localdate()
 
         past_booked = member.booked_classes.filter(date__lt=today)
         past_waitlisted = member.waitlisted_classes.filter(date__lt=today)
@@ -487,7 +487,7 @@ class MemberHistoryView(MemberRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         member = Member.objects.get(email=self.request.session["member_email"])
-        today = timezone.now().date()
+        today = timezone.localdate()
 
         tab = self.request.GET.get("tab", HISTORY_TABS[0]["key"])
         if tab not in [t["key"] for t in HISTORY_TABS]:

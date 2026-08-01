@@ -89,7 +89,7 @@ class ClassInstance(models.Model):
 
     @property
     def is_bookable(self):
-        return self.status in ["OPEN", "FULL"] and self.date >= timezone.now().date()
+        return self.status in ["OPEN", "FULL"] and self.date >= timezone.localdate()
 
     @property
     def available_slots(self):

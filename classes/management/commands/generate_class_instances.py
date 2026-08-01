@@ -18,7 +18,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         days_ahead = options["days"]
-        today = timezone.now().date()
+        today = timezone.localdate()
 
         self.stdout.write(
             self.style.SUCCESS(

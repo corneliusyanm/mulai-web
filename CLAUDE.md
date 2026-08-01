@@ -55,7 +55,7 @@ User-facing copy is **Indonesian**, informal and warm ("Kamu", "Yuk", "biar ngga
 
 - **Money**: `Rp {{ amount|floatformat:0|intcomma }}` (needs `{% load humanize %}`), or `f"Rp {value:,.0f}"` in Python. Comma separators, matching the rest of the codebase.
 - **Dates**: `{{ value|date:"d M Y" }}`. Month names in Indonesian only where a heading carries the date (see `MONTHS_ID` in `accounts/views.py`, `indonesian_day` in `classes/templatetags/class_extras.py`).
-- **Timezone**: `USE_TZ=True`, `TIME_ZONE="Asia/Jakarta"`. Always `localtime()` a `DateTimeField` before taking `.date()`, or a late-evening visit lands on the wrong day.
+- **Timezone**: `USE_TZ=True`, `TIME_ZONE="Asia/Jakarta"`. Never `.date()` a datetime straight: use `timezone.localdate()` for today and `timezone.localdate(value)` for a stored `DateTimeField`. Jakarta is UTC+7, so from midnight until 07:00 the UTC date is still yesterday, and the two crons run at 06:00 local, i.e. always inside that window. ORM `__date` lookups already convert to Asia/Jakarta, so a raw `.date()` on the Python side silently compares two different days.
 
 ### Templates
 

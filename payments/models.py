@@ -99,16 +99,18 @@ class Payment(models.Model):
 
     def calculate_end_date(self, current_date, duration_months):
         """Calculate end date based on current active date and duration"""
-        today = timezone.now().date()
+        today = timezone.localdate()
         start_date = None
 
         # Determine start date based on current membership status
-        if current_date and current_date.date() >= today:
+        if current_date and timezone.localdate(current_date) >= today:
             # Member is active, start new period after current one ends
-            start_date = current_date.date() + timedelta(days=1)
+            start_date = timezone.localdate(current_date) + timedelta(days=1)
         else:
             # Member is inactive or has no active date, start from payment date
-            start_date = self.payment_date.date() if self.payment_date else today
+            start_date = (
+                timezone.localdate(self.payment_date) if self.payment_date else today
+            )
 
         # Calculate end date
         end_time = datetime.max.time()  # End of day
