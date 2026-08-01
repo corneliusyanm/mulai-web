@@ -613,6 +613,11 @@ python manage.py generate_reminders
 0 6 * * * /path/to/mulai_web/generate_daily_reminders.sh
 ```
 
+**What the droplet actually runs is not this example.** Measured from 342 days of `visits_reminder.created_date`, the reminder script fires at **00:03 UTC, i.e. 07:03 WIB**, every day. Both readings matter:
+
+- It is 3 minutes past the UTC date boundary. Anything scheduled a few minutes earlier lands between 00:00 and 07:00 WIB, where the UTC date is still yesterday, and every "today" the command computes would be off by a day. `generate_reminders` now uses `timezone.localdate()` so the schedule cannot do that, but the margin is worth knowing.
+- `generate_daily_class_instances.sh` has no timestamp to measure (`ClassInstance` has no `created_at`). Its log is `/root/mulai_web/class_instance_generation.log` on the droplet; the reminder one is `reminder_generation.log`. Check `crontab -l` for the real entries.
+
 ### Templates (`templates/admin/reminders/reminder/`)
 - **`current_reminders.html`**: Current reminders admin view with resolve actions
 - **`reminder_history.html`**: Historical reminders for audit trail
