@@ -441,6 +441,7 @@ The account-related pages are accessible at the following URLs:
 - **Login**: `/masuk/`
 - **Logout**: `/keluar/`
 - **Member Details**: `/akun/`
+- **Full History**: `/akun/riwayat/`
 - **Edit Profile**: `/akun/edit/`
 
 ### Forms (`accounts/forms.py`)
@@ -456,11 +457,18 @@ The account-related pages are accessible at the following URLs:
   - On failure (not found, invalid form), shows error message.
 - **`member_logout`** (`/keluar/`): Logs the member out by clearing the session.
 - **`MemberSignUpView`** (`/daftar/`): After successful signup, stores `member.email` in session (`member_email`) for auto-login.
+- **`MemberDetailView`** (`/akun/`): Member's own page. Each history section is trimmed (5 visits, 5 payments, 10 past classes, see the `*_LIMIT` constants in `accounts/views.py`). When there is more than that, a "Lihat Semua ..." button with the total count links to the full history page.
+- **`MemberHistoryView`** (`/akun/riwayat/`): Full history, nothing cut off.
+  - Tabs via `?tab=kunjungan|pembayaran|kelas` (plain links, so a tab is bookmarkable/shareable). An unknown tab falls back to `kunjungan`.
+  - Only the active tab's rows are queried; the other tabs just get a count for their badge.
+  - Rows are grouped by month (newest first) with Indonesian month labels, plus 3 summary tiles per tab (e.g. total kunjungan, kunjungan bulan ini, kunjungan pertama).
+  - Kunjungan rows show the visit duration (`1j 15m`); classes tab merges booked and waitlisted past classes into one date-sorted list.
 
 ### Templates
 - `login.html`: Updated to include email and phone number fields (with country code).
 - `check_in.html`: Updated to include email and phone number fields (with country code).
 - `signup.html`, `member_edit.html`: Include country code and phone number fields.
+- `member_history.html`: Full history page. Segmented tab bar, summary tiles, month groups, and a floating back-to-top button for long lists.
 
 ### Automatic `is_pemula` Calculation
 During member registration, the `is_pemula` field is automatically calculated based on the `years_of_working_out` input:

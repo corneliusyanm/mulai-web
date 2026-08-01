@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load visit_extras %}
+{% load visit_extras humanize %}
 
 {% block title %}Akun Saya - Mulai Gym{% endblock %}
 
@@ -165,6 +165,12 @@
                     {% else %}
                         <p class="text-center py-3">Belum ada riwayat kunjungan</p>
                     {% endif %}
+                    {% if has_more_visits %}
+                        <a href="{% url 'member_history' %}?tab=kunjungan" class="btn btn-outline-primary w-100 rounded-pill fw-bold mt-3">
+                            <i class="fas fa-clock-rotate-left me-2"></i>Lihat Semua Kunjungan
+                            <span class="badge bg-primary rounded-pill ms-1">{{ total_visits }}</span>
+                        </a>
+                    {% endif %}
                 </div>
             </div>
 
@@ -186,7 +192,7 @@
                                               <i class="fas fa-money-bill-wave text-success"></i>
                                           </div>
                                           <div>
-                                              <div class="fw-bold text-success">Rp {{ payment.amount|floatformat:0 }}</div>
+                                              <div class="fw-bold text-success">Rp {{ payment.amount|floatformat:0|intcomma }}</div>
                                               <small class="text-muted">{{ payment.payment_date|date:"d M Y" }}</small>
                                           </div>
                                       </div>
@@ -210,6 +216,14 @@
                       <div class="text-center py-4">
                           <i class="fas fa-receipt text-muted mb-2" style="font-size: 2.5rem;"></i>
                           <p class="text-muted mb-0">Belum ada riwayat pembayaran</p>
+                      </div>
+                  {% endif %}
+                  {% if has_more_payments %}
+                      <div class="px-3 pb-3 pt-1">
+                          <a href="{% url 'member_history' %}?tab=pembayaran" class="btn btn-outline-success w-100 rounded-pill fw-bold">
+                              <i class="fas fa-clock-rotate-left me-2"></i>Lihat Semua Pembayaran
+                              <span class="badge bg-success rounded-pill ms-1">{{ total_payments }}</span>
+                          </a>
                       </div>
                   {% endif %}
               </div>
@@ -268,6 +282,14 @@
                       <div class="text-center py-4">
                           <i class="fas fa-history text-muted mb-2" style="font-size: 2.5rem;"></i>
                           <p class="text-muted mb-0">Belum ada riwayat kelas</p>
+                      </div>
+                  {% endif %}
+                  {% if has_more_past_classes %}
+                      <div class="px-3 pb-3 pt-1">
+                          <a href="{% url 'member_history' %}?tab=kelas" class="btn btn-outline-primary w-100 rounded-pill fw-bold">
+                              <i class="fas fa-clock-rotate-left me-2"></i>Lihat Semua Riwayat Kelas
+                              <span class="badge bg-primary rounded-pill ms-1">{{ total_past_classes }}</span>
+                          </a>
                       </div>
                   {% endif %}
               </div>

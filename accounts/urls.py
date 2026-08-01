@@ -12,6 +12,7 @@ urlpatterns = [
     path("masuk/", views.member_login, name="member_login"),
     path("keluar/", views.member_logout, name="member_logout"),
     path("akun/", views.MemberDetailView.as_view(), name="member_details"),
+    path("akun/riwayat/", views.MemberHistoryView.as_view(), name="member_history"),
     path("akun/ubah/", views.MemberEditView.as_view(), name="member_edit"),
     path("lowongan-kerja/", views.job_openings, name="job_openings"),
 ]

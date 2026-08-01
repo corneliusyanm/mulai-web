@@ -9,6 +9,7 @@ from .models import Member, ActiveMember, Tamu, Masukkan, Prospect
 from .admin import ProspectAdmin, MemberAdmin, ActiveMemberAdmin, SaleInline
 from .models import User
 from visits.admin import admin_site
+from visits.models import Visit
 from payments.models import Payment
 from purchases.models import Product, Sale, SaleItem
 
@@ -1235,3 +1236,176 @@ class MemberAdminCSVExportTest(TestCase):
         # Check flags are included
         self.assertIn("asked_referral", content)  # Header
         self.assertIn("True", content)  # asked_referral value
+
+
+class MemberHistoryViewTest(TestCase):
+    """Tests for /akun/riwayat/ (full, unlimited history)."""
+
+    def setUp(self):
+        self.member = Member.objects.create(
+            name="History User",
+            email="history@example.com",
+            phone_number="6281234500001",
+            gender="M",
+            age=30,
+            height=170,
+            weight=70,
+            years_of_working_out="1 tahun",
+            goals="Stay fit",
+            know_mulai_gym_from="friends",
+            active_until=timezone.now() + timedelta(days=30),
+        )
+
+    def login(self):
+        session = self.client.session
+        session["member_email"] = self.member.email
+        session.save()
+
+    def create_visits(self, count, start_days_ago=0):
+        """Create visits on distinct days (check_in_time is auto_now_add, so update it)."""
+        for i in range(count):
+            visit = Visit.objects.create(member=self.member)
+            check_in = timezone.now() - timedelta(days=start_days_ago + i)
+            Visit.objects.filter(pk=visit.pk).update(
+                check_in_time=check_in,
+                check_out_time=check_in + timedelta(hours=1, minutes=15),
+            )
+
+    def create_past_class(self, days_ago, waitlist=False):
+        from classes.models import Class, ClassSchedule, ClassInstance
+
+        class_obj, _ = Class.objects.get_or_create(
+            name="Kelas Pemula", defaults={"max_members": 10}
+        )
+        schedule, _ = ClassSchedule.objects.get_or_create(
+            class_obj=class_obj,
+            day_of_week=0,
+            start_time=time(8, 0),
+            end_time=time(9, 0),
+        )
+        instance = ClassInstance.objects.create(
+            class_schedule=schedule,
+            date=timezone.now().date() - timedelta(days=days_ago),
+            start_time=time(8, 0),
+            end_time=time(9, 0),
+            status="COMPLETED",
+        )
+        if waitlist:
+            instance.waitlisted_members.add(self.member)
+        else:
+            instance.booked_members.add(self.member)
+        return instance
+
+    def test_requires_login(self):
+        response = self.client.get(reverse("member_history"))
+        self.assertRedirects(response, reverse("member_login"))
+
+    def test_shows_all_visits_not_limited(self):
+        self.create_visits(12)
+        self.login()
+        response = self.client.get(reverse("member_history"))
+        self.assertEqual(response.status_code, 200)
+        rows = [row for group in response.context["groups"] for row in group["rows"]]
+        self.assertEqual(len(rows), 12)
+        self.assertEqual(response.context["active_tab"], "kunjungan")
+        self.assertEqual(response.context["total_rows"], 12)
+
+    def test_visits_are_grouped_by_month_newest_first(self):
+        self.create_visits(2)  # this month
+        self.create_visits(2, start_days_ago=70)  # ~2 months ago
+        self.login()
+        response = self.client.get(reverse("member_history"))
+        groups = response.context["groups"]
+        self.assertGreaterEqual(len(groups), 2)
+        keys = [group["key"] for group in groups]
+        self.assertEqual(keys, sorted(keys, reverse=True))
+
+    def test_visit_duration_label(self):
+        self.create_visits(1)
+        self.login()
+        response = self.client.get(reverse("member_history"))
+        visit = response.context["groups"][0]["rows"][0]
+        self.assertEqual(visit.duration_label, "1j 15m")
+
+    def test_payments_tab_shows_all_payments(self):
+        for i in range(8):
+            Payment.objects.create(
+                member=self.member,
+                amount=150000,
+                payment_date=timezone.now() - timedelta(days=30 * i),
+            )
+        self.login()
+        response = self.client.get(reverse("member_history"), {"tab": "pembayaran"})
+        self.assertEqual(response.status_code, 200)
+        rows = [row for group in response.context["groups"] for row in group["rows"]]
+        self.assertEqual(len(rows), 8)
+        self.assertEqual(response.context["active_tab"], "pembayaran")
+
+    def test_classes_tab_shows_booked_and_waitlisted(self):
+        self.create_past_class(days_ago=3)
+        self.create_past_class(days_ago=10)
+        self.create_past_class(days_ago=20, waitlist=True)
+        self.login()
+        response = self.client.get(reverse("member_history"), {"tab": "kelas"})
+        self.assertEqual(response.status_code, 200)
+        rows = [row for group in response.context["groups"] for row in group["rows"]]
+        self.assertEqual(len(rows), 3)
+        self.assertEqual(sum(1 for row in rows if row["is_waitlist"]), 1)
+
+    def test_classes_tab_excludes_upcoming(self):
+        from classes.models import Class, ClassSchedule, ClassInstance
+
+        self.create_past_class(days_ago=3)
+        class_obj = Class.objects.get(name="Kelas Pemula")
+        schedule = ClassSchedule.objects.filter(class_obj=class_obj).first()
+        upcoming = ClassInstance.objects.create(
+            class_schedule=schedule,
+            date=timezone.now().date() + timedelta(days=2),
+            start_time=time(8, 0),
+            end_time=time(9, 0),
+        )
+        upcoming.booked_members.add(self.member)
+        self.login()
+        response = self.client.get(reverse("member_history"), {"tab": "kelas"})
+        rows = [row for group in response.context["groups"] for row in group["rows"]]
+        self.assertEqual(len(rows), 1)
+
+    def test_unknown_tab_falls_back_to_kunjungan(self):
+        self.login()
+        response = self.client.get(reverse("member_history"), {"tab": "ngawur"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["active_tab"], "kunjungan")
+
+    def test_empty_history_renders(self):
+        self.login()
+        response = self.client.get(reverse("member_history"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["groups"], [])
+        self.assertContains(response, "Belum ada riwayat")
+
+    def test_detail_view_hides_button_when_nothing_more(self):
+        self.create_visits(3)
+        self.login()
+        response = self.client.get(reverse("member_details"))
+        self.assertFalse(response.context["has_more_visits"])
+        self.assertNotContains(response, "Lihat Semua Kunjungan")
+
+    def test_detail_view_shows_button_when_more_history(self):
+        self.create_visits(7)
+        self.login()
+        response = self.client.get(reverse("member_details"))
+        self.assertTrue(response.context["has_more_visits"])
+        self.assertEqual(response.context["total_visits"], 7)
+        self.assertContains(response, "Lihat Semua Kunjungan")
+        self.assertContains(response, reverse("member_history"))
+        # The trimmed list itself stays at 5 rows
+        self.assertEqual(len(response.context["recent_visits"]), 5)
+
+    def test_detail_view_shows_class_history_button(self):
+        for i in range(11):
+            self.create_past_class(days_ago=i + 1)
+        self.login()
+        response = self.client.get(reverse("member_details"))
+        self.assertTrue(response.context["has_more_past_classes"])
+        self.assertEqual(response.context["total_past_classes"], 11)
+        self.assertContains(response, "Lihat Semua Riwayat Kelas")

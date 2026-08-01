@@ -4,7 +4,8 @@ from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 from django.utils import timezone
-from django.views.generic import DetailView
+from django.utils.timezone import localtime
+from django.views.generic import DetailView, TemplateView
 from django.views.generic.edit import CreateView, UpdateView
 
 from payments.models import Payment
@@ -20,6 +21,66 @@ from .forms import (
 from .models import Member, Tamu, Masukkan
 
 # Create your views here.
+
+# How many rows each history section shows on /akun/ before the member has to
+# open /akun/riwayat/ for the full list.
+RECENT_VISITS_LIMIT = 5
+RECENT_PAYMENTS_LIMIT = 5
+PAST_CLASSES_LIMIT = 10
+
+HISTORY_TABS = [
+    {"key": "kunjungan", "label": "Kunjungan", "icon": "fas fa-calendar-check"},
+    {"key": "pembayaran", "label": "Pembayaran", "icon": "fas fa-credit-card"},
+    {"key": "kelas", "label": "Kelas", "icon": "fas fa-dumbbell"},
+]
+
+MONTHS_ID = {
+    1: "Januari",
+    2: "Februari",
+    3: "Maret",
+    4: "April",
+    5: "Mei",
+    6: "Juni",
+    7: "Juli",
+    8: "Agustus",
+    9: "September",
+    10: "Oktober",
+    11: "November",
+    12: "Desember",
+}
+
+
+def _duration_label(check_in, check_out):
+    """Human duration of a visit, e.g. "1j 18m". Empty when still checked in."""
+    if not check_in or not check_out:
+        return ""
+    minutes = int((check_out - check_in).total_seconds() // 60)
+    if minutes < 1:
+        return "< 1m"
+    hours, minutes = divmod(minutes, 60)
+    if hours and minutes:
+        return f"{hours}j {minutes}m"
+    if hours:
+        return f"{hours}j"
+    return f"{minutes}m"
+
+
+def _group_by_month(rows, get_date):
+    """Bucket rows (already sorted newest first) into month groups for display."""
+    groups = []
+    for row in rows:
+        row_date = get_date(row)
+        key = (row_date.year, row_date.month)
+        if not groups or groups[-1]["key"] != key:
+            groups.append(
+                {
+                    "key": key,
+                    "label": f"{MONTHS_ID[row_date.month]} {row_date.year}",
+                    "rows": [],
+                }
+            )
+        groups[-1]["rows"].append(row)
+    return groups
 
 
 class MemberSignUpView(CreateView):
@@ -99,28 +160,175 @@ class MemberDetailView(MemberRequiredMixin, DetailView):
         member = self.get_object()
         today = timezone.now().date()
 
+        past_booked = member.booked_classes.filter(date__lt=today)
+        past_waitlisted = member.waitlisted_classes.filter(date__lt=today)
+
         # Filter booked classes for upcoming and past
         context["upcoming_booked_classes"] = member.booked_classes.filter(
             date__gte=today
         ).order_by("date", "start_time")
-        context["past_booked_classes"] = member.booked_classes.filter(
-            date__lt=today
-        ).order_by("-date", "-start_time")[:10]
+        context["past_booked_classes"] = past_booked.order_by("-date", "-start_time")[
+            :PAST_CLASSES_LIMIT
+        ]
 
         # Filter waitlisted classes for upcoming and past
         context["upcoming_waitlisted_classes"] = member.waitlisted_classes.filter(
             date__gte=today
         ).order_by("date", "start_time")
-        context["past_waitlisted_classes"] = member.waitlisted_classes.filter(
-            date__lt=today
-        ).order_by("-date", "-start_time")[:10]
+        context["past_waitlisted_classes"] = past_waitlisted.order_by(
+            "-date", "-start_time"
+        )[:PAST_CLASSES_LIMIT]
 
         context["recent_visits"] = Visit.objects.filter(member=member).order_by(
             "-check_in_time"
-        )[:5]
+        )[:RECENT_VISITS_LIMIT]
         context["recent_payments"] = Payment.objects.filter(member=member).order_by(
             "-payment_date"
-        )[:5]
+        )[:RECENT_PAYMENTS_LIMIT]
+
+        # Totals drive the "Lihat Semua Riwayat" buttons, which only make sense
+        # when there is more history than the trimmed lists above show.
+        total_visits = Visit.objects.filter(member=member).count()
+        total_payments = Payment.objects.filter(member=member).count()
+        past_booked_count = past_booked.count()
+        past_waitlisted_count = past_waitlisted.count()
+
+        context["total_visits"] = total_visits
+        context["total_payments"] = total_payments
+        context["total_past_classes"] = past_booked_count + past_waitlisted_count
+        context["has_more_visits"] = total_visits > RECENT_VISITS_LIMIT
+        context["has_more_payments"] = total_payments > RECENT_PAYMENTS_LIMIT
+        context["has_more_past_classes"] = (
+            past_booked_count > PAST_CLASSES_LIMIT
+            or past_waitlisted_count > PAST_CLASSES_LIMIT
+        )
+        return context
+
+
+class MemberHistoryView(MemberRequiredMixin, TemplateView):
+    """Full history for the logged-in member: every visit, payment and past class.
+
+    Unlike /akun/ (which trims each list), nothing is cut off here. Only the
+    active tab's rows are loaded, grouped by month so long lists stay readable.
+    """
+
+    template_name = "accounts/member_history.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        member = Member.objects.get(email=self.request.session["member_email"])
+        today = timezone.now().date()
+
+        tab = self.request.GET.get("tab", HISTORY_TABS[0]["key"])
+        if tab not in [t["key"] for t in HISTORY_TABS]:
+            tab = HISTORY_TABS[0]["key"]
+
+        visits = Visit.objects.filter(member=member)
+        payments = Payment.objects.filter(member=member)
+        past_booked = member.booked_classes.filter(date__lt=today)
+        past_waitlisted = member.waitlisted_classes.filter(date__lt=today)
+
+        counts = {
+            "kunjungan": visits.count(),
+            "pembayaran": payments.count(),
+            "kelas": past_booked.count() + past_waitlisted.count(),
+        }
+
+        groups = []
+        stats = []
+
+        if tab == "kunjungan":
+            rows = list(visits.order_by("-check_in_time"))
+            for visit in rows:
+                visit.duration_label = _duration_label(
+                    visit.check_in_time, visit.check_out_time
+                )
+            groups = _group_by_month(rows, lambda v: localtime(v.check_in_time).date())
+            this_month = sum(
+                1
+                for v in rows
+                if localtime(v.check_in_time).date().replace(day=1)
+                == today.replace(day=1)
+            )
+            stats = [
+                {
+                    "label": "Total Kunjungan",
+                    "value": counts["kunjungan"],
+                    "icon": "fas fa-calendar-check",
+                },
+                {
+                    "label": "Bulan Ini",
+                    "value": this_month,
+                    "icon": "fas fa-calendar-day",
+                },
+                {
+                    "label": "Pertama Kali",
+                    "value": localtime(rows[-1].check_in_time).strftime("%d %b %Y")
+                    if rows
+                    else "-",
+                    "icon": "fas fa-flag",
+                },
+            ]
+        elif tab == "pembayaran":
+            rows = list(payments.select_related("package").order_by("-payment_date"))
+            groups = _group_by_month(rows, lambda p: localtime(p.payment_date).date())
+            total_paid = sum(p.amount for p in rows)
+            stats = [
+                {
+                    "label": "Total Transaksi",
+                    "value": counts["pembayaran"],
+                    "icon": "fas fa-receipt",
+                },
+                {
+                    "label": "Total Dibayar",
+                    "value": f"Rp {total_paid:,.0f}",
+                    "icon": "fas fa-wallet",
+                },
+                {
+                    "label": "Terakhir",
+                    "value": localtime(rows[0].payment_date).strftime("%d %b %Y")
+                    if rows
+                    else "-",
+                    "icon": "fas fa-clock-rotate-left",
+                },
+            ]
+        else:
+            booked = past_booked.select_related("class_schedule__class_obj")
+            waitlisted = past_waitlisted.select_related("class_schedule__class_obj")
+            rows = [{"instance": ci, "is_waitlist": False} for ci in booked] + [
+                {"instance": ci, "is_waitlist": True} for ci in waitlisted
+            ]
+            rows.sort(
+                key=lambda row: (row["instance"].date, row["instance"].start_time),
+                reverse=True,
+            )
+            groups = _group_by_month(rows, lambda row: row["instance"].date)
+            stats = [
+                {
+                    "label": "Kelas Diikuti",
+                    "value": booked.count(),
+                    "icon": "fas fa-dumbbell",
+                },
+                {
+                    "label": "Pernah Antri",
+                    "value": waitlisted.count(),
+                    "icon": "fas fa-hourglass-half",
+                },
+                {
+                    "label": "Terakhir",
+                    "value": rows[0]["instance"].date.strftime("%d %b %Y")
+                    if rows
+                    else "-",
+                    "icon": "fas fa-clock-rotate-left",
+                },
+            ]
+
+        context["member"] = member
+        context["active_tab"] = tab
+        context["tabs"] = [{**t, "count": counts[t["key"]]} for t in HISTORY_TABS]
+        context["stats"] = stats
+        context["groups"] = groups
+        context["total_rows"] = counts[tab]
         return context
 
 
