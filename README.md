@@ -18,6 +18,8 @@ Insights:
 
 Mulai Gym was opened since June 28, 2025.
 
+> This file documents **what the system does**: per-feature behaviour, business rules, admin workflows, infra. How to work in the codebase (stack, commands, conventions, testing, gotchas) lives in `CLAUDE.md`.
+
 # Overall Architecture
 Infrastructure & Deployment Architecture
 ```mermaid
@@ -458,11 +460,18 @@ The account-related pages are accessible at the following URLs:
 - **`member_logout`** (`/keluar/`): Logs the member out by clearing the session.
 - **`MemberSignUpView`** (`/daftar/`): After successful signup, stores `member.email` in session (`member_email`) for auto-login.
 - **`MemberDetailView`** (`/akun/`): Member's own page. Each history section is trimmed (5 visits, 5 payments, 10 past classes, see the `*_LIMIT` constants in `accounts/views.py`). When there is more than that, a "Lihat Semua ..." button with the total count links to the full history page.
+- **Account page extras** (all in `MemberDetailView`):
+  - **Class countdown**: each upcoming class carries a `when_label` ("40 menit lagi", "3 jam lagi", "Besok 16:00", "3 hari lagi", "Sedang berlangsung") plus `when_soon`, which turns the badge red for anything today or already running. Built by `_class_when_label()`.
+  - **Cancel nudge**: one line under the upcoming list, "Nggak bisa datang? Batalkan dulu biar member lain kebagian tempat." The daily cap stops members hoarding classes; this aims at the no-shows.
+  - **Waitlist place**: waitlisted upcoming classes show "Antrian ke-2" (see `ClassInstance.waitlist_position`).
+  - **Habit tiles**: visits this month, week streak, total visits. `_visit_streak_weeks()` counts consecutive weeks with at least one visit; the current week having no visit yet does **not** break the streak (nobody should lose 8 weeks because it is Monday morning), a fully missed week does. Hidden entirely for a member with no visits.
+  - Note `upcoming_booked_classes` / `upcoming_waitlisted_classes` are now **lists**, not querysets, since each item carries these computed labels.
 - **`MemberHistoryView`** (`/akun/riwayat/`): Full history, nothing cut off.
   - Tabs via `?tab=kunjungan|pembayaran|kelas` (plain links, so a tab is bookmarkable/shareable). An unknown tab falls back to `kunjungan`.
   - Only the active tab's rows are queried; the other tabs just get a count for their badge.
   - Rows are grouped by month (newest first) with Indonesian month labels, plus 3 summary tiles per tab (e.g. total kunjungan, kunjungan bulan ini, kunjungan pertama).
   - Kunjungan rows show the visit duration (`1j 15m`); classes tab merges booked and waitlisted past classes into one date-sorted list.
+  - **Monthly visit chart** (kunjungan tab only): 12-month bar chart via Chart.js (same CDN the admin analytics pages use), data passed with `json_script`. Quiet months stay as zeros so the shape of the habit is honest. One series, one brand hue, no legend, recessive gridlines, value on hover. `_monthly_visit_chart()` returns `None` when there is nothing to draw, and then neither the card nor the Chart.js script is rendered.
 
 ### Templates
 - `login.html`: Updated to include email and phone number fields (with country code).
@@ -674,14 +683,24 @@ Every card on `/kelas/` carries its own action button, so booking takes one tap 
 - **Returns to the list**: the forms post `next=list`, and `_redirect_after_action()` sends the member back to `/kelas/#kelas-<id>`, i.e. the same card they tapped. Only that one fixed value is accepted, so it can't be abused as an open redirect the way `next=<url>` could. Without the field (the detail page), behaviour is unchanged.
 - **Cancelling asks first**: a mis-tap while scrolling would hand the spot to the waitlist with no undo, so cancel/leave-waitlist show a confirm. Booking itself is one tap.
 - **Double taps**: on submit the button is disabled and swapped for a spinner.
-- **Flat query count**: `ClassListView.get_context_data()` precomputes everything each card needs (`slots_left`, `member_is_booked`, `member_is_waitlisted`, `booking_block`) in 5 queries total, no matter how many classes are listed. Doing it in the template would cost several queries per card. A test pins this by rendering 6 then 12 cards and asserting the same count.
 - **Day limit note**: shown once per date group (not per card), listing the classes the member already holds that day. Cards under it get a compact disabled `Maks 2/hari`.
 
-### Booking Rules, One Place
+### Class Card Extras
 
-`booking_block_reason(member, instance, held_that_day=None)` in `classes/models.py` answers "may this member book this class?" and is used by the class list, the class detail page and the `book_class` POST, so a member never sees a button the server then refuses.
+- **How full it is**: each card shows "7 dari 10 sudah booking", a thin capacity bar (purple, orange under 3 slots left, red when full) and the initials of up to 5 members already booked, plus "+N". Sorted by name so the row is stable between loads, and the circles carry a `title` with the first name. Honest urgency instead of a binary Tersedia/Penuh badge, and seeing familiar people is what makes a class feel like the community it is. Template: `templates/classes/_class_capacity.html`.
+- **Waitlist place**: `ClassInstance.waitlist_position(member)` returns the 1-based place in the same FIFO order `move_from_waitlist()` promotes in, so "Antrian ke-2" is a promise the system keeps. Shown on the class list, the class detail page and the account page.
+- **Tambah ke Kalender**: `/kelas/<id>/kalender/` returns an `.ics` (`classes/calendar_export.py`) for members who hold a spot. Hand-rolled, no dependency: CRLF endings, RFC 5545 escaping, 75-octet line folding, times in UTC (`DTSTART:...Z`, so no VTIMEZONE block needed), and a `VALARM` 60 minutes before. That alarm is a reminder the member's own phone fires, which we do not have to build or send.
+- **Ajak Temen**: `wa.me` link with a prefilled message naming the class, day and time plus an absolute link back to the class page. Available on any class, booked or not.
 
-Returns `None` when they may book, otherwise a dict with `code` (`DAY_LIMIT` / `SEMI_PRIVATE_INACTIVE` / `PEMULA_INACTIVE`), `short` (small list button), `label` (roomier detail-page button) and `message` (full sentence for `messages.error`). `held_that_day` lets the list page pass a count it already has instead of re-querying per card; `book_class` leaves it out so the count is taken fresh inside the transaction.
+### What Can Block a Booking
+
+Three things, all decided by `booking_block_reason()` in `classes/models.py`:
+
+- **`DAY_LIMIT`** - already holding 2 classes that day (see "Daily Booking Limit").
+- **`PEMULA_INACTIVE`** - Kelas Pemula, but the member's Silver is not active on the class date.
+- **`SEMI_PRIVATE_INACTIVE`** - Semi Private, but the member's Gold is not active on the class date.
+
+The class list, the class detail page and the booking POST all read the same function, so a member never sees a button the server then refuses. A blocked member gets a disabled button naming the reason instead of an error after tapping.
 
 ### Admin Interface
 - **Full CRUD Access**: Classes, schedules, and bookings management
@@ -708,7 +727,7 @@ Members used to book 3-4 classes on the same day just to be sure they never hit 
 - **Waitlist promotion is never blocked**: the waitlist spot already counted, so `move_from_waitlist()` only converts it to a booking and the total for that day does not change.
 - **Admins can override**: the limit lives in the member-facing `book_class` view, not in the model, so staff can still add a member to a 3rd class from `/admin` for special cases (paid extra, makeup class).
 - **Race-safe**: the check and the booking run in one transaction with `select_for_update()` on the member row, so double-tapping cannot slip a 3rd booking through.
-- **Shown before they tap**: on the class detail page, a member who already has 2 classes on that date sees a disabled "Maks 2 Kelas per Hari" button plus a note listing the classes they already hold that day, instead of an error after tapping. `ClassDetailView` provides `day_limit_reached`, `member_classes_on_date` and `max_classes_per_day`.
+- **Shown before they tap**: a member who already has 2 classes on that date sees a disabled "Maks 2 Kelas per Hari" button plus a note listing the classes they already hold that day, instead of an error after tapping.
 - **To change the limit**: edit `MAX_CLASSES_PER_DAY` in `classes/models.py`. All user-facing messages read the number from that constant.
 
 ### Technical Implementation
