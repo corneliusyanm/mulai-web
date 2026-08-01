@@ -479,14 +479,14 @@ The account-related pages are accessible at the following URLs:
   - **Kalender / Ajak Temen per row**: each upcoming class (booked or waitlisted) carries the `.ics` download and the WhatsApp invite that the class detail page already had, since a member checking their bookings starts here. The row markup lives in one partial, `templates/accounts/_upcoming_class_row.html`, used by both the booked and the waitlisted loop. The row is a `div` with an inner link, not one big `<a>`, because an anchor cannot contain anchors. The invite text comes from `whatsapp_invite_url()` in `classes/sharing.py`, called by both this page and the class detail page so the two cannot drift.
   - **Habit tiles**: visits this month, week streak, total visits. `_visit_streak_weeks()` counts consecutive weeks with at least one visit; the current week having no visit yet does **not** break the streak (nobody should lose 8 weeks because it is Monday morning), a fully missed week does. Hidden entirely for a member with no visits.
   - **Visit milestone**: badge earned plus the next one to chase ("100 kunjungan", "17 lagi ke 200") and a progress bar. Steps are `VISIT_MILESTONES` (5, 10, 25, 50, 100, 200, 300), spaced to match the real spread: the median member has about 6 visits, nine in ten are under 60, the busiest has just over 200. Progress is measured **inside the current step**, so the bar moves every few visits instead of crawling towards 300, and a member who has just landed on a badge still gets a 4% sliver. Hidden for a member with no visits.
-  - **Jam Lengang strip**: when the gym is usually quiet today, so a member can pick a calm hour. See below.
+  - **Jam Kosong strip**: when the gym is usually quiet today, so a member can pick a calm hour. See below.
   - Note `upcoming_booked_classes` / `upcoming_waitlisted_classes` are now **lists**, not querysets, since each item carries these computed labels.
 
-### Jam Lengang (`visits/busy_hours.py`)
+### Jam Kosong (`visits/busy_hours.py`)
 
 A small bar strip on `/akun` showing how busy each open hour usually is today, so a member can come when the gym is calm.
 
-- **Framing is deliberate**: the card is called "Jam Lengang" and always points at a quiet window. It never says the gym is full and never tells anyone not to come. A busy evening here is about 20 people, so there is nothing to warn about; the value is telling a first-timer when they can have the place to themselves.
+- **Framing is deliberate**: the card is called "Jam Kosong" and always points at a quiet window. It never says the gym is full and never tells anyone not to come. A busy evening here is about 20 people, so there is nothing to warn about; the value is telling a first-timer when they can have the place to themselves.
 - **Historical, not live.** A 12-week average for that weekday (`LOOKBACK_WEEKS`), never a live head count: a live number is scary without context and would flip between two page loads.
 - **Opening hours per weekday** live in `OPENING_HOURS` (Mon-Fri 07:00-21:00, Sat/Sun 07:00-20:00; Sunday actually opens 07:30, so its 07:00 bar covers half an hour). Bars run from the opening hour to the hour before closing.
 - **Levels** are a share of that day's busiest hour: `quiet` at or below 40%, `medium` at or below 75%, `busy` above (`QUIET_AT_OR_BELOW` / `MEDIUM_AT_OR_BELOW`).

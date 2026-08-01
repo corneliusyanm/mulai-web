@@ -1547,7 +1547,7 @@ class WeeklyMetricsViewTest(TestCase):
 
 
 class QuietHoursTest(TestCase):
-    """The member-facing "Jam Lengang" strip on /akun.
+    """The member-facing "Jam Kosong" strip on /akun.
 
     Anchored to a fixed Monday and a fixed "now" so the 12-week lookback and the
     "sekarang" marker cannot drift with the real calendar.
@@ -1668,4 +1668,4 @@ class QuietHoursTest(TestCase):
 
         response = self.client.get(reverse("member_details"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Jam Lengang")
+        self.assertContains(response, "Jam Kosong")
