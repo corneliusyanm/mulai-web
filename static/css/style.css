@@ -778,17 +778,10 @@ section {
   color: var(--primary);
 }
 
-@media (min-width: 768px) {
-  .reviews-scroller {
-    overflow: visible;
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-
-  .review-card {
-    flex: 0 1 300px;
-  }
-}
+/* No wrap-to-grid at wider viewports on purpose. The homepage lives inside a
+   500px .mobile-container at every screen size, so a min-width media query fires
+   while the column is still narrow and turns the carousel into one tall stack of
+   full-width cards. It stays a swipe carousel everywhere. */
 
 /* Membership expiry / come back nudge on the account page */
 .membership-nudge {
