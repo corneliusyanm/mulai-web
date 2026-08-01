@@ -11,6 +11,7 @@ from django.utils.timezone import localtime
 from django.views.generic import DetailView, TemplateView
 from django.views.generic.edit import CreateView, UpdateView
 
+from homepage.models import ReviewSummary, Testimonial
 from payments.models import Payment
 from visits.models import Visit
 
@@ -30,6 +31,9 @@ from .models import Member, Tamu, Masukkan
 RECENT_VISITS_LIMIT = 5
 RECENT_PAYMENTS_LIMIT = 5
 PAST_CLASSES_LIMIT = 10
+
+# How many curated reviews the homepage shows before "lihat semua di Google".
+TESTIMONIALS_ON_HOME = 6
 
 HISTORY_TABS = [
     {"key": "kunjungan", "label": "Kunjungan", "icon": "fas fa-calendar-check"},
@@ -565,7 +569,15 @@ class MemberEditView(MemberRequiredMixin, UpdateView):
 
 
 def home(request):
-    return render(request, "home.html")
+    summary = ReviewSummary.get_solo()
+    return render(
+        request,
+        "home.html",
+        {
+            "review_summary": summary,
+            "testimonials": Testimonial.get_active()[:TESTIMONIALS_ON_HOME],
+        },
+    )
 
 
 JOB_LISTINGS = [

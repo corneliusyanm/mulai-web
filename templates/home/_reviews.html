@@ -1,0 +1,57 @@
+{% comment %}
+Social proof, sitting right before the contact footer.
+Renders nothing at all when there is neither a rating badge nor a review.
+{% endcomment %}
+{% if review_summary or testimonials %}
+<section id="ulasan" class="reviews-section">
+    <div class="container-fluid px-4">
+        <h2 class="reviews-title">Kata Member Mulai</h2>
+
+        {% if review_summary %}
+            <a href="{{ review_summary.maps_url }}" target="_blank" rel="noopener noreferrer" class="reviews-badge">
+                <span class="reviews-badge-score">{{ review_summary.rating_display }}</span>
+                <span class="reviews-badge-meta">
+                    <span class="reviews-badge-stars" aria-hidden="true">
+                        <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                    </span>
+                    <span class="reviews-badge-count">{{ review_summary.review_count }} ulasan di Google</span>
+                </span>
+                <i class="fas fa-arrow-up-right-from-square reviews-badge-go" aria-hidden="true"></i>
+            </a>
+        {% endif %}
+
+        {% if testimonials %}
+            <div class="reviews-scroller">
+                {% for review in testimonials %}
+                    <figure class="review-card">
+                        <div class="review-card-head">
+                            <span class="review-avatar">{{ review.initial }}</span>
+                            <div class="review-who">
+                                <figcaption class="review-name">{{ review.author_name }}</figcaption>
+                                <span class="review-stars" aria-label="{{ review.rating }} dari 5">
+                                    {% for _ in review.stars %}<i class="fas fa-star"></i>{% endfor %}
+                                </span>
+                            </div>
+                        </div>
+                        <blockquote class="review-text">{{ review.text }}</blockquote>
+                        {% if review.review_url %}
+                            <a href="{{ review.review_url }}" target="_blank" rel="noopener noreferrer" class="review-link">
+                                Lihat di Google
+                            </a>
+                        {% endif %}
+                    </figure>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% if review_summary %}
+            <div class="text-center">
+                <a href="{{ review_summary.maps_url }}" target="_blank" rel="noopener noreferrer" class="reviews-cta">
+                    Lihat semua {{ review_summary.review_count }} ulasan
+                    <i class="fas fa-chevron-right ms-1"></i>
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% endif %}
