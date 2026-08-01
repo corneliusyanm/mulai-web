@@ -115,6 +115,17 @@
                                 {% endif %}
                             </form>
 
+                            <div class="d-flex justify-content-center flex-wrap gap-2 mt-3">
+                                {% if member in instance.booked_members.all or member in instance.waitlisted_members.all %}
+                                    <a href="{% url 'classes:class_calendar' instance.id %}" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold">
+                                        <i class="fas fa-calendar-plus me-1"></i>Tambah ke Kalender
+                                    </a>
+                                {% endif %}
+                                <a href="{{ whatsapp_share_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-success rounded-pill px-3 fw-bold">
+                                    <i class="fab fa-whatsapp me-1"></i>Ajak Temen
+                                </a>
+                            </div>
+
                             {% if booking_block %}
                                 <div class="alert alert-warning border-0 shadow-sm text-start mt-3 mb-0 mx-auto" style="border-radius: 15px; max-width: 460px;">
                                     {% if day_limit_reached %}

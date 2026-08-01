@@ -1,5 +1,7 @@
 from collections import defaultdict
+from urllib.parse import quote
 
+from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.views.generic import ListView, DetailView
@@ -11,6 +13,8 @@ from django.contrib import messages
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from .calendar_export import class_instance_to_ics, ics_filename
+from .templatetags.class_extras import indonesian_day
 from .models import (
     MAX_CLASSES_PER_DAY,
     ClassInstance,
@@ -209,7 +213,54 @@ class ClassDetailView(MemberRequiredMixin, DetailView):
         context["waitlist_place"] = (
             self.object.waitlist_position(member) if member else None
         )
+
+        # "Ajak temen": prefilled WhatsApp message with a link to this class
+        class_name = self.object.class_schedule.class_obj.name
+        share_text = (
+            f"Yuk ikut kelas {class_name} di Mulai Gym, "
+            f"{indonesian_day(self.object.date)} jam "
+            f"{self.object.start_time.strftime('%H:%M')}. "
+            f"Detailnya di sini: {self.request.build_absolute_uri()}"
+        )
+        context["whatsapp_share_url"] = f"https://wa.me/?text={quote(share_text)}"
         return context
+
+
+@member_login_required
+def class_calendar(request, instance_id):
+    """Download this class as an .ics, so it lands in the member's own calendar.
+
+    Only for members who actually hold a spot: the point is remembering a class
+    you signed up for, and the calendar app's own alarm is a reminder we do not
+    have to send ourselves.
+    """
+    instance = get_object_or_404(
+        ClassInstance.objects.select_related("class_schedule__class_obj"),
+        id=instance_id,
+    )
+    member = get_object_or_404(Member, email=request.session.get("member_email"))
+
+    if (
+        member not in instance.booked_members.all()
+        and member not in instance.waitlisted_members.all()
+    ):
+        messages.warning(
+            request,
+            "Kamu belum terdaftar di kelas ini, jadi belum bisa ditambahkan ke kalender.",
+        )
+        return redirect("classes:class_detail", pk=instance.id)
+
+    detail_url = request.build_absolute_uri(
+        reverse("classes:class_detail", args=[instance.id])
+    )
+    response = HttpResponse(
+        class_instance_to_ics(instance, url=detail_url),
+        content_type="text/calendar; charset=utf-8",
+    )
+    response["Content-Disposition"] = (
+        f'attachment; filename="{ics_filename(instance)}"'
+    )
+    return response
 
 
 def _redirect_after_action(request, instance):

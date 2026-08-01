@@ -1844,3 +1844,135 @@ class ClassCapacityDisplayTest(TestCase):
 
         self.assertEqual(listed.booked_percent, 100)
         self.assertEqual(listed.slots_left, 0)
+
+
+class ClassCalendarExportTest(TestCase):
+    """The .ics download for a class the member holds."""
+
+    def setUp(self):
+        self.pemula = Class.objects.create(
+            name="Kelas Pemula", description="Beginner", max_members=10
+        )
+        self.tomorrow = timezone.now().date() + timedelta(days=1)
+        schedule = ClassSchedule.objects.create(
+            class_obj=self.pemula,
+            day_of_week=self.tomorrow.weekday(),
+            start_time="08:00:00",
+            end_time="09:00:00",
+        )
+        self.instance = ClassInstance.objects.create(
+            class_schedule=schedule,
+            date=self.tomorrow,
+            start_time="08:00:00",
+            end_time="09:00:00",
+        )
+        self.member = Member.objects.create(
+            name="Calendar Member",
+            email="calendar@example.com",
+            phone_number="628559000111",
+            age=25,
+            height=170.0,
+            weight=70.0,
+            gender="M",
+            goals="Stay fit",
+            years_of_working_out="1-2 years",
+            active_until=timezone.now() + timedelta(days=30),
+            pemula_active_until=timezone.now() + timedelta(days=30),
+        )
+
+    def login(self):
+        session = self.client.session
+        session["member_email"] = self.member.email
+        session.save()
+
+    def test_booked_member_gets_an_ics_file(self):
+        self.instance.booked_members.add(self.member)
+        self.login()
+
+        response = self.client.get(
+            reverse("classes:class_calendar", args=[self.instance.id])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/calendar", response["Content-Type"])
+        self.assertIn("attachment", response["Content-Disposition"])
+        self.assertIn(".ics", response["Content-Disposition"])
+
+        body = response.content.decode()
+        self.assertTrue(body.startswith("BEGIN:VCALENDAR\r\n"))
+        self.assertIn("END:VCALENDAR", body)
+        self.assertIn(f"UID:kelas-{self.instance.id}@mulaigym.id", body)
+        self.assertIn("SUMMARY:Kelas Pemula - Mulai Gym", body)
+        # 08:00 Jakarta is 01:00 UTC
+        self.assertIn(f"DTSTART:{self.tomorrow:%Y%m%d}T010000Z", body)
+        self.assertIn(f"DTEND:{self.tomorrow:%Y%m%d}T020000Z", body)
+        # A reminder the phone fires by itself
+        self.assertIn("BEGIN:VALARM", body)
+        self.assertIn("TRIGGER:-PT60M", body)
+        # Every line uses CRLF, as RFC 5545 requires
+        self.assertNotIn("\n", body.replace("\r\n", ""))
+
+    def test_waitlisted_member_can_also_add_it(self):
+        self.instance.waitlisted_members.add(self.member)
+        self.login()
+
+        response = self.client.get(
+            reverse("classes:class_calendar", args=[self.instance.id])
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_member_without_a_spot_is_turned_away(self):
+        self.login()
+
+        response = self.client.get(
+            reverse("classes:class_calendar", args=[self.instance.id]), follow=True
+        )
+
+        self.assertContains(response, "belum terdaftar")
+
+    def test_login_required(self):
+        response = self.client.get(
+            reverse("classes:class_calendar", args=[self.instance.id])
+        )
+
+        self.assertRedirects(response, reverse("member_login"))
+
+    def test_special_characters_are_escaped(self):
+        self.pemula.name = "Kelas Pemula, Level 1; Pagi"
+        self.pemula.save()
+        self.instance.booked_members.add(self.member)
+        self.login()
+
+        body = self.client.get(
+            reverse("classes:class_calendar", args=[self.instance.id])
+        ).content.decode()
+
+        self.assertIn(r"Kelas Pemula\, Level 1\; Pagi", body)
+
+    def test_calendar_button_and_share_link_on_detail_page(self):
+        self.instance.booked_members.add(self.member)
+        self.login()
+
+        response = self.client.get(
+            reverse("classes:class_detail", args=[self.instance.id])
+        )
+
+        self.assertContains(response, "Tambah ke Kalender")
+        self.assertContains(
+            response, reverse("classes:class_calendar", args=[self.instance.id])
+        )
+        self.assertContains(response, "Ajak Temen")
+        self.assertContains(response, "https://wa.me/?text=")
+        self.assertIn("Kelas%20Pemula", response.context["whatsapp_share_url"])
+
+    def test_calendar_button_hidden_when_not_registered(self):
+        self.login()
+
+        response = self.client.get(
+            reverse("classes:class_detail", args=[self.instance.id])
+        )
+
+        self.assertNotContains(response, "Tambah ke Kalender")
+        # Sharing a class you have not booked is still fine
+        self.assertContains(response, "Ajak Temen")
