@@ -15,6 +15,7 @@ from django.views.generic.edit import CreateView, UpdateView
 
 from homepage.models import ReviewSummary, Testimonial
 from payments.models import Payment
+from visits.busy_hours import quiet_hours
 from visits.models import Visit
 
 from .forms import (
@@ -414,6 +415,10 @@ class MemberDetailView(MemberRequiredMixin, DetailView):
         context["visit_streak_weeks"] = _visit_streak_weeks(visit_dates, today)
 
         context["membership_nudge"] = _membership_nudge(member, today)
+
+        # "Come when it is quiet" strip. Reads the whole gym's history, not this
+        # member's, so it is the same for everyone and cached per weekday.
+        context["quiet_hours"] = quiet_hours()
         return context
 
     @staticmethod

@@ -477,7 +477,21 @@ The account-related pages are accessible at the following URLs:
   - **Cancel nudge**: one line under the upcoming list, "Nggak bisa datang? Batalkan dulu biar member lain kebagian tempat." The daily cap stops members hoarding classes; this aims at the no-shows.
   - **Waitlist place**: waitlisted upcoming classes show "Antrian ke-2" (see `ClassInstance.waitlist_position`).
   - **Habit tiles**: visits this month, week streak, total visits. `_visit_streak_weeks()` counts consecutive weeks with at least one visit; the current week having no visit yet does **not** break the streak (nobody should lose 8 weeks because it is Monday morning), a fully missed week does. Hidden entirely for a member with no visits.
+  - **Jam Lengang strip**: when the gym is usually quiet today, so a member can pick a calm hour. See below.
   - Note `upcoming_booked_classes` / `upcoming_waitlisted_classes` are now **lists**, not querysets, since each item carries these computed labels.
+
+### Jam Lengang (`visits/busy_hours.py`)
+
+A small bar strip on `/akun` showing how busy each open hour usually is today, so a member can come when the gym is calm.
+
+- **Framing is deliberate**: the card is called "Jam Lengang" and always points at a quiet window. It never says the gym is full and never tells anyone not to come. A busy evening here is about 20 people, so there is nothing to warn about; the value is telling a first-timer when they can have the place to themselves.
+- **Historical, not live.** A 12-week average for that weekday (`LOOKBACK_WEEKS`), never a live head count: a live number is scary without context and would flip between two page loads.
+- **Opening hours per weekday** live in `OPENING_HOURS` (Mon-Fri 07:00-21:00, Sat/Sun 07:00-20:00; Sunday actually opens 07:30, so its 07:00 bar covers half an hour). Bars run from the opening hour to the hour before closing.
+- **Levels** are a share of that day's busiest hour: `quiet` at or below 40%, `medium` at or below 75%, `busy` above (`QUIET_AT_OR_BELOW` / `MEDIUM_AT_OR_BELOW`).
+- **Quietest window** is the longest run of consecutive quiet hours, tie-broken by fewest check-ins, rendered as "09:00 - 14:00".
+- **Silent below `MIN_SAMPLE` (20) check-ins** for that weekday: with too little history the advice would be made up, so the card is not rendered at all.
+- **Cached per weekday per day** (`cache.set`, 6 hours) since it is the same for every member and today's own check-ins cannot move a 12-week average.
+- Colour is deliberately inverted: quiet hours (the short bars) carry the brand purple, busy hours are light grey, with a two-swatch legend so the mapping is explicit. The current hour is marked with a purple baseline rule and "skrg", not a shaded column, because a shaded column reads as the tallest bar.
 - **`MemberHistoryView`** (`/akun/riwayat/`): Full history, nothing cut off.
   - Tabs via `?tab=kunjungan|pembayaran|kelas` (plain links, so a tab is bookmarkable/shareable). An unknown tab falls back to `kunjungan`.
   - Only the active tab's rows are queried; the other tabs just get a count for their badge.

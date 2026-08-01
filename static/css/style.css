@@ -854,6 +854,109 @@ section {
   letter-spacing: 0.03em;
 }
 
+/* "Jam Lengang" strip on the account page. Bar height is how busy an hour
+   usually is, so the short bars are the quiet ones and they carry the brand
+   colour: the card is pointing at a good time to come, not warning anyone off. */
+.quiet-hours-sub {
+  font-size: 0.72rem;
+  color: var(--gray);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.quiet-hours-chip {
+  flex-shrink: 0;
+  background: rgba(75, 75, 236, 0.1);
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.quiet-hours-strip {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.quiet-hours-col {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* A baseline rule, not a shaded column: a shaded column reads as a bar and the
+   current hour then looks like the busiest one. */
+.quiet-hours-col.is-now .quiet-hours-track {
+  border-bottom: 2px solid var(--primary);
+  margin-bottom: -2px;
+}
+
+.quiet-hours-track {
+  height: 42px;
+  display: flex;
+  align-items: flex-end;
+}
+
+.quiet-hours-bar {
+  width: 100%;
+  border-radius: 4px 4px 0 0;
+  background: #dcdce8;
+}
+
+.quiet-hours-bar.level-quiet {
+  background: var(--primary);
+}
+
+.quiet-hours-bar.level-medium {
+  background: #b9b9e8;
+}
+
+.quiet-hours-tick {
+  height: 14px;
+  text-align: center;
+  font-size: 0.6rem;
+  line-height: 14px;
+  color: var(--gray);
+}
+
+.quiet-hours-now {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.quiet-hours-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.68rem;
+  color: var(--gray);
+  white-space: nowrap;
+}
+
+.quiet-hours-swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+.quiet-hours-swatch.level-quiet {
+  background: var(--primary);
+}
+
+.quiet-hours-swatch.level-busy {
+  background: #dcdce8;
+}
+
+.quiet-hours-note {
+  margin-top: 6px;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--gray);
+}
+
 /* How full a class is, on the class list cards */
 .class-capacity {
   height: 6px;

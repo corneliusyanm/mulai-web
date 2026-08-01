@@ -1,12 +1,14 @@
+from django.core.cache import cache
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
-from datetime import timedelta, datetime, date
+from datetime import timedelta, datetime, date, time
 from django.contrib.auth import get_user_model
 from django.template import Template, Context
 import json
 
 from accounts.models import Member
+from .busy_hours import LOOKBACK_WEEKS, quiet_hours
 from .models import Visit
 from payments.models import Payment, Package
 from purchases.models import Product, Sale, SaleItem
@@ -1542,3 +1544,128 @@ class WeeklyMetricsViewTest(TestCase):
         self.assertEqual(context["total_repurchased"], 3)
         self.assertEqual(context["repurchase_rate"], 100.0)
         self.assertEqual(context["did_not_repurchase_members"].count(), 0)
+
+
+class QuietHoursTest(TestCase):
+    """The member-facing "Jam Lengang" strip on /akun.
+
+    Anchored to a fixed Monday and a fixed "now" so the 12-week lookback and the
+    "sekarang" marker cannot drift with the real calendar.
+    """
+
+    MONDAY = date(2026, 3, 16)
+    SATURDAY = date(2026, 3, 21)
+
+    def setUp(self):
+        cache.clear()
+        self.member = Member.objects.create(
+            name="Quiet Hours Member",
+            email="quiet@example.com",
+            phone_number="6281200000001",
+            gender="M",
+            age=30,
+            height=170,
+            weight=65,
+        )
+        self.now = timezone.make_aware(datetime.combine(self.MONDAY, time(12, 30)))
+
+    def tearDown(self):
+        cache.clear()
+
+    def _visits_at(self, day, hour, count):
+        """`count` check-ins in one local hour. check_in_time is auto_now_add."""
+        when = timezone.make_aware(datetime.combine(day, time(hour, 15)))
+        for _ in range(count):
+            visit = Visit.objects.create(member=self.member)
+            Visit.objects.filter(pk=visit.pk).update(check_in_time=when)
+
+    def _busy_monday(self):
+        """A shape like the real one: busy at 07:00 and 18:00, dead at midday."""
+        for week in range(4):
+            day = self.MONDAY - timedelta(weeks=week + 1)
+            self._visits_at(day, 7, 5)
+            self._visits_at(day, 8, 4)
+            self._visits_at(day, 11, 1)
+            self._visits_at(day, 16, 3)
+            self._visits_at(day, 18, 6)
+
+    def test_says_nothing_when_there_is_not_enough_history(self):
+        self._visits_at(self.MONDAY - timedelta(weeks=1), 7, 3)
+        self.assertIsNone(quiet_hours(day=self.MONDAY, now=self.now))
+
+    def test_quiet_hours_are_the_ones_well_below_the_busiest_hour(self):
+        self._busy_monday()
+        strip = quiet_hours(day=self.MONDAY, now=self.now)
+        levels = {entry["hour"]: entry["level"] for entry in strip["hours"]}
+
+        self.assertEqual(levels[18], "busy")  # the peak itself
+        self.assertEqual(levels[7], "busy")  # 5 of 6, still busy
+        self.assertEqual(levels[16], "medium")  # 3 of 6 = 50%
+        self.assertEqual(levels[11], "quiet")  # 1 of 6 = 17%
+        self.assertEqual(levels[13], "quiet")  # nobody ever comes at 13:00
+
+    def test_quietest_window_is_the_longest_run_of_quiet_hours(self):
+        self._busy_monday()
+        strip = quiet_hours(day=self.MONDAY, now=self.now)
+
+        # 09:00 to 16:00 has no check-ins except the single one at 11:00, which
+        # is quiet too, so the whole run is one window.
+        self.assertEqual(strip["quietest"]["label"], "09:00 - 16:00")
+
+    def test_bars_stop_at_the_closing_hour_of_that_weekday(self):
+        for week in range(4):
+            day = self.SATURDAY - timedelta(weeks=week + 1)
+            self._visits_at(day, 8, 5)
+            self._visits_at(day, 17, 3)
+
+        saturday_noon = timezone.make_aware(
+            datetime.combine(self.SATURDAY, time(12, 30))
+        )
+        strip = quiet_hours(day=self.SATURDAY, now=saturday_noon)
+        hours = [entry["hour"] for entry in strip["hours"]]
+
+        # Saturday closes at 20:00, so the last bar is the 19:00 hour.
+        self.assertEqual(hours[0], 7)
+        self.assertEqual(hours[-1], 19)
+
+        monday = quiet_hours(day=self.MONDAY, now=self.now)
+        self.assertIsNone(monday)  # Saturday's check-ins are not Monday's
+
+    def test_now_is_marked_only_when_the_strip_is_for_today(self):
+        self._busy_monday()
+
+        today = quiet_hours(day=self.MONDAY, now=self.now)
+        marked = [entry["hour"] for entry in today["hours"] if entry["is_now"]]
+        self.assertEqual(marked, [12])
+        self.assertEqual(today["now_level"], "quiet")
+
+        next_monday = quiet_hours(day=self.MONDAY + timedelta(days=7), now=self.now)
+        self.assertFalse(any(entry["is_now"] for entry in next_monday["hours"]))
+        self.assertIsNone(next_monday["now_level"])
+
+    def test_check_ins_older_than_the_lookback_window_are_ignored(self):
+        self._busy_monday()
+        old = self.MONDAY - timedelta(weeks=LOOKBACK_WEEKS + 1)
+        self._visits_at(old, 12, 50)
+
+        strip = quiet_hours(day=self.MONDAY, now=self.now)
+        noon = next(e for e in strip["hours"] if e["hour"] == 12)
+        self.assertEqual(noon["count"], 0)
+        self.assertEqual(noon["level"], "quiet")
+
+    def test_account_page_shows_the_strip(self):
+        # The page asks for the real today, so build history on the real weekday.
+        # 08:00 and 17:00 are inside opening hours every day of the week.
+        today = timezone.localtime(timezone.now()).date()
+        for week in range(4):
+            day = today - timedelta(weeks=week + 1)
+            self._visits_at(day, 8, 5)
+            self._visits_at(day, 17, 2)
+
+        session = self.client.session
+        session["member_email"] = self.member.email
+        session.save()
+
+        response = self.client.get(reverse("member_details"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Jam Lengang")
