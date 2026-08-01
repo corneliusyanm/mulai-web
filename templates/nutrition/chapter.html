@@ -10,7 +10,11 @@
                 <a href="{% url 'nutrition:index' %}" class="gizi-back" id="gizi-back" aria-label="Kembali">
                     <i class="fas fa-chevron-left"></i>
                 </a>
-                <div class="gizi-topbar-title">Bab {{ chapter.number }} &middot; {{ chapter.title }}</div>
+                <div class="gizi-topbar-title">
+                    <span class="gizi-topbar-emoji">{{ chapter.emoji }}</span>
+                    Bab {{ chapter.number }} &middot; {{ chapter.title }}
+                </div>
+                <div class="gizi-topbar-count" id="gizi-count"></div>
             </div>
             <div class="gizi-stepbar"><div class="gizi-stepbar-fill" id="gizi-stepbar"></div></div>
 
@@ -36,7 +40,7 @@
                             {% if next_chapter %}
                                 <a href="{% url 'nutrition:chapter' next_chapter.slug %}"
                                    class="btn btn-primary rounded-pill fw-bold">
-                                    Lanjut: Bab {{ next_chapter.number }} {{ next_chapter.title }}
+                                    {{ next_chapter.emoji }} Lanjut: Bab {{ next_chapter.number }} {{ next_chapter.title }}
                                     <i class="fas fa-chevron-right ms-1"></i>
                                 </a>
                             {% else %}
@@ -79,6 +83,25 @@
     </div>
 </div>
 
+{% comment %}
+Feedback sheet, filled from the answered question and slid up from the bottom.
+Lives outside the steps so it can be fixed to the viewport. With JS off it stays
+hidden and the explanation shows inline inside the card instead.
+{% endcomment %}
+<div class="gizi-sheet" id="gizi-sheet" hidden>
+    <div class="gizi-sheet-inner">
+        <div class="gizi-sheet-head">
+            <span class="gizi-sheet-icon" id="gizi-sheet-icon"><i class="fas fa-check"></i></span>
+            <span class="gizi-sheet-verdict" id="gizi-sheet-verdict"></span>
+        </div>
+        <p class="gizi-sheet-text" id="gizi-sheet-text"></p>
+        <button type="button" class="btn btn-secondary w-100 rounded-pill fw-bold" id="gizi-sheet-next">
+            Lanjut<i class="fas fa-chevron-right ms-1"></i>
+        </button>
+    </div>
+</div>
+<div class="gizi-confetti" id="gizi-confetti" aria-hidden="true"></div>
+
 <script>
 (function () {
     var root = document.getElementById('gizi-steps');
@@ -86,35 +109,80 @@
 
     var steps = Array.prototype.slice.call(root.querySelectorAll('.gizi-step'));
     var bar = document.getElementById('gizi-stepbar');
+    var count = document.getElementById('gizi-count');
     var back = document.getElementById('gizi-back');
+    var sheet = document.getElementById('gizi-sheet');
+    var sheetIcon = document.getElementById('gizi-sheet-icon');
+    var sheetVerdict = document.getElementById('gizi-sheet-verdict');
+    var sheetText = document.getElementById('gizi-sheet-text');
+    var sheetNext = document.getElementById('gizi-sheet-next');
+    var calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
     var answers = {};
     var current = 0;
     var submitted = false;
 
-    // Everything starts visible so the page still reads with JS off. The
-    // stepper is what hides it, right here.
+    // Everything renders visible so the chapter still reads with JS off. The
+    // stepper is what hides it, here, at the last possible moment.
     root.querySelectorAll('.gizi-explain').forEach(function (el) { el.hidden = true; });
     root.querySelectorAll('.gizi-step[data-quiz] .gizi-next').forEach(function (el) { el.hidden = true; });
 
+    function closeSheet() {
+        sheet.classList.remove('is-open');
+        // Keep it out of the tab order once it is off screen.
+        window.setTimeout(function () {
+            if (!sheet.classList.contains('is-open')) sheet.hidden = true;
+        }, calm ? 0 : 260);
+    }
+
     function show(index) {
         current = index;
-        steps.forEach(function (step, i) { step.hidden = i !== index; });
-        bar.style.width = Math.round(index * 100 / (steps.length - 1)) + '%';
+        steps.forEach(function (step, i) {
+            step.hidden = i !== index;
+            if (i === index) {
+                // Retrigger the entrance animation on the step being shown.
+                step.classList.remove('is-live');
+                void step.offsetWidth;
+                step.classList.add('is-live');
+            }
+        });
+
+        var last = steps.length - 1;
+        bar.style.width = Math.round(index * 100 / last) + '%';
+        count.textContent = Math.min(index + 1, last) + '/' + last;
         window.scrollTo(0, 0);
+        growBars(steps[index]);
         if (steps[index].classList.contains('gizi-result-step')) submit();
     }
 
-    root.querySelectorAll('.gizi-next').forEach(function (button) {
-        button.addEventListener('click', function () {
-            if (current < steps.length - 1) show(current + 1);
+    // Bars start at zero width and grow when their step appears. Without this
+    // they are already drawn before anyone looks at them.
+    function growBars(step) {
+        step.querySelectorAll('.gizi-bar').forEach(function (barEl) {
+            var target = barEl.dataset.width;
+            if (!target) return;
+            barEl.style.width = calm ? target : '0%';
+            if (calm) return;
+            window.setTimeout(function () { barEl.style.width = target; }, 60);
         });
-    });
+    }
 
-    // The back arrow walks the chapter backwards first, and only leaves the
-    // page from the first step.
+    function goNext() {
+        closeSheet();
+        if (current < steps.length - 1) show(current + 1);
+    }
+
+    root.querySelectorAll('.gizi-next').forEach(function (button) {
+        button.addEventListener('click', goNext);
+    });
+    sheetNext.addEventListener('click', goNext);
+
+    // The back arrow walks the chapter backwards and only leaves the page from
+    // the first step.
     back.addEventListener('click', function (event) {
         if (current > 0) {
             event.preventDefault();
+            closeSheet();
             show(current - 1);
         }
     });
@@ -127,33 +195,68 @@
 
             var picked = choice.dataset.choice;
             var right = step.dataset.answer;
+            var ok = picked === right;
             answers[step.dataset.quiz] = picked;
 
             step.querySelectorAll('.gizi-choice').forEach(function (other) {
                 other.disabled = true;
                 if (other.dataset.choice === right) other.classList.add('is-correct');
             });
-            if (picked !== right) choice.classList.add('is-wrong');
+            choice.classList.add(ok ? 'is-picked' : 'is-wrong');
 
-            var verdict = step.querySelector('.gizi-verdict');
-            verdict.textContent = picked === right ? 'Bener!' : 'Belum tepat';
-            verdict.className = 'gizi-verdict ' + (picked === right ? 'is-correct' : 'is-wrong');
-            step.querySelector('.gizi-explain').hidden = false;
-            step.querySelector('.gizi-next').hidden = false;
+            // Inline copy stays in the card for the no-JS case; on screen it
+            // reads better as a sheet that slides up over the thumb.
+            sheetVerdict.textContent = ok ? 'Bener!' : 'Belum tepat';
+            sheetText.textContent = step.querySelector('.gizi-explain-text').textContent.trim();
+            sheetIcon.innerHTML = ok ? '<i class="fas fa-check"></i>' : '<i class="fas fa-xmark"></i>';
+            sheet.className = 'gizi-sheet ' + (ok ? 'is-right' : 'is-wrong');
+            sheet.hidden = false;
+            void sheet.offsetWidth;
+            sheet.classList.add('is-open');
         });
     });
+
+    function countUp(el, to) {
+        if (calm || to === 0) { el.textContent = to + '/' + el.dataset.total; return; }
+        var at = 0;
+        var timer = window.setInterval(function () {
+            at += 1;
+            el.textContent = at + '/' + el.dataset.total;
+            if (at >= to) window.clearInterval(timer);
+        }, 220);
+    }
+
+    function confetti() {
+        if (calm) return;
+        var host = document.getElementById('gizi-confetti');
+        var colors = ['#BEF006', '#4B4BEC', '#ffd93d', '#ff8fab', '#2fa15e'];
+        for (var i = 0; i < 40; i++) {
+            var bit = document.createElement('span');
+            bit.className = 'gizi-confetti-bit';
+            bit.style.left = Math.random() * 100 + '%';
+            bit.style.background = colors[i % colors.length];
+            bit.style.animationDelay = (Math.random() * 0.4).toFixed(2) + 's';
+            bit.style.animationDuration = (1.6 + Math.random() * 0.9).toFixed(2) + 's';
+            bit.style.transform = 'rotate(' + Math.round(Math.random() * 360) + 'deg)';
+            host.appendChild(bit);
+        }
+        window.setTimeout(function () { host.innerHTML = ''; }, 3200);
+    }
 
     function paint(data) {
         var medal = document.getElementById('gizi-medal');
         var score = document.getElementById('gizi-score');
         var level = document.getElementById('gizi-level');
 
-        score.textContent = data.correct + '/' + data.total;
-        medal.className = 'gizi-medal gizi-medal-lg' + (data.medal ? ' gizi-medal-' + data.medal : '');
+        score.dataset.total = data.total;
+        countUp(score, data.correct);
+        medal.className = 'gizi-medal gizi-medal-lg is-live' +
+            (data.medal ? ' gizi-medal-' + data.medal : '');
         if (data.saved) {
             level.textContent = 'Level kamu sekarang: ' + data.level +
                 ' (' + data.finished_count + '/' + data.total_chapters + ' bab)';
         }
+        if (data.total && data.correct === data.total) confetti();
     }
 
     // Graded on the server, even for a guest: the answers are in this page, so
@@ -168,10 +271,7 @@
             body: JSON.stringify({ answers: answers })
         })
             .then(function (response) { return response.ok ? response.json() : null; })
-            .then(function (data) {
-                if (data) paint(data);
-                else fallback();
-            })
+            .then(function (data) { data ? paint(data) : fallback(); })
             .catch(fallback);
     }
 
@@ -182,7 +282,8 @@
             if (answers[step.dataset.quiz] === step.dataset.answer) correct += 1;
         });
         paint({ correct: correct, total: total, medal: null, saved: false });
-        document.getElementById('gizi-level').textContent = 'Progres nggak kesimpen, koneksinya lagi ngambek.';
+        document.getElementById('gizi-level').textContent =
+            'Progres nggak kesimpen, koneksinya lagi ngambek.';
     }
 
     show(0);

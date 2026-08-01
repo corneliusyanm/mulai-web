@@ -977,7 +977,21 @@ To understand which equipment guides are most popular, a view tracking system ha
 
 ## Belajar Gizi (`nutrition/`)
 
-Nutrition basics at `/gizi/`, written for people who have never counted a calorie. Three chapters (Kalori, Protein, Gula Cair), each a short stack of cards with quiz questions in between. Anyone can read; progress, badges and the level are for members.
+Nutrition and training basics at `/gizi/`, written for people who have never counted a calorie. Nine chapters, each a short stack of cards with quiz questions in between. Anyone can read; progress, badges and the level are for members.
+
+| # | Chapter | What it covers |
+| --- | --- | --- |
+| 1 | Kalori | Energy balance, why portion size does not equal calories |
+| 2 | Protein | The most under-eaten macro, and protein per Rp 10.000 |
+| 3 | Gula Cair | Sweet drinks, kental manis, the opportunity cost of a glass |
+| 4 | Gorengan & Minyak | Why fried food is so dense, and cooking-method swaps |
+| 5 | Serat & Rasa Kenyang | Satiety, volume, and the 3pm hunger |
+| 6 | Kenapa Nge-Gym | What lifting and cardio each do, blood sugar, "too late to start" |
+| 7 | Otot | Progressive overload, sleep, which supplements are real |
+| 8 | Mitos Lokal | Eating late, sweating, sit-ups, detox tea |
+| 9 | Makanan Kemasan | Reading a label in 10 seconds, and what the claims mean |
+
+Chapters 6 and 7 are about training rather than food. They earn their place: the gym is the product, and "why bother lifting" is the question that makes the nutrition worth acting on. If the split ever feels wrong, the menu label is one string in `base.html`.
 
 **Why it exists**: most members here have never been taught what is in the food they buy every day, and local food is heavy on fried oil and liquid sugar while short on protein. The rule for the content is that every claim is about food you can point at in Bandung, and every idea is tested with a question before the reader moves on.
 
@@ -986,13 +1000,15 @@ Nutrition basics at `/gizi/`, written for people who have never counted a calori
 - **Content is in the repo, not the database.** These are health claims, so they go through code review, and a wrong number gets caught before a member reads it. Editing needs a deploy, which is the right friction for this kind of text.
 - **Every number is an estimate and says so.** Portions and prices vary by warung, so numbers are rounded hard and written with "kira-kira". `PRICE_NOTE` carries the date and caveat for the price chart, and the prices are the one thing here that goes stale.
 - **A quiz `key` is permanent.** It is stored on every recorded answer, so renaming one orphans that question's history. Reorder freely, rename never. `ContentIntegrityTest` pins uniqueness, that each `answer` names a real choice, and that every block type has a template.
-- **Four block types**: `card` (an idea, 2-3 sentences, optional highlight line), `quiz`, `bars` (a ranking drawn in plain CSS, e.g. "protein per Rp 10.000"), `swap` (two plates from the same warung, before and after). The two data blocks are the memorable part; a `muted` row in `bars` is a comparison rather than a member of the list.
-- Levels are named per number of finished chapters (`LEVELS`), and the last name covers everything beyond it so adding a chapter cannot leave a member without a level. Badges are `emas` (all correct), `perak` (60% or more), `perunggu` (finished).
+- **Five block types**: `card` (an idea, 2-3 sentences, optional `emoji` and `highlight`), `quiz`, `bars` (a ranking drawn in plain CSS, e.g. "protein per Rp 10.000"), `swap` (two plates from the same warung, before and after), `verdicts` (true/false rows with one line of why, used for myths, supplements and label claims). The data blocks are the memorable part; a `muted` row in `bars` is a comparison rather than a member of the list.
+- **Levels are bands, not one name per chapter** (`LEVELS`, each with an inclusive `min`): nine chapters would otherwise need nine names nobody can tell apart. `level_name()` reads the list backwards so the first match wins, and the last band covers everything beyond it. `level_chips()` labels the ladder as ranges ("3-5 bab") for the index. Badges are `emas` (all correct), `perak` (60% or more), `perunggu` (finished).
 
 ### The chapter page
 
-- One block per screen, driven by vanilla JS in `templates/nutrition/chapter.html`. A question reveals right/wrong instantly, then the explanation, then the Lanjut button. The back arrow walks the chapter backwards and only leaves the page from the first step.
-- **Everything renders visible and the script hides it.** With JS off the chapter is still a readable page with its questions and explanations, rather than a blank screen.
+- One block per screen, driven by vanilla JS in `templates/nutrition/chapter.html`. The back arrow walks the chapter backwards and only leaves the page from the first step, and the topbar carries the chapter emoji and a step count.
+- **Answer feedback is a sheet that slides up from the bottom**, the way a phone app does it: verdict, why, and the Lanjut button all under the thumb. The explanation is rendered inline in the card and copied into the sheet, so it is not duplicated in two places.
+- **Everything renders visible and the script hides it.** With JS off the chapter is still a readable page with its questions and explanations, and the sheet stays hidden. The bars carry their width in both `style` and `data-width` for the same reason: drawn without JS, grown from zero with it.
+- Motion: steps rise in, a right answer pops, a wrong one shakes, bars grow, the medal springs in, the score counts up, and a perfect chapter gets CSS confetti (plain divs, no library). All of it is skipped under `prefers-reduced-motion`.
 - **Answers are graded on the server** (`content.grade`), even for a guest whose score is not saved. The correct key sits in the page so the reveal can be instant, so the browser is the wrong place to decide what the score was. A skipped question counts as wrong and records an empty choice.
 - `POST /gizi/<slug>/selesai/` grades, records one `QuizAnswer` per question, upserts `ChapterProgress` (keeping `best_correct` so a bad retake cannot take a badge away), and returns the new level for the result screen. A guest gets `saved: false` and an invite to sign in.
 - The `Lanjut` buttons are `btn-secondary` (lime) on purpose: `btn-primary` is the same purple as the page background, so it renders invisible outside a white card. Same trap for text, since `body` sets white type: anything inside a white card must name its own colour.

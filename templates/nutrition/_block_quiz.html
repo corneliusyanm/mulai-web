@@ -1,13 +1,16 @@
 {% comment %}
 One question, answered on the spot. The correct key sits in the step's
 data-answer so the reveal is instant; the server grades it again for the record.
+
+The explanation is rendered inline and hidden by the script, which copies it into
+the feedback sheet. With JS off it simply stays visible in the card.
 {% endcomment %}
 <div class="gizi-card">
     <div class="gizi-quiz-kicker">Soal {{ block.quiz_number }} dari {{ chapter.quiz_count }}</div>
     <h2 class="gizi-card-title">{{ block.question }}</h2>
     <div class="gizi-choices">
         {% for choice in block.choices %}
-            <button type="button" class="gizi-choice" data-choice="{{ choice.key }}">
+            <button type="button" class="gizi-choice" data-choice="{{ choice.key }}" style="--i: {{ forloop.counter0 }}">
                 <span class="gizi-choice-key">{{ choice.key|upper }}</span>
                 <span class="gizi-choice-text">{{ choice.text }}</span>
             </button>
@@ -15,7 +18,7 @@ data-answer so the reveal is instant; the server grades it again for the record.
     </div>
     <div class="gizi-explain">
         <div class="gizi-verdict"></div>
-        <p class="gizi-card-body mb-0">{{ block.explanation }}</p>
+        <p class="gizi-card-body gizi-explain-text mb-0">{{ block.explanation }}</p>
     </div>
 </div>
 <button type="button" class="btn btn-secondary w-100 rounded-pill fw-bold gizi-next">

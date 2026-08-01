@@ -10,7 +10,13 @@ member of the list (whey among cheap proteins, a plate of food among drinks).
             <div class="gizi-bar-row">
                 <div class="gizi-bar-label">{{ row.label }}</div>
                 <div class="gizi-bar-track">
+                    {% comment %}
+                    Width is also on data-width so the script can grow the bar
+                    from zero when the step appears. Without JS it is already
+                    drawn at full width.
+                    {% endcomment %}
                     <div class="gizi-bar{% if row.muted %} is-muted{% endif %}"
+                         data-width="{% widthratio row.value block.max 100 %}%"
                          style="width: {% widthratio row.value block.max 100 %}%"></div>
                 </div>
                 <div class="gizi-bar-value">{{ row.value }}</div>

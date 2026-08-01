@@ -1,0 +1,25 @@
+{% comment %}
+True / false rows: local myths, supplement claims, label wording. One tick or
+cross plus one line of why, which is all these need. Rows stagger in when the
+step is shown (see .gizi-verdict-row in style.css).
+{% endcomment %}
+<div class="gizi-card">
+    <h2 class="gizi-card-title">{{ block.title }}</h2>
+    <div class="gizi-verdicts">
+        {% for row in block.rows %}
+            <div class="gizi-verdict-row" style="--i: {{ forloop.counter0 }}">
+                <div class="gizi-verdict-mark {% if row.is_true %}is-true{% else %}is-false{% endif %}">
+                    <i class="fas {% if row.is_true %}fa-check{% else %}fa-xmark{% endif %}"></i>
+                </div>
+                <div>
+                    <div class="gizi-verdict-claim">{{ row.claim }}</div>
+                    <div class="gizi-verdict-note">{{ row.note }}</div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+    {% if block.note %}<p class="gizi-note mb-0">{{ block.note }}</p>{% endif %}
+</div>
+<button type="button" class="btn btn-secondary w-100 rounded-pill fw-bold gizi-next">
+    Lanjut<i class="fas fa-chevron-right ms-1"></i>
+</button>

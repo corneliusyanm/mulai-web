@@ -6,8 +6,8 @@
 <div class="container py-4 gizi-page">
     <h1 class="section-title text-center mb-2">Belajar Gizi</h1>
     <p class="gizi-lead text-center">
-        {{ summary.total_chapters }} bab, kira-kira 15 menit. Isinya makanan yang beneran
-        ada di Bandung, bukan teori.
+        {{ summary.total_chapters }} bab, kira-kira {{ total_minutes }} menit total. Isinya
+        makanan yang beneran ada di Bandung, bukan teori. Bisa dicicil.
     </p>
 
     <div class="row justify-content-center">
@@ -51,9 +51,14 @@
             </div>
 
             {% for chapter in chapters %}
-                <a href="{% url 'nutrition:chapter' chapter.slug %}" class="gizi-chapter-card">
+                <a href="{% url 'nutrition:chapter' chapter.slug %}" class="gizi-chapter-card"
+                   style="--i: {{ forloop.counter0 }}">
                     <div class="gizi-chapter-icon">
-                        <i class="{{ chapter.icon }}"></i>
+                        {% if chapter.emoji %}
+                            <span class="gizi-chapter-emoji">{{ chapter.emoji }}</span>
+                        {% else %}
+                            <i class="{{ chapter.icon }}"></i>
+                        {% endif %}
                     </div>
                     <div class="flex-grow-1 min-width-0">
                         <div class="gizi-chapter-kicker">Bab {{ chapter.number }}</div>
@@ -81,9 +86,9 @@
 
             <div class="gizi-levels">
                 <div class="gizi-levels-title">Level</div>
-                {% for name in levels %}
-                    <span class="gizi-level-chip {% if member and name == summary.level %}is-current{% endif %}">
-                        {{ forloop.counter0 }} bab &middot; {{ name }}
+                {% for level in levels %}
+                    <span class="gizi-level-chip {% if member and level.name == summary.level %}is-current{% endif %}">
+                        {{ level.label }} &middot; {{ level.name }}
                     </span>
                 {% endfor %}
             </div>
