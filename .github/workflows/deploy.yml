@@ -135,8 +135,37 @@ jobs:
               -v /root/mulai_web/data:/app/data \
               mulai_web
 
+            # Migrate BEFORE waiting on health. The container health check curls
+            # the homepage, so a release that adds a model fails health on the
+            # missing table. This used to sit after the health gate, so that
+            # failure exited the job before migrating and left the new container
+            # up serving 500s, with the old one already removed.
+            echo "Waiting for container process to accept exec..."
+            for i in {1..15}; do
+              if docker exec mulai_web true 2>/dev/null; then
+                echo "Container is running."
+                break
+              fi
+              echo "Exec attempt $i: not ready yet"
+              sleep 2
+            done
+
+            echo "Running migrations..."
+            if ! docker exec mulai_web python manage.py migrate --noinput; then
+              echo "Migration failed! Dumping logs."
+              docker logs --tail=50 mulai_web
+              exit 1
+            fi
+
+            echo "Collecting static files..."
+            if ! docker exec mulai_web python manage.py collectstatic --noinput; then
+              echo "Collectstatic failed!"
+              exit 1
+            fi
+
+            # Only now is it fair to ask whether the homepage renders.
             # Wait for container to become healthy or fail (optimized timing)
-            echo "Waiting for container to start..."
+            echo "Waiting for container to become healthy..."
             for i in {1..20}; do
               STATUS=$(docker inspect --format '{{.State.Health.Status}}' mulai_web 2>/dev/null || echo "starting")
               echo "Health check attempt $i: $STATUS"
@@ -163,21 +192,6 @@ jobs:
             if [ "$(docker inspect --format '{{.State.Health.Status}}' mulai_web)" != "healthy" ]; then
               echo "Container failed to start. Dumping logs."
               docker logs mulai_web
-              exit 1
-            fi
-
-            # Run migrations first, then collectstatic (sequential for safety)
-            echo "Running migrations..."
-            docker exec mulai_web python manage.py migrate
-            if [ $? -ne 0 ]; then
-              echo "Migration failed!"
-              exit 1
-            fi
-
-            echo "Collecting static files..."
-            docker exec mulai_web python manage.py collectstatic --noinput
-            if [ $? -ne 0 ]; then
-              echo "Collectstatic failed!"
               exit 1
             fi
 

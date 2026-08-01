@@ -87,6 +87,14 @@ The custom admin site is `admin_site` in `visits/admin.py`, and much of the mode
 - Watch out for **date-relative assumptions**. `timedelta(days=1)` can cross a month boundary and break a "this month" assertion. Anchor such tests to values that cannot straddle the boundary.
 - `Visit.check_in_time` is `auto_now_add`, so passing it to `create()` is silently ignored. Set it with `Visit.objects.filter(pk=...).update(check_in_time=...)`.
 
+## Deploy
+
+`deploy.yml` (drone-ssh onto the droplet) stops the old container, starts the new one, migrates, runs `collectstatic`, then waits for health.
+
+- **The container health check is `curl -f http://localhost:8000/`, i.e. the homepage.** So the homepage is the liveness probe: if it errors, the deploy fails and the container is marked unhealthy. Keep that page cheap and hard to break.
+- **The new container serves traffic before migrations finish.** There is no blue/green step, so every release has a short window of new code against the old schema. A page that reads a table added in the same release must degrade rather than raise in that window (see `_homepage_reviews()` in `accounts/views.py`). Migrations run before the health gate, so a schema-adding release deploys, but real visitors can still land inside the window.
+- A failed deploy leaves the **new** container running, because the old one is removed before the new one is started. Recovery is usually `docker exec mulai_web python manage.py migrate` on the droplet, not a rollback.
+
 ## Verifying work
 
 Tests are not enough for a member-facing change: look at the page.
@@ -99,7 +107,7 @@ Tests are not enough for a member-facing change: look at the page.
 ## Data safety
 
 - The local Postgres on port **5435** holds a copy of production: ~800 real members with real phone numbers. **Read from it freely, never write content to it.** No test members, no test bookings, no fake payments.
-- **Migrations are the exception: apply them locally as soon as you add one** (`python manage.py migrate`). They are the same additive schema change the deploy will run, not test data. The test suite builds its own database, so a green suite says nothing about whether the dev database is up to date, and the first page load after adding a model will 500 with `relation ... does not exist`. Deploy itself is covered: `deploy.yml` runs `migrate` before `collectstatic`.
+- **Migrations are the exception: apply them locally as soon as you add one** (`python manage.py migrate`). They are the same additive schema change the deploy will run, not test data. The test suite builds its own database, so a green suite says nothing about whether the dev database is up to date, and the first page load after adding a model will 500 with `relation ... does not exist`.
 - **After adding a model, load the affected page against the real local database**, not only a throwaway one. That is what catches an unapplied migration, a missing table, and anything that depends on production-shaped data.
 - Querying it for design decisions is encouraged and has already changed decisions (for example: the Silver and Gold add-ons have never expired on a different day from the gym membership, so the expiry nudge only checks `active_until`).
 - For anything that needs writes, use a throwaway SQLite or a scratch database, seeded by a script.
