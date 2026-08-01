@@ -975,6 +975,34 @@ To understand which equipment guides are most popular, a view tracking system ha
   - **Member Engagement**: A new "Member Engagement" column calculates the percentage of views that come from authenticated members.
   - **Detailed Analytics**: The edit page for each equipment now includes a collapsible "Analytics" section showing the raw view counts.
 
+## Belajar Gizi (`nutrition/`)
+
+Nutrition basics at `/gizi/`, written for people who have never counted a calorie. Three chapters (Kalori, Protein, Gula Cair), each a short stack of cards with quiz questions in between. Anyone can read; progress, badges and the level are for members.
+
+**Why it exists**: most members here have never been taught what is in the food they buy every day, and local food is heavy on fried oil and liquid sugar while short on protein. The rule for the content is that every claim is about food you can point at in Bandung, and every idea is tested with a question before the reader moves on.
+
+### Content (`nutrition/content.py`)
+
+- **Content is in the repo, not the database.** These are health claims, so they go through code review, and a wrong number gets caught before a member reads it. Editing needs a deploy, which is the right friction for this kind of text.
+- **Every number is an estimate and says so.** Portions and prices vary by warung, so numbers are rounded hard and written with "kira-kira". `PRICE_NOTE` carries the date and caveat for the price chart, and the prices are the one thing here that goes stale.
+- **A quiz `key` is permanent.** It is stored on every recorded answer, so renaming one orphans that question's history. Reorder freely, rename never. `ContentIntegrityTest` pins uniqueness, that each `answer` names a real choice, and that every block type has a template.
+- **Four block types**: `card` (an idea, 2-3 sentences, optional highlight line), `quiz`, `bars` (a ranking drawn in plain CSS, e.g. "protein per Rp 10.000"), `swap` (two plates from the same warung, before and after). The two data blocks are the memorable part; a `muted` row in `bars` is a comparison rather than a member of the list.
+- Levels are named per number of finished chapters (`LEVELS`), and the last name covers everything beyond it so adding a chapter cannot leave a member without a level. Badges are `emas` (all correct), `perak` (60% or more), `perunggu` (finished).
+
+### The chapter page
+
+- One block per screen, driven by vanilla JS in `templates/nutrition/chapter.html`. A question reveals right/wrong instantly, then the explanation, then the Lanjut button. The back arrow walks the chapter backwards and only leaves the page from the first step.
+- **Everything renders visible and the script hides it.** With JS off the chapter is still a readable page with its questions and explanations, rather than a blank screen.
+- **Answers are graded on the server** (`content.grade`), even for a guest whose score is not saved. The correct key sits in the page so the reveal can be instant, so the browser is the wrong place to decide what the score was. A skipped question counts as wrong and records an empty choice.
+- `POST /gizi/<slug>/selesai/` grades, records one `QuizAnswer` per question, upserts `ChapterProgress` (keeping `best_correct` so a bad retake cannot take a badge away), and returns the new level for the result screen. A guest gets `saved: false` and an invite to sign in.
+- The `Lanjut` buttons are `btn-secondary` (lime) on purpose: `btn-primary` is the same purple as the page background, so it renders invisible outside a white card. Same trap for text, since `body` sets white type: anything inside a white card must name its own colour.
+
+### Admin (`admin/analytics/belajar-gizi/`)
+
+- Tiles for members started, members who finished everything, and answers recorded.
+- **"Yang paling sering salah" counts each member's first answer per question** (`analytics.first_answers`, Postgres `DISTINCT ON`). A retake after reading the explanation would otherwise make everyone look like they understood it all along. It also names the wrong answer most people picked, which is the actual misunderstanding to explain on the floor.
+- Per-chapter table uses each member's best score, matching the badge they keep.
+
 ## Products & Sales
 
 ### Models (`payments/models.py`)
