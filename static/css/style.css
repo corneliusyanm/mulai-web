@@ -618,6 +618,15 @@ section {
   background-color: transparent;
 }
 
+/* Shown once per day when the member already holds their max classes that day */
+.class-day-cap-note {
+  background: rgba(255, 243, 205, 0.96);
+  color: #6b4e00;
+  border-left: 4px solid #ffc107;
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
 /* Class list filter chips - compact Gojek style */
 .class-filter-bar {
   background: rgba(255, 255, 255, 0.12);

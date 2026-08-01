@@ -91,6 +91,10 @@
                                     <button type="submit" class="btn btn-warning px-4 py-2 rounded-pill fw-bold shadow">
                                         <i class="fas fa-clock me-2"></i>Keluar dari Antrian
                                     </button>
+                                {% elif booking_block %}
+                                    <button type="button" class="btn btn-light text-dark px-4 py-2 rounded-pill fw-bold shadow-sm" disabled>
+                                        <i class="fas fa-ban me-2"></i>{{ booking_block.label }}
+                                    </button>
                                 {% else %}
                                     {% if instance.status == 'FULL' %}
                                         <button type="submit" class="btn btn-info px-4 py-2 rounded-pill fw-bold shadow">
@@ -103,6 +107,35 @@
                                     {% endif %}
                                 {% endif %}
                             </form>
+
+                            {% if booking_block %}
+                                <div class="alert alert-warning border-0 shadow-sm text-start mt-3 mb-0 mx-auto" style="border-radius: 15px; max-width: 460px;">
+                                    {% if day_limit_reached %}
+                                        <div class="fw-bold mb-2">
+                                            <i class="fas fa-circle-info me-2"></i>Kamu sudah punya {{ member_classes_on_date|length }} kelas di tanggal {{ instance.date|date:"d M Y" }}
+                                        </div>
+                                        <ul class="list-unstyled mb-2 small">
+                                            {% for booked in member_classes_on_date %}
+                                                <li class="mb-1">
+                                                    <i class="fas fa-calendar-check me-1"></i>{{ booked.class_schedule.class_obj.name }}
+                                                    <span class="text-muted">{{ booked.start_time|time:"H:i" }}</span>
+                                                    {% if member in booked.waitlisted_members.all %}
+                                                        <span class="badge bg-warning text-dark rounded-pill ms-1">Antrian</span>
+                                                    {% endif %}
+                                                </li>
+                                            {% endfor %}
+                                        </ul>
+                                        <div class="small mb-0">
+                                            Maksimal {{ max_classes_per_day }} kelas per hari, biar semua member kebagian tempat.
+                                            Kalau mau pindah ke kelas ini, batalkan salah satu kelas di atas dulu.
+                                        </div>
+                                    {% else %}
+                                        <div class="small mb-0">
+                                            <i class="fas fa-circle-info me-2"></i>{{ booking_block.message }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
                         {% else %}
                             <a href="{% url 'member_login' %}" class="btn btn-secondary px-4 py-2 rounded-pill fw-bold shadow">
                                 <i class="fas fa-sign-in-alt me-2"></i>Masuk untuk Booking

@@ -1,8 +1,14 @@
 from django.db import models
+from django.db.models import Q
 from django.utils import timezone
 from django.core.validators import MaxValueValidator, MinValueValidator
 
 from accounts.models import Member
+
+# How many classes one member may hold per day. Members used to book 3-4 classes
+# a day just so they would never hit a "full" class, then skip most of them,
+# which locked everyone else out. Admins can still go over this from /admin.
+MAX_CLASSES_PER_DAY = 2
 
 
 class Class(models.Model):
@@ -131,3 +137,95 @@ class ClassInstance(models.Model):
             models.Index(fields=["date", "start_time"], name="class_date_time_idx"),
             models.Index(fields=["status"], name="class_status_idx"),
         ]
+
+
+def member_classes_on_dates(member, dates):
+    """Classes on `dates` the member holds a spot in, booked or waitlisted.
+
+    Waitlist spots count against the daily limit: they turn into real bookings
+    as soon as somebody cancels, so leaving them out would let a member hold
+    2 bookings plus a stack of waitlist spots and still end up with 4 classes.
+
+    Classes the gym cancelled are not counted, they never happened.
+    """
+    return (
+        ClassInstance.objects.filter(date__in=dates)
+        .exclude(status="CANCELLED")
+        .filter(Q(booked_members=member) | Q(waitlisted_members=member))
+        .select_related("class_schedule__class_obj")
+        .order_by("date", "start_time")
+        .distinct()
+    )
+
+
+def member_classes_on_date(member, date):
+    """Classes on one date the member holds a spot in. See member_classes_on_dates."""
+    return member_classes_on_dates(member, [date])
+
+
+def booking_block_reason(member, instance, held_that_day=None):
+    """Why `member` may not book `instance`, or None when they may.
+
+    One place for the booking rules so the class list, the class detail page and
+    the book_class POST always agree: a member never sees a button that the
+    server then refuses. Being booked or waitlisted already is not handled here,
+    those members get a cancel button instead.
+
+    `held_that_day` is how many classes the member already holds on that date.
+    Pass it when you already know (the list page counts every date in one query);
+    leave it out and it gets counted here.
+
+    Returns None, or a dict with:
+      code    - DAY_LIMIT / SEMI_PRIVATE_INACTIVE / PEMULA_INACTIVE
+      short   - fits on the small disabled button in the class list
+      label   - roomier button label, for the class detail page
+      message - the full sentence, for messages.error()
+    """
+    class_name = instance.class_schedule.class_obj.name.lower()
+    class_date_start = timezone.make_aware(
+        timezone.datetime.combine(instance.date, timezone.datetime.min.time())
+    )
+
+    if "semi private" in class_name and (
+        not member.semi_private_active_until
+        or member.semi_private_active_until < class_date_start
+    ):
+        return {
+            "code": "SEMI_PRIVATE_INACTIVE",
+            "short": "Gold Tidak Aktif",
+            "label": "Membership Gold Tidak Aktif",
+            "message": (
+                "Membership Gold kamu sudah tidak aktif pada tanggal tersebut. "
+                "Silahkan hubungi admin untuk mengaktifkannya."
+            ),
+        }
+
+    if "kelas pemula" in class_name and (
+        not member.pemula_active_until or member.pemula_active_until < class_date_start
+    ):
+        return {
+            "code": "PEMULA_INACTIVE",
+            "short": "Silver Tidak Aktif",
+            "label": "Membership Silver Tidak Aktif",
+            "message": (
+                "Membership Silver kamu sudah tidak aktif pada tanggal tersebut. "
+                "Silahkan hubungi admin untuk mengaktifkannya."
+            ),
+        }
+
+    if held_that_day is None:
+        held_that_day = member_classes_on_date(member, instance.date).count()
+    if held_that_day >= MAX_CLASSES_PER_DAY:
+        return {
+            "code": "DAY_LIMIT",
+            "short": f"Maks {MAX_CLASSES_PER_DAY}/hari",
+            "label": f"Maks {MAX_CLASSES_PER_DAY} Kelas per Hari",
+            "message": (
+                f"Kamu sudah punya {MAX_CLASSES_PER_DAY} kelas di tanggal "
+                f"{instance.date.strftime('%d %b %Y')}. Maksimal "
+                f"{MAX_CLASSES_PER_DAY} kelas per hari, jadi batalkan salah satu "
+                f"dulu kalau mau pindah ke kelas ini."
+            ),
+        }
+
+    return None

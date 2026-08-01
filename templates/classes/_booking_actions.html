@@ -1,0 +1,50 @@
+{% comment %}
+One-tap booking actions for a class card on /kelas/.
+Expects: instance (with member_is_booked / member_is_waitlisted / booking_block
+set by ClassListView) and member.
+{% endcomment %}
+<div class="d-flex justify-content-end align-items-center flex-wrap gap-2">
+    <a href="{% url 'classes:class_detail' instance.pk %}" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold">
+        <i class="fas fa-eye me-1"></i>Detail
+    </a>
+
+    {% if member %}
+        {% if instance.member_is_booked %}
+            <form method="post" action="{% url 'classes:cancel_class' instance.id %}" class="d-inline js-confirm"
+                  data-confirm="Batalkan booking {{ instance.class_schedule.class_obj.name }} {{ instance.start_time|time:'H:i' }}?">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="list">
+                <button type="submit" class="btn btn-sm btn-danger rounded-pill px-3 fw-bold shadow-sm">
+                    <i class="fas fa-times me-1"></i>Batalkan
+                </button>
+            </form>
+        {% elif instance.member_is_waitlisted %}
+            <form method="post" action="{% url 'classes:cancel_class' instance.id %}" class="d-inline js-confirm"
+                  data-confirm="Keluar dari antrian {{ instance.class_schedule.class_obj.name }} {{ instance.start_time|time:'H:i' }}?">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="list">
+                <button type="submit" class="btn btn-sm btn-warning rounded-pill px-3 fw-bold shadow-sm">
+                    <i class="fas fa-clock me-1"></i>Keluar Antrian
+                </button>
+            </form>
+        {% elif instance.booking_block %}
+            <button type="button" class="btn btn-sm btn-light text-dark rounded-pill px-3 fw-bold" disabled>
+                <i class="fas fa-ban me-1"></i>{{ instance.booking_block.short }}
+            </button>
+        {% else %}
+            <form method="post" action="{% url 'classes:book_class' instance.id %}" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="list">
+                {% if instance.status == 'FULL' %}
+                    <button type="submit" class="btn btn-sm btn-info rounded-pill px-3 fw-bold shadow-sm">
+                        <i class="fas fa-list me-1"></i>Masuk Antrian
+                    </button>
+                {% else %}
+                    <button type="submit" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold shadow-sm">
+                        <i class="fas fa-check me-1"></i>Booking
+                    </button>
+                {% endif %}
+            </form>
+        {% endif %}
+    {% endif %}
+</div>

@@ -656,13 +656,32 @@ python manage.py generate_class_instances 7
 
 ### User Interface
 - **Class List**: Shows upcoming classes only (`/kelas/`) - members only
+- **1-tap Booking**: Book, join the waitlist, or cancel straight from the list, no need to open the class first. See "Booking from the Class List" below
 - **1-tap Filters**: Kelas (Semi Private, Kelas Pemula) and Waktu (Pagi ≤12:00, Sore >12:00); tap to filter, tap again to clear
 - **Card Styles**: Light Ramadan (neon/Mulai brand) for morning Kelas Pemula during Ramadan; Semi Private (gold luxury with ribbon)
 - **Time-Based Filtering**: Automatically hides classes that have already started
 - **Real-Time Updates**: Classes disappear from list as their start time passes
 - **Class Detail**: Individual class pages with booking functionality (`/kelas/<id>/`)
 - **My Account Integration**: Upcoming classes displayed on member account page
-- **Mobile-Friendly**: "Lihat Detail" buttons for clear navigation
+- **Mobile-Friendly**: Small secondary "Detail" button next to the primary booking button
+
+### Booking from the Class List
+
+Every card on `/kelas/` carries its own action button, so booking takes one tap instead of list → detail → book → back.
+
+- **One shared button block** (`templates/classes/_booking_actions.html`), included by all 4 card variants (Ramadan light / Kelas Pemula / Semi Private / other) so the states only exist in one place.
+- **Button states**, in this order: `Batalkan` (already booked) → `Keluar Antrian` (waitlisted) → disabled reason (see `booking_block_reason`) → `Masuk Antrian` (class FULL) → `Booking`.
+- **Returns to the list**: the forms post `next=list`, and `_redirect_after_action()` sends the member back to `/kelas/#kelas-<id>`, i.e. the same card they tapped. Only that one fixed value is accepted, so it can't be abused as an open redirect the way `next=<url>` could. Without the field (the detail page), behaviour is unchanged.
+- **Cancelling asks first**: a mis-tap while scrolling would hand the spot to the waitlist with no undo, so cancel/leave-waitlist show a confirm. Booking itself is one tap.
+- **Double taps**: on submit the button is disabled and swapped for a spinner.
+- **Flat query count**: `ClassListView.get_context_data()` precomputes everything each card needs (`slots_left`, `member_is_booked`, `member_is_waitlisted`, `booking_block`) in 5 queries total, no matter how many classes are listed. Doing it in the template would cost several queries per card. A test pins this by rendering 6 then 12 cards and asserting the same count.
+- **Day limit note**: shown once per date group (not per card), listing the classes the member already holds that day. Cards under it get a compact disabled `Maks 2/hari`.
+
+### Booking Rules, One Place
+
+`booking_block_reason(member, instance, held_that_day=None)` in `classes/models.py` answers "may this member book this class?" and is used by the class list, the class detail page and the `book_class` POST, so a member never sees a button the server then refuses.
+
+Returns `None` when they may book, otherwise a dict with `code` (`DAY_LIMIT` / `SEMI_PRIVATE_INACTIVE` / `PEMULA_INACTIVE`), `short` (small list button), `label` (roomier detail-page button) and `message` (full sentence for `messages.error`). `held_that_day` lets the list page pass a count it already has instead of re-querying per card; `book_class` leaves it out so the count is taken fresh inside the transaction.
 
 ### Admin Interface
 - **Full CRUD Access**: Classes, schedules, and bookings management
@@ -675,9 +694,22 @@ python manage.py generate_class_instances 7
 ### Booking Rules
 - **Login Required**: Only authenticated members can book classes
 - **Waitlist System**: Automatic promotion when spots become available
-- **No Booking Limits**: Members can book multiple classes
+- **Max 2 Classes per Day**: See "Daily Booking Limit" below
 - **Free Cancellation**: No time restrictions on cancellations
 - **FIFO Waitlist**: First to join waitlist gets first available spot
+
+### Daily Booking Limit
+
+Members used to book 3-4 classes on the same day just to be sure they never hit a full class, then skip most of them, which locked other members out of those spots. So one member can now hold at most `MAX_CLASSES_PER_DAY` (2) classes per day.
+
+- **Counts waitlist too** (`member_classes_on_date()` in `classes/models.py`): a waitlist spot becomes a real booking as soon as someone cancels, so it consumes quota. Without this, a member could hold 2 bookings + 2 waitlist spots and still end up with 4 classes that day.
+- **All class types together**: Kelas Pemula + Semi Private combined. 2 per day total, not 2 of each.
+- **Cancelled classes don't count**: if the gym cancels a class (`status="CANCELLED"`), it frees the member's quota for that day. A member cancelling their own booking frees it immediately too.
+- **Waitlist promotion is never blocked**: the waitlist spot already counted, so `move_from_waitlist()` only converts it to a booking and the total for that day does not change.
+- **Admins can override**: the limit lives in the member-facing `book_class` view, not in the model, so staff can still add a member to a 3rd class from `/admin` for special cases (paid extra, makeup class).
+- **Race-safe**: the check and the booking run in one transaction with `select_for_update()` on the member row, so double-tapping cannot slip a 3rd booking through.
+- **Shown before they tap**: on the class detail page, a member who already has 2 classes on that date sees a disabled "Maks 2 Kelas per Hari" button plus a note listing the classes they already hold that day, instead of an error after tapping. `ClassDetailView` provides `day_limit_reached`, `member_classes_on_date` and `max_classes_per_day`.
+- **To change the limit**: edit `MAX_CLASSES_PER_DAY` in `classes/models.py`. All user-facing messages read the number from that constant.
 
 ### Technical Implementation
 - **Time-Based Filtering (`classes/views.py`)**:

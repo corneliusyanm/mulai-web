@@ -1153,3 +1153,501 @@ class CancelledInstanceStatusGuardTest(TestCase):
         live.refresh_from_db()
         self.assertEqual(live.status, "OPEN")
 
+
+
+class DailyBookingLimitTest(TestCase):
+    """Max MAX_CLASSES_PER_DAY classes per member per day, waitlist included."""
+
+    def setUp(self):
+        self.pemula = Class.objects.create(
+            name="Kelas Pemula", description="Beginner class", max_members=10
+        )
+        self.semi_private = Class.objects.create(
+            name="Semi Private", description="Semi private class", max_members=2
+        )
+        self.member = Member.objects.create(
+            name="Rajin Member",
+            email="rajin@example.com",
+            phone_number="628555000111",
+            age=25,
+            height=170.0,
+            weight=70.0,
+            gender="M",
+            goals="Stay fit",
+            years_of_working_out="1-2 years",
+            active_until=timezone.now() + timedelta(days=30),
+            pemula_active_until=timezone.now() + timedelta(days=30),
+            semi_private_active_until=timezone.now() + timedelta(days=30),
+        )
+        self.other_member = Member.objects.create(
+            name="Member Lain",
+            email="lain@example.com",
+            phone_number="628555000222",
+            age=25,
+            height=170.0,
+            weight=70.0,
+            gender="M",
+            goals="Stay fit",
+            years_of_working_out="1-2 years",
+            active_until=timezone.now() + timedelta(days=30),
+            pemula_active_until=timezone.now() + timedelta(days=30),
+        )
+        self.tomorrow = timezone.now().date() + timedelta(days=1)
+        self.day_after = timezone.now().date() + timedelta(days=2)
+
+    def make_instance(self, class_obj, hour, on_date=None, status="OPEN"):
+        """One class instance at `hour` on `on_date` (defaults to tomorrow)."""
+        on_date = on_date or self.tomorrow
+        schedule, _ = ClassSchedule.objects.get_or_create(
+            class_obj=class_obj,
+            day_of_week=on_date.weekday(),
+            start_time=f"{hour:02d}:00:00",
+            defaults={"end_time": f"{hour + 1:02d}:00:00"},
+        )
+        return ClassInstance.objects.create(
+            class_schedule=schedule,
+            date=on_date,
+            start_time=schedule.start_time,
+            end_time=schedule.end_time,
+            status=status,
+        )
+
+    def login(self, member=None):
+        session = self.client.session
+        session["member_email"] = (member or self.member).email
+        session.save()
+
+    def book(self, instance):
+        return self.client.post(
+            reverse("classes:book_class", args=[instance.id]), follow=True
+        )
+
+    def test_third_booking_same_day_is_blocked(self):
+        first = self.make_instance(self.pemula, 8)
+        second = self.make_instance(self.pemula, 10)
+        third = self.make_instance(self.pemula, 16)
+        self.login()
+
+        self.book(first)
+        self.book(second)
+        response = self.book(third)
+
+        self.assertContains(response, "Maksimal 2 kelas per hari")
+        self.assertNotIn(self.member, third.booked_members.all())
+        self.assertNotIn(self.member, third.waitlisted_members.all())
+        self.assertIn(self.member, first.booked_members.all())
+        self.assertIn(self.member, second.booked_members.all())
+
+    def test_limit_counts_all_class_types_together(self):
+        pemula_class = self.make_instance(self.pemula, 8)
+        semi_class = self.make_instance(self.semi_private, 10)
+        third = self.make_instance(self.pemula, 16)
+        self.login()
+
+        self.book(pemula_class)
+        self.book(semi_class)
+        response = self.book(third)
+
+        self.assertContains(response, "Maksimal 2 kelas per hari")
+        self.assertNotIn(self.member, third.booked_members.all())
+
+    def test_waitlist_counts_toward_the_limit(self):
+        booked = self.make_instance(self.pemula, 8)
+        full_class = self.make_instance(self.semi_private, 10)
+        third = self.make_instance(self.pemula, 16)
+
+        # Fill the Semi Private class (max 2) so the member lands on the waitlist
+        for i in range(2):
+            filler = Member.objects.create(
+                name=f"Filler {i}",
+                email=f"filler{i}@example.com",
+                phone_number=f"62855590000{i}",
+                age=25,
+                height=170.0,
+                weight=70.0,
+                gender="M",
+                goals="Stay fit",
+                years_of_working_out="1-2 years",
+            )
+            full_class.booked_members.add(filler)
+        full_class.update_status()
+
+        self.login()
+        self.book(booked)
+        self.book(full_class)
+        self.assertIn(self.member, full_class.waitlisted_members.all())
+
+        response = self.book(third)
+        self.assertContains(response, "Maksimal 2 kelas per hari")
+        self.assertNotIn(self.member, third.booked_members.all())
+
+    def test_limit_is_per_day_not_overall(self):
+        first = self.make_instance(self.pemula, 8)
+        second = self.make_instance(self.pemula, 10)
+        next_day = self.make_instance(self.pemula, 8, on_date=self.day_after)
+        self.login()
+
+        self.book(first)
+        self.book(second)
+        response = self.book(next_day)
+
+        self.assertNotContains(response, "Maksimal 2 kelas per hari")
+        self.assertIn(self.member, next_day.booked_members.all())
+
+    def test_cancelling_frees_up_a_slot(self):
+        first = self.make_instance(self.pemula, 8)
+        second = self.make_instance(self.pemula, 10)
+        third = self.make_instance(self.pemula, 16)
+        self.login()
+
+        self.book(first)
+        self.book(second)
+        self.client.post(
+            reverse("classes:cancel_class", args=[second.id]), follow=True
+        )
+        response = self.book(third)
+
+        self.assertContains(response, "Berhasil booking")
+        self.assertIn(self.member, third.booked_members.all())
+
+    def test_class_cancelled_by_gym_does_not_use_up_the_quota(self):
+        first = self.make_instance(self.pemula, 8)
+        second = self.make_instance(self.pemula, 10)
+        third = self.make_instance(self.pemula, 16)
+        self.login()
+
+        self.book(first)
+        self.book(second)
+        # Gym cancels the 10:00 class, so it should not count anymore
+        second.status = "CANCELLED"
+        second.save()
+
+        response = self.book(third)
+        self.assertContains(response, "Berhasil booking")
+        self.assertIn(self.member, third.booked_members.all())
+
+    def test_waitlist_promotion_still_works_at_the_limit(self):
+        """Promotion converts a waitlist spot that already counted, so it must pass."""
+        booked = self.make_instance(self.pemula, 8)
+        full_class = self.make_instance(self.semi_private, 10)
+        full_class.booked_members.add(self.other_member)
+        filler = Member.objects.create(
+            name="Filler",
+            email="filler@example.com",
+            phone_number="628555099999",
+            age=25,
+            height=170.0,
+            weight=70.0,
+            gender="M",
+            goals="Stay fit",
+            years_of_working_out="1-2 years",
+        )
+        full_class.booked_members.add(filler)
+        full_class.update_status()
+
+        self.login()
+        self.book(booked)
+        self.book(full_class)
+        self.assertIn(self.member, full_class.waitlisted_members.all())
+
+        # Somebody drops out: our member (2 classes that day already) gets the spot
+        full_class.booked_members.remove(filler)
+        full_class.move_from_waitlist()
+
+        self.assertIn(self.member, full_class.booked_members.all())
+        self.assertNotIn(self.member, full_class.waitlisted_members.all())
+
+    def test_admin_can_still_add_a_third_class(self):
+        first = self.make_instance(self.pemula, 8)
+        second = self.make_instance(self.pemula, 10)
+        third = self.make_instance(self.pemula, 16)
+        self.login()
+
+        self.book(first)
+        self.book(second)
+        # Admin override: adding directly (as /admin does) is not capped
+        third.booked_members.add(self.member)
+
+        self.assertIn(self.member, third.booked_members.all())
+
+    def test_detail_page_warns_before_booking(self):
+        first = self.make_instance(self.pemula, 8)
+        second = self.make_instance(self.pemula, 10)
+        third = self.make_instance(self.pemula, 16)
+        self.login()
+
+        self.book(first)
+        self.book(second)
+        response = self.client.get(
+            reverse("classes:class_detail", args=[third.id])
+        )
+
+        self.assertTrue(response.context["day_limit_reached"])
+        self.assertEqual(len(response.context["member_classes_on_date"]), 2)
+        self.assertContains(response, "Maks 2 Kelas per Hari")
+        self.assertNotContains(response, "Booking Sekarang")
+
+    def test_detail_page_has_no_warning_below_the_limit(self):
+        first = self.make_instance(self.pemula, 8)
+        second = self.make_instance(self.pemula, 10)
+        self.login()
+
+        self.book(first)
+        response = self.client.get(
+            reverse("classes:class_detail", args=[second.id])
+        )
+
+        self.assertFalse(response.context["day_limit_reached"])
+        self.assertContains(response, "Booking Sekarang")
+
+    def test_booked_member_still_sees_cancel_button_at_the_limit(self):
+        first = self.make_instance(self.pemula, 8)
+        second = self.make_instance(self.pemula, 10)
+        self.login()
+
+        self.book(first)
+        self.book(second)
+        response = self.client.get(
+            reverse("classes:class_detail", args=[second.id])
+        )
+
+        self.assertContains(response, "Batalkan Booking")
+        self.assertNotContains(response, "Maks 2 Kelas per Hari")
+
+
+class ListPageBookingTest(TestCase):
+    """One-tap booking / cancel / waitlist straight from the /kelas/ list."""
+
+    def setUp(self):
+        self.pemula = Class.objects.create(
+            name="Kelas Pemula", description="Beginner class", max_members=10
+        )
+        self.semi_private = Class.objects.create(
+            name="Semi Private", description="Semi private class", max_members=2
+        )
+        self.member = Member.objects.create(
+            name="List Member",
+            email="list@example.com",
+            phone_number="628556000111",
+            age=25,
+            height=170.0,
+            weight=70.0,
+            gender="M",
+            goals="Stay fit",
+            years_of_working_out="1-2 years",
+            active_until=timezone.now() + timedelta(days=30),
+            pemula_active_until=timezone.now() + timedelta(days=30),
+            semi_private_active_until=timezone.now() + timedelta(days=30),
+        )
+        self.tomorrow = timezone.now().date() + timedelta(days=1)
+        self.day_after = timezone.now().date() + timedelta(days=2)
+
+    def make_instance(self, class_obj, hour, on_date=None, status="OPEN"):
+        on_date = on_date or self.tomorrow
+        schedule, _ = ClassSchedule.objects.get_or_create(
+            class_obj=class_obj,
+            day_of_week=on_date.weekday(),
+            start_time=f"{hour:02d}:00:00",
+            defaults={"end_time": f"{hour + 1:02d}:00:00"},
+        )
+        return ClassInstance.objects.create(
+            class_schedule=schedule,
+            date=on_date,
+            start_time=schedule.start_time,
+            end_time=schedule.end_time,
+            status=status,
+        )
+
+    def login(self, member=None):
+        session = self.client.session
+        session["member_email"] = (member or self.member).email
+        session.save()
+
+    def fill(self, instance, count):
+        """Book `count` other members into the instance."""
+        for i in range(count):
+            filler = Member.objects.create(
+                name=f"Filler {instance.id}-{i}",
+                email=f"filler{instance.id}-{i}@example.com",
+                phone_number=f"6285561{instance.id:03d}{i:02d}",
+                age=25,
+                height=170.0,
+                weight=70.0,
+                gender="M",
+                goals="Stay fit",
+                years_of_working_out="1-2 years",
+            )
+            instance.booked_members.add(filler)
+        instance.update_status()
+
+    def test_list_shows_booking_button(self):
+        instance = self.make_instance(self.pemula, 8)
+        self.login()
+
+        response = self.client.get(reverse("classes:class_list"))
+
+        self.assertContains(response, "Booking")
+        self.assertContains(
+            response, reverse("classes:book_class", args=[instance.id])
+        )
+        self.assertContains(response, f'id="kelas-{instance.id}"')
+
+    def test_booking_from_list_returns_to_list_anchor(self):
+        instance = self.make_instance(self.pemula, 8)
+        self.login()
+
+        response = self.client.post(
+            reverse("classes:book_class", args=[instance.id]), {"next": "list"}
+        )
+
+        self.assertRedirects(
+            response,
+            f"{reverse('classes:class_list')}#kelas-{instance.id}",
+            fetch_redirect_response=False,
+        )
+        self.assertIn(self.member, instance.booked_members.all())
+
+    def test_booking_from_detail_still_returns_to_detail(self):
+        instance = self.make_instance(self.pemula, 8)
+        self.login()
+
+        response = self.client.post(reverse("classes:book_class", args=[instance.id]))
+
+        self.assertRedirects(
+            response, reverse("classes:class_detail", args=[instance.id])
+        )
+
+    def test_cancel_from_list_returns_to_list_anchor(self):
+        instance = self.make_instance(self.pemula, 8)
+        instance.booked_members.add(self.member)
+        self.login()
+
+        response = self.client.post(
+            reverse("classes:cancel_class", args=[instance.id]), {"next": "list"}
+        )
+
+        self.assertRedirects(
+            response,
+            f"{reverse('classes:class_list')}#kelas-{instance.id}",
+            fetch_redirect_response=False,
+        )
+        self.assertNotIn(self.member, instance.booked_members.all())
+
+    def test_next_param_cannot_redirect_off_site(self):
+        instance = self.make_instance(self.pemula, 8)
+        self.login()
+
+        response = self.client.post(
+            reverse("classes:book_class", args=[instance.id]),
+            {"next": "https://evil.example.com/"},
+        )
+
+        self.assertRedirects(
+            response, reverse("classes:class_detail", args=[instance.id])
+        )
+
+    def test_list_shows_cancel_for_booked_class(self):
+        instance = self.make_instance(self.pemula, 8)
+        instance.booked_members.add(self.member)
+        self.login()
+
+        response = self.client.get(reverse("classes:class_list"))
+
+        self.assertContains(response, "Batalkan")
+        self.assertContains(response, reverse("classes:cancel_class", args=[instance.id]))
+
+    def test_list_shows_leave_waitlist_for_waitlisted_class(self):
+        instance = self.make_instance(self.semi_private, 8)
+        self.fill(instance, 2)
+        instance.waitlisted_members.add(self.member)
+        self.login()
+
+        response = self.client.get(reverse("classes:class_list"))
+
+        self.assertContains(response, "Keluar Antrian")
+
+    def test_list_shows_join_waitlist_for_full_class(self):
+        instance = self.make_instance(self.semi_private, 8)
+        self.fill(instance, 2)
+        self.login()
+
+        response = self.client.get(reverse("classes:class_list"))
+
+        self.assertContains(response, "Masuk Antrian")
+        self.assertEqual(instance.status, "FULL")
+
+    def test_list_blocks_and_explains_when_day_limit_reached(self):
+        first = self.make_instance(self.pemula, 8)
+        second = self.make_instance(self.pemula, 10)
+        third = self.make_instance(self.pemula, 16)
+        first.booked_members.add(self.member)
+        second.booked_members.add(self.member)
+        self.login()
+
+        response = self.client.get(reverse("classes:class_list"))
+        groups = {group["date"]: group for group in response.context["date_groups"]}
+
+        self.assertTrue(groups[self.tomorrow]["day_limit_reached"])
+        self.assertEqual(len(groups[self.tomorrow]["held_classes"]), 2)
+        self.assertContains(response, "Maks 2/hari")
+        # The explanation shows once for the day, not once per card
+        self.assertContains(response, "Kamu sudah punya 2 kelas di hari ini", count=1)
+        blocked = [
+            instance
+            for instance in response.context["class_instances"]
+            if instance.id == third.id
+        ][0]
+        self.assertEqual(blocked.booking_block["code"], "DAY_LIMIT")
+
+    def test_day_limit_only_marks_the_capped_date(self):
+        first = self.make_instance(self.pemula, 8)
+        second = self.make_instance(self.pemula, 10)
+        first.booked_members.add(self.member)
+        second.booked_members.add(self.member)
+        self.make_instance(self.pemula, 8, on_date=self.day_after)
+        self.login()
+
+        response = self.client.get(reverse("classes:class_list"))
+        groups = {group["date"]: group for group in response.context["date_groups"]}
+
+        self.assertTrue(groups[self.tomorrow]["day_limit_reached"])
+        self.assertFalse(groups[self.day_after]["day_limit_reached"])
+
+    def test_list_blocks_class_the_member_has_no_membership_for(self):
+        no_membership = Member.objects.create(
+            name="Bronze Only",
+            email="bronze@example.com",
+            phone_number="628556000999",
+            age=25,
+            height=170.0,
+            weight=70.0,
+            gender="M",
+            goals="Stay fit",
+            years_of_working_out="1-2 years",
+            active_until=timezone.now() + timedelta(days=30),
+        )
+        self.make_instance(self.pemula, 8)
+        self.make_instance(self.semi_private, 10)
+        self.login(no_membership)
+
+        response = self.client.get(reverse("classes:class_list"))
+
+        self.assertContains(response, "Silver Tidak Aktif")
+        self.assertContains(response, "Gold Tidak Aktif")
+        self.assertNotContains(response, "fa-check me-1")
+
+    def test_list_does_not_grow_queries_per_card(self):
+        for hour in (8, 10, 12, 14, 16, 18):
+            self.make_instance(self.pemula, hour)
+        self.login()
+
+        # Everything a card needs is precomputed, so the query count must stay
+        # flat no matter how many classes are listed.
+        with self.assertNumQueries(5):
+            self.client.get(reverse("classes:class_list"))
+
+        for hour in (7, 9, 11, 13, 15, 17):
+            self.make_instance(self.pemula, hour)
+
+        with self.assertNumQueries(5):
+            self.client.get(reverse("classes:class_list"))
