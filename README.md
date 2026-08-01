@@ -276,6 +276,28 @@ erDiagram
 
 ## Homepage
 
+Section order: hero → Ramadan (when on) → Kenapa Mulai → Mari Mulai → Fasilitas → **Ulasan** → **Instagram** → kontak footer. Proof sits directly above the contact CTA; the Instagram grid closes the page.
+
+### Member Reviews (Ulasan)
+
+Social proof from the Google Maps listing, curated rather than pulled from an API.
+
+- **Rating badge**: a white pill with the score, five stars and "N ulasan di Google", linking to the listing. Numbers come from the **`ReviewSummary`** model (one row, `Ringkasan Ulasan Google` in the admin), seeded with the listing's 5,0 / 142 by a data migration and edited by hand after that.
+- **Review cards**: **`Testimonial`** rows (`Ulasan Member` in the admin) with name, rating, the review text as written, and an optional link to the original review. `priority` pins the best ones to the front, `is_active` hides one without deleting it. The homepage shows up to 6 (`TESTIMONIALS_ON_HOME`).
+- **Layout**: horizontal snap-scroll on phones with the next card peeking so swiping is obvious, wrapping grid from 768px up. Initials avatar, matching the class-card faces.
+- **Empty states**: no reviews means badge only; no summary and no reviews means the whole section disappears.
+- **Why no Places API**: Place Details returns at most 5 reviews and needs a billing-enabled key, and Google Business Profile API needs owner OAuth plus Google approving access. Neither gets you the 6 best of 142, which is the whole point. The count only grows, so a hand-edited badge that is a few weeks behind costs nothing.
+
+### Instagram Grid
+
+3 x 3 of square stills, each linking to its post, with a "Lihat Semua" button to the profile.
+
+- **Tiles live in code** (`homepage/instagram.py`), because the images ship in `static/images/instagram/` with the deploy, so a new tile needs a deploy anyway. Same shape as `JOB_LISTINGS`.
+- **Not pulled from Instagram**: the Basic Display API was shut down at the end of 2024, and the Graph API replacement hands back CDN URLs that expire within hours, so the files would have to be hosted here regardless. Hand-picking also keeps announcements and reposts out of the grid.
+- **Stills, no video**, `loading="lazy"`, so the section adds nothing to first paint.
+- **A bad path cannot break the page**: `get_tiles()` skips any tile whose file is missing (which would otherwise raise inside `{% static %}` under manifest storage), and a test fails on a bad path before deploy.
+- The section hides itself while the tile list is empty.
+
 ### Ramadan Mode
 - **Toggle**: `RAMADAN_MODE` env var (or GitHub vars) controls all Ramadan content.
 - **Date range**: 2026-02-18 to 2026-03-20 (`RAMADAN_START` / `RAMADAN_END` in settings).
