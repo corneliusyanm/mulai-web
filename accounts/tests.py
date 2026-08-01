@@ -1623,6 +1623,74 @@ class VisitHabitStatsTest(TestCase):
         self.assertEqual(streak, 0)
 
 
+class VisitChartTest(TestCase):
+    """The monthly bar chart on the full history page."""
+
+    def setUp(self):
+        self.member = Member.objects.create(
+            name="Chart Member",
+            email="chart@example.com",
+            phone_number="628562000111",
+            gender="M",
+            age=25,
+            height=170,
+            weight=70,
+            years_of_working_out="1 tahun",
+            goals="Stay fit",
+            know_mulai_gym_from="friends",
+        )
+        session = self.client.session
+        session["member_email"] = self.member.email
+        session.save()
+
+    def visit_days_ago(self, days):
+        visit = Visit.objects.create(member=self.member)
+        Visit.objects.filter(pk=visit.pk).update(
+            check_in_time=timezone.now() - timedelta(days=days)
+        )
+
+    def test_chart_covers_twelve_months_oldest_first(self):
+        # Both today, so neither can slip into last month's bucket
+        self.visit_days_ago(0)
+        self.visit_days_ago(0)
+        response = self.client.get(reverse("member_history"))
+        chart = response.context["visit_chart"]
+
+        self.assertEqual(len(chart["labels"]), 12)
+        self.assertEqual(len(chart["values"]), 12)
+        # Current month is the last bucket
+        self.assertEqual(chart["values"][-1], 2)
+        self.assertEqual(sum(chart["values"]), 2)
+
+    def test_quiet_months_are_kept_as_zero(self):
+        self.visit_days_ago(0)
+        response = self.client.get(reverse("member_history"))
+        chart = response.context["visit_chart"]
+
+        self.assertEqual(chart["values"][0], 0)
+        self.assertTrue(all(isinstance(value, int) for value in chart["values"]))
+
+    def test_no_chart_without_visits(self):
+        response = self.client.get(reverse("member_history"))
+
+        self.assertIsNone(response.context["visit_chart"])
+        self.assertNotContains(response, "Kunjungan per bulan")
+
+    def test_chart_renders_with_data(self):
+        self.visit_days_ago(3)
+        response = self.client.get(reverse("member_history"))
+
+        self.assertContains(response, "Kunjungan per bulan")
+        self.assertContains(response, 'id="visit-chart-data"')
+        self.assertContains(response, "chart.js")
+
+    def test_chart_only_on_the_visits_tab(self):
+        self.visit_days_ago(3)
+        response = self.client.get(reverse("member_history"), {"tab": "pembayaran"})
+
+        self.assertNotContains(response, "Kunjungan per bulan")
+
+
 class AccountWaitlistPlaceTest(TestCase):
     """The account page tells a waitlisted member their place in the queue."""
 

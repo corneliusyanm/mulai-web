@@ -52,6 +52,55 @@ MONTHS_ID = {
 }
 
 
+MONTHS_ID_SHORT = {
+    1: "Jan",
+    2: "Feb",
+    3: "Mar",
+    4: "Apr",
+    5: "Mei",
+    6: "Jun",
+    7: "Jul",
+    8: "Agu",
+    9: "Sep",
+    10: "Okt",
+    11: "Nov",
+    12: "Des",
+}
+
+VISIT_CHART_MONTHS = 12
+
+
+def _monthly_visit_chart(visits, today):
+    """Visits per month for the last VISIT_CHART_MONTHS months, oldest first.
+
+    Months with no visit are kept as zeros so the shape of the habit is honest.
+    Returns None when there is nothing worth drawing.
+    """
+    if not visits:
+        return None
+
+    counts = {}
+    for visit in visits:
+        day = localtime(visit.check_in_time).date()
+        counts[(day.year, day.month)] = counts.get((day.year, day.month), 0) + 1
+
+    labels = []
+    values = []
+    year, month = today.year, today.month
+    for _ in range(VISIT_CHART_MONTHS):
+        labels.append(f"{MONTHS_ID_SHORT[month]}")
+        values.append(counts.get((year, month), 0))
+        month -= 1
+        if month == 0:
+            year, month = year - 1, 12
+    labels.reverse()
+    values.reverse()
+
+    if not any(values):
+        return None
+    return {"labels": labels, "values": values}
+
+
 def _class_when_label(start, end, now):
     """When an upcoming class starts, in words: "2 jam lagi", "Besok 08:00".
 
@@ -340,6 +389,7 @@ class MemberHistoryView(MemberRequiredMixin, TemplateView):
                     visit.check_in_time, visit.check_out_time
                 )
             groups = _group_by_month(rows, lambda v: localtime(v.check_in_time).date())
+            context["visit_chart"] = _monthly_visit_chart(rows, today)
             this_month = sum(
                 1
                 for v in rows
