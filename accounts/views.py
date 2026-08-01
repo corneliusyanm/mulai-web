@@ -1,9 +1,11 @@
+import logging
 from datetime import datetime, timedelta
 from urllib.parse import quote
 
 from django.contrib import messages
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.core.exceptions import PermissionDenied
+from django.db import OperationalError, ProgrammingError
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 from django.utils import timezone
@@ -23,6 +25,8 @@ from .forms import (
     MasukkanForm,
 )
 from .models import Member, Tamu, Masukkan
+
+logger = logging.getLogger(__name__)
 
 # Create your views here.
 
@@ -569,15 +573,30 @@ class MemberEditView(MemberRequiredMixin, UpdateView):
 
 
 def home(request):
-    summary = ReviewSummary.get_solo()
-    return render(
-        request,
-        "home.html",
-        {
-            "review_summary": summary,
-            "testimonials": Testimonial.get_active()[:TESTIMONIALS_ON_HOME],
-        },
-    )
+    return render(request, "home.html", _homepage_reviews())
+
+
+def _homepage_reviews():
+    """Reviews context for the homepage, or empty if the tables are not there yet.
+
+    Deploy starts the new container and only then runs migrations, so for a few
+    seconds every release serves new code against the old schema. A homepage read
+    of a table added in that same release would 500 for real visitors in that
+    window. Losing the reviews strip for a moment is fine; losing the homepage is
+    not, so the narrow "table does not exist" case degrades instead of raising.
+    """
+    empty = {"review_summary": None, "testimonials": []}
+    try:
+        return {
+            "review_summary": ReviewSummary.get_solo(),
+            "testimonials": list(Testimonial.get_active()[:TESTIMONIALS_ON_HOME]),
+        }
+    except (ProgrammingError, OperationalError):
+        logger.warning(
+            "Homepage reviews skipped: tables missing, migrations may still be running",
+            exc_info=True,
+        )
+        return empty
 
 
 JOB_LISTINGS = [

@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from django.test import TestCase
 from django.urls import reverse
 
@@ -108,3 +110,39 @@ class HomepageReviewsSectionTest(TestCase):
 
         self.assertNotContains(response, "<script>alert(1)</script>")
         self.assertContains(response, "&lt;script&gt;")
+
+
+class HomepageSurvivesMissingTablesTest(TestCase):
+    """Deploy runs migrations after the container is already serving traffic.
+
+    In that window the homepage would be querying tables the release has not
+    created yet, which is exactly how production went down once.
+    """
+
+    def test_homepage_still_renders_when_the_tables_are_missing(self):
+        from django.db import ProgrammingError
+
+        with patch.object(
+            ReviewSummary, "get_solo", side_effect=ProgrammingError("no such table")
+        ):
+            with self.assertLogs("accounts.views", level="WARNING"):
+                response = self.client.get(reverse("home"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.context["review_summary"])
+        self.assertEqual(response.context["testimonials"], [])
+        self.assertNotContains(response, "Kata Member Mulai")
+        # the rest of the page is untouched (Mari Mulai is a PNG, so check its alt)
+        self.assertContains(response, 'alt="Mari Mulai!"')
+        self.assertContains(response, "Tanya-tanya gratis")
+
+    def test_homepage_still_renders_when_the_connection_dies(self):
+        from django.db import OperationalError
+
+        with patch.object(
+            Testimonial, "get_active", side_effect=OperationalError("gone")
+        ):
+            with self.assertLogs("accounts.views", level="WARNING"):
+                response = self.client.get(reverse("home"))
+
+        self.assertEqual(response.status_code, 200)
