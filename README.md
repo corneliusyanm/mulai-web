@@ -276,7 +276,7 @@ erDiagram
 
 ## Homepage
 
-Section order: hero → Ramadan (when on) → Kenapa Mulai → Mari Mulai → Fasilitas → **Ulasan** → kontak footer, so the proof sits directly above the contact CTA.
+Section order: hero → Ramadan (when on) → Kenapa Mulai → **Ulasan** → Mari Mulai → Fasilitas → kontak footer. The proof lands right after the reasons to join and directly before the Mari Mulai steps, so a visitor reads it at the moment they are deciding.
 
 ### Member Reviews (Ulasan)
 

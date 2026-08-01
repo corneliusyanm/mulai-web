@@ -225,8 +225,10 @@
             </div>
         </section>
 
+        {% include "home/_reviews.html" %}
+
         <!-- Mari Mulai Section -->
-        <section id="mari-mulai" class="feature-section" style="min-height: 90vh; padding-top: 25px; padding-bottom: 0px; text-align: center; color: white; position: relative; overflow: hidden; margin-top: -10vh;">
+        <section id="mari-mulai" class="feature-section" style="min-height: 90vh; padding-top: 25px; padding-bottom: 0px; text-align: center; color: white; position: relative; overflow: hidden;">
             <div class="container-fluid px-4">
               <img src="{% static 'images/mari_mulai.png' %}" alt="Mari Mulai!" class="img-fluid mx-auto d-block mb-4" style="max-width: 85%;">
             </div>
@@ -236,8 +238,6 @@
         <section id="fasilitas" class="feature-section" style="min-height: 80vh; padding-top: 0; padding-bottom: 0; text-align: center; color: white; position: relative; overflow: hidden; margin-bottom: 50px;">
             <img src="{% static 'images/fasilitas.png' %}" alt="Fasilitas" class="full-width-img" style="margin-top: 0;">
         </section>
-
-        {% include "home/_reviews.html" %}
 
 
         <a href="https://wa.me/+628996940908" class="btn py-1 px-4 rounded d-flex align-items-center justify-content-center" style="background-color: white; color: #4B4BEC; height: 32px; white-space: nowrap; overflow: hidden; font-size: 14px; width: auto;" target="_blank" rel="noopener noreferrer">

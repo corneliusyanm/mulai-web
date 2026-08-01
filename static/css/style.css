@@ -622,6 +622,9 @@ section {
 .reviews-section {
   padding: 10px 0 40px;
   color: var(--light);
+  /* Kenapa Mulai above is min-height:100vh and ends well short of its own
+     bottom, so close some of that dead space without touching the section. */
+  margin-top: -6vh;
 }
 
 .reviews-title {
