@@ -618,6 +618,53 @@ section {
   background-color: transparent;
 }
 
+/* Membership expiry / come back nudge on the account page */
+.membership-nudge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  color: #fff;
+  box-shadow: 0 8px 22px rgba(20, 20, 80, 0.18);
+}
+
+.membership-nudge-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 200px;
+  flex: 1 1 240px;
+}
+
+.membership-nudge-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+  font-size: 1rem;
+}
+
+.membership-nudge-warning {
+  background: linear-gradient(135deg, #f0a500 0%, #e08600 100%);
+}
+
+.membership-nudge-urgent {
+  background: linear-gradient(135deg, #f2683c 0%, #de4b2a 100%);
+}
+
+/* Sits on the purple page background, so it needs an edge to read as a card */
+.membership-nudge-expired {
+  background: linear-gradient(135deg, #7a72ff 0%, #5751f0 100%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
 /* Visit habit tiles on the account page */
 .habit-stat + .habit-stat {
   border-left: 1px solid #eee;

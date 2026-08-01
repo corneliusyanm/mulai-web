@@ -1751,3 +1751,114 @@ class AccountWaitlistPlaceTest(TestCase):
         booking = response.context["upcoming_waitlisted_classes"][0]
         self.assertEqual(booking.waitlist_place, 2)
         self.assertContains(response, "ke-2")
+
+
+class MembershipNudgeTest(TestCase):
+    """The renew / come-back strip on the account page."""
+
+    def setUp(self):
+        self.member = Member.objects.create(
+            name="Nudge Member",
+            email="nudge@example.com",
+            phone_number="628564000111",
+            gender="M",
+            age=25,
+            height=170,
+            weight=70,
+            years_of_working_out="1 tahun",
+            goals="Stay fit",
+            know_mulai_gym_from="friends",
+        )
+        session = self.client.session
+        session["member_email"] = self.member.email
+        session.save()
+
+    def set_expiry(self, days_from_today, **flags):
+        if days_from_today is None:
+            self.member.active_until = None
+        else:
+            self.member.active_until = timezone.now() + timedelta(days=days_from_today)
+        for field, value in flags.items():
+            setattr(self.member, field, value)
+        self.member.save()
+
+    def nudge(self):
+        response = self.client.get(reverse("member_details"))
+        return response, response.context["membership_nudge"]
+
+    def test_warns_a_few_days_before_expiry(self):
+        self.set_expiry(3)
+        response, nudge = self.nudge()
+
+        self.assertEqual(nudge["level"], "warning")
+        self.assertIn("3 hari lagi", nudge["headline"])
+        self.assertContains(response, "3 hari lagi")
+        self.assertContains(response, "Perpanjang via WhatsApp")
+
+    def test_urgent_the_day_before(self):
+        self.set_expiry(1)
+        _, nudge = self.nudge()
+
+        self.assertEqual(nudge["level"], "urgent")
+        self.assertIn("besok", nudge["headline"])
+
+    def test_urgent_on_the_last_day(self):
+        self.set_expiry(0)
+        _, nudge = self.nudge()
+
+        self.assertEqual(nudge["level"], "urgent")
+        self.assertIn("hari ini", nudge["headline"])
+
+    def test_come_back_message_after_expiry(self):
+        self.set_expiry(-5)
+        response, nudge = self.nudge()
+
+        self.assertEqual(nudge["level"], "expired")
+        self.assertIn("5 hari lalu", nudge["headline"])
+        self.assertContains(response, "Aktifkan via WhatsApp")
+
+    def test_quiet_while_the_membership_is_comfortable(self):
+        self.set_expiry(20)
+        response, nudge = self.nudge()
+
+        self.assertIsNone(nudge)
+        self.assertNotContains(response, "membership-nudge")
+
+    def test_quiet_for_long_lapsed_memberships(self):
+        self.set_expiry(-120)
+        _, nudge = self.nudge()
+
+        self.assertIsNone(nudge)
+
+    def test_quiet_for_members_with_no_membership_date(self):
+        self.set_expiry(None)
+        _, nudge = self.nudge()
+
+        self.assertIsNone(nudge)
+
+    def test_quiet_for_members_the_admin_handles_manually(self):
+        self.set_expiry(2, skip_auto_reminder=True)
+        _, nudge = self.nudge()
+
+        self.assertIsNone(nudge)
+
+    def test_boundaries_of_the_nudge_window(self):
+        self.set_expiry(7)
+        self.assertIsNotNone(self.nudge()[1])
+
+        self.set_expiry(8)
+        self.assertIsNone(self.nudge()[1])
+
+        self.set_expiry(-30)
+        self.assertIsNotNone(self.nudge()[1])
+
+        self.set_expiry(-31)
+        self.assertIsNone(self.nudge()[1])
+
+    def test_whatsapp_message_identifies_the_member(self):
+        self.set_expiry(2)
+        _, nudge = self.nudge()
+
+        self.assertTrue(nudge["whatsapp_url"].startswith("https://wa.me/628996940908?text="))
+        self.assertIn("Nudge%20Member", nudge["whatsapp_url"])
+        self.assertIn("628564000111", nudge["whatsapp_url"])

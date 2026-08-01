@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from urllib.parse import quote
 
 from django.contrib import messages
 from django.contrib.auth.mixins import UserPassesTestMixin
@@ -50,6 +51,76 @@ MONTHS_ID = {
     11: "November",
     12: "Desember",
 }
+
+
+# Membership expiry nudge on /akun. Staff already get expiry reminders in the
+# admin; this is the member's own side of it.
+NUDGE_DAYS_BEFORE = 7
+NUDGE_DAYS_AFTER = 30  # past this, an expired membership stops being nagged about
+GYM_WHATSAPP_NUMBER = "628996940908"
+
+
+def _membership_nudge(member, today):
+    """A renew / come-back-please strip for the account page, or None.
+
+    Only `active_until` is checked: across the whole member base the Silver and
+    Gold add-ons have never expired on a different day from the gym membership
+    itself, so a second nudge for those would be noise.
+
+    Silent for members with no membership date at all (never paid, the card
+    already shows "tidak aktif"), for members marked `skip_auto_reminder`
+    (admin handles those by hand, so an automated nudge could contradict a
+    private arrangement), and for memberships that lapsed long ago.
+    """
+    if not member.active_until or member.skip_auto_reminder:
+        return None
+
+    expires_on = localtime(member.active_until).date()
+    days = (expires_on - today).days
+
+    if days > NUDGE_DAYS_BEFORE or days < -NUDGE_DAYS_AFTER:
+        return None
+
+    if days > 1:
+        level, headline = "warning", f"Membership kamu habis {days} hari lagi"
+        note = "Perpanjang sekarang biar latihanmu nggak putus."
+        cta = "Perpanjang via WhatsApp"
+        wa_status = f"habis {days} hari lagi"
+    elif days == 1:
+        level, headline = "urgent", "Membership kamu habis besok"
+        note = "Perpanjang sekarang biar latihanmu nggak putus."
+        cta = "Perpanjang via WhatsApp"
+        wa_status = "habis besok"
+    elif days == 0:
+        level, headline = "urgent", "Membership kamu habis hari ini"
+        note = "Perpanjang hari ini biar besok masih bisa nge-gym."
+        cta = "Perpanjang via WhatsApp"
+        wa_status = "habis hari ini"
+    else:
+        gone = abs(days)
+        level = "expired"
+        headline = (
+            "Membership kamu sudah habis kemarin"
+            if gone == 1
+            else f"Membership kamu sudah habis {gone} hari lalu"
+        )
+        note = "Yuk aktifkan lagi, kami tunggu di gym."
+        cta = "Aktifkan via WhatsApp"
+        wa_status = "sudah habis"
+
+    message = (
+        f"Halo Mulai Gym, saya {member.name} ({member.phone_number}). "
+        f"Membership saya {wa_status} (tanggal {expires_on.strftime('%d %b %Y')}), "
+        f"mau perpanjang ya."
+    )
+    return {
+        "level": level,
+        "headline": headline,
+        "note": note,
+        "cta": cta,
+        "expires_on": expires_on,
+        "whatsapp_url": f"https://wa.me/{GYM_WHATSAPP_NUMBER}?text={quote(message)}",
+    }
 
 
 MONTHS_ID_SHORT = {
@@ -334,6 +405,7 @@ class MemberDetailView(MemberRequiredMixin, DetailView):
         )
         context["visit_streak_weeks"] = _visit_streak_weeks(visit_dates, today)
 
+        context["membership_nudge"] = _membership_nudge(member, today)
         return context
 
     @staticmethod

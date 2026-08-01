@@ -11,6 +11,31 @@
         </div>
     </div>
 
+    {% if membership_nudge %}
+        <div class="row justify-content-center mb-4">
+            <div class="col-lg-8">
+                <div class="membership-nudge membership-nudge-{{ membership_nudge.level }}">
+                    <div class="membership-nudge-body">
+                        <div class="membership-nudge-icon">
+                            <i class="fas {% if membership_nudge.level == 'expired' %}fa-heart{% else %}fa-hourglass-half{% endif %}"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="fw-bold">{{ membership_nudge.headline }}</div>
+                            <div class="small">
+                                {{ membership_nudge.note }}
+                                <span class="text-nowrap">({{ membership_nudge.expires_on|date:"d M Y" }})</span>
+                            </div>
+                        </div>
+                    </div>
+                    <a href="{{ membership_nudge.whatsapp_url }}" target="_blank" rel="noopener noreferrer"
+                       class="btn btn-sm btn-light text-dark rounded-pill px-3 fw-bold shadow-sm text-nowrap">
+                        <i class="fab fa-whatsapp me-1 text-success"></i>{{ membership_nudge.cta }}
+                    </a>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
     <div class="row">
         <div class="col-lg-4 mb-0 mb-lg-0">
             {% include "accounts/member_card.html" with member=member %}
