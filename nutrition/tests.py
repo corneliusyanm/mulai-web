@@ -3,6 +3,7 @@ import json
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
+from django.utils.html import escape
 
 from accounts.models import Member
 
@@ -64,6 +65,26 @@ class ContentIntegrityTest(TestCase):
             self.assertTrue(block["explanation"].strip(), block["key"])
             self.assertGreaterEqual(len(block["choices"]), 2, block["key"])
 
+    def test_every_verdict_row_has_a_claim_and_a_reason(self):
+        rows = [
+            row
+            for chapter in content.CHAPTERS
+            for block in chapter["blocks"]
+            if block["type"] == "verdicts"
+            for row in block["rows"]
+        ]
+        self.assertTrue(rows)
+        for row in rows:
+            self.assertTrue(row["claim"].strip())
+            self.assertTrue(row["note"].strip())
+            self.assertIsInstance(row["is_true"], bool)
+
+    def test_every_chapter_has_an_emoji_and_a_title(self):
+        for chapter in content.CHAPTERS:
+            self.assertTrue(chapter["emoji"], chapter["slug"])
+            self.assertTrue(chapter["title"], chapter["slug"])
+            self.assertTrue(chapter["subtitle"], chapter["slug"])
+
     def test_every_block_type_has_a_template(self):
         from .views import BLOCK_TEMPLATES
 
@@ -76,13 +97,30 @@ class ContentIntegrityTest(TestCase):
             self.assertGreater(chapter["quiz_count"], 0, chapter["slug"])
             self.assertGreater(chapter["minutes"], 0, chapter["slug"])
 
+    def test_the_level_bands_are_ordered_and_start_at_zero(self):
+        mins = [level["min"] for level in content.LEVELS]
+
+        self.assertEqual(mins[0], 0)
+        self.assertEqual(mins, sorted(mins))
+        self.assertEqual(len(mins), len(set(mins)))
+        # The top band is only reachable by finishing everything.
+        self.assertEqual(mins[-1], content.total_chapters())
+
+    def test_every_level_chip_is_labelled(self):
+        chips = content.level_chips()
+
+        self.assertEqual(len(chips), len(content.LEVELS))
+        for chip in chips:
+            self.assertTrue(chip["label"].endswith("bab"))
+            self.assertTrue(chip["name"])
+
     def test_there_is_a_level_name_for_every_number_of_finished_chapters(self):
         for done in range(content.total_chapters() + 1):
             self.assertTrue(content.level_name(done))
 
         # And beyond the list, so adding a chapter later cannot break it.
         self.assertEqual(
-            content.level_name(content.total_chapters() + 5), content.LEVELS[-1]
+            content.level_name(content.total_chapters() + 5), content.LEVELS[-1]["name"]
         )
 
 
@@ -107,7 +145,8 @@ class PagesTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Belajar Gizi")
         for chapter in content.CHAPTERS:
-            self.assertContains(response, chapter["title"])
+            # escape(): "Gorengan & Minyak" reaches the page as "&amp;"
+            self.assertContains(response, escape(chapter["title"]))
 
     def test_guest_is_told_progress_needs_signing_in(self):
         response = self.client.get(reverse("nutrition:index"))
@@ -133,7 +172,7 @@ class PagesTest(TestCase):
 
         response = self.client.get(reverse("nutrition:index"))
 
-        self.assertContains(response, content.LEVELS[0])
+        self.assertContains(response, content.LEVELS[0]["name"])
 
     def test_account_page_shows_the_teaser(self):
         member = a_member()
@@ -144,7 +183,9 @@ class PagesTest(TestCase):
         response = self.client.get(reverse("member_details"))
 
         self.assertContains(response, "Belajar Gizi")
-        self.assertEqual(response.context["gizi"]["total_chapters"], 3)
+        self.assertEqual(
+            response.context["gizi"]["total_chapters"], content.total_chapters()
+        )
 
 
 class FinishChapterTest(TestCase):
@@ -263,7 +304,7 @@ class FinishChapterTest(TestCase):
             ).json()
 
         self.assertTrue(body["all_done"])
-        self.assertEqual(body["level"], content.LEVELS[-1])
+        self.assertEqual(body["level"], content.LEVELS[-1]["name"])
 
     def test_garbage_body_is_rejected_not_crashed(self):
         self.login()

@@ -22,6 +22,7 @@ BLOCK_TEMPLATES = {
     "quiz": "nutrition/_block_quiz.html",
     "bars": "nutrition/_block_bars.html",
     "swap": "nutrition/_block_swap.html",
+    "verdicts": "nutrition/_block_verdicts.html",
 }
 
 
@@ -56,7 +57,10 @@ def index(request):
             "member": member,
             "chapters": chapters,
             "summary": summary,
-            "levels": content.LEVELS,
+            "levels": content.level_chips(),
+            # Reading time for the whole thing, so the lead line cannot drift
+            # from the chapter list under it.
+            "total_minutes": sum(c["minutes"] for c in content.CHAPTERS),
         },
     )
 
