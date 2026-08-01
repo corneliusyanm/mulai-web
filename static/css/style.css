@@ -618,6 +618,30 @@ section {
   background-color: transparent;
 }
 
+/* Visit habit tiles on the account page */
+.habit-stat + .habit-stat {
+  border-left: 1px solid #eee;
+}
+
+.habit-stat-icon {
+  color: var(--primary);
+  font-size: 0.95rem;
+}
+
+.habit-stat-value {
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: var(--dark);
+  line-height: 1.1;
+}
+
+.habit-stat-label {
+  font-size: 0.68rem;
+  color: var(--gray);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
 /* How full a class is, on the class list cards */
 .class-capacity {
   height: 6px;

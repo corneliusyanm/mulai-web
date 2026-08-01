@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+
 from django.contrib import messages
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.core.exceptions import PermissionDenied
@@ -48,6 +50,64 @@ MONTHS_ID = {
     11: "November",
     12: "Desember",
 }
+
+
+def _class_when_label(start, end, now):
+    """When an upcoming class starts, in words: "2 jam lagi", "Besok 08:00".
+
+    Returns (label, is_soon). is_soon marks anything today or already running,
+    which the account page highlights so a member cannot miss it.
+    """
+    if end <= now:
+        return "Sudah selesai", False
+    if start <= now:
+        return "Sedang berlangsung", True
+
+    minutes = int((start - now).total_seconds() // 60)
+    if minutes < 60:
+        return f"{max(1, minutes)} menit lagi", True
+
+    start_date = localtime(start).date()
+    today = localtime(now).date()
+    clock = localtime(start).strftime("%H:%M")
+
+    if start_date == today:
+        hours = minutes // 60
+        return f"{hours} jam lagi", True
+    if start_date == today + timedelta(days=1):
+        return f"Besok {clock}", False
+    days = (start_date - today).days
+    return f"{days} hari lagi", False
+
+
+def _week_key(day):
+    """(ISO year, ISO week) so weeks compare correctly across a year boundary."""
+    iso = day.isocalendar()
+    return (iso[0], iso[1])
+
+
+def _visit_streak_weeks(visit_dates, today):
+    """How many weeks in a row the member has come in, counting back from now.
+
+    A week counts if it has at least one visit. The current week not having one
+    yet does not break the streak (nobody should lose 8 weeks because it is
+    Monday morning); missing a whole week does.
+    """
+    weeks = {_week_key(day) for day in visit_dates}
+    if not weeks:
+        return 0
+
+    cursor = today
+    if _week_key(cursor) not in weeks:
+        cursor = today - timedelta(days=7)
+        if _week_key(cursor) not in weeks:
+            return 0
+
+    streak = 0
+    while _week_key(cursor) in weeks:
+        streak += 1
+        cursor -= timedelta(days=7)
+    return streak
 
 
 def _duration_label(check_in, check_out):
@@ -163,18 +223,27 @@ class MemberDetailView(MemberRequiredMixin, DetailView):
         past_booked = member.booked_classes.filter(date__lt=today)
         past_waitlisted = member.waitlisted_classes.filter(date__lt=today)
 
+        upcoming_booked = self._with_when_labels(
+            member.booked_classes.filter(date__gte=today)
+            .select_related("class_schedule__class_obj")
+            .order_by("date", "start_time")
+        )
+        upcoming_waitlisted = self._with_when_labels(
+            member.waitlisted_classes.filter(date__gte=today)
+            .select_related("class_schedule__class_obj")
+            .order_by("date", "start_time")
+        )
+        for booking in upcoming_waitlisted:
+            booking.waitlist_place = booking.waitlist_position(member)
+
         # Filter booked classes for upcoming and past
-        context["upcoming_booked_classes"] = member.booked_classes.filter(
-            date__gte=today
-        ).order_by("date", "start_time")
+        context["upcoming_booked_classes"] = upcoming_booked
         context["past_booked_classes"] = past_booked.order_by("-date", "-start_time")[
             :PAST_CLASSES_LIMIT
         ]
 
         # Filter waitlisted classes for upcoming and past
-        context["upcoming_waitlisted_classes"] = member.waitlisted_classes.filter(
-            date__gte=today
-        ).order_by("date", "start_time")
+        context["upcoming_waitlisted_classes"] = upcoming_waitlisted
         context["past_waitlisted_classes"] = past_waitlisted.order_by(
             "-date", "-start_time"
         )[:PAST_CLASSES_LIMIT]
@@ -202,7 +271,34 @@ class MemberDetailView(MemberRequiredMixin, DetailView):
             past_booked_count > PAST_CLASSES_LIMIT
             or past_waitlisted_count > PAST_CLASSES_LIMIT
         )
+
+        # Visit habit at a glance. For a gym that is mostly first-timers, seeing
+        # the streak is what makes the habit stick.
+        visit_dates = [
+            localtime(check_in).date()
+            for check_in in Visit.objects.filter(member=member).values_list(
+                "check_in_time", flat=True
+            )
+        ]
+        context["visits_this_month"] = sum(
+            1 for day in visit_dates if (day.year, day.month) == (today.year, today.month)
+        )
+        context["visit_streak_weeks"] = _visit_streak_weeks(visit_dates, today)
+
         return context
+
+    @staticmethod
+    def _with_when_labels(queryset):
+        """Attach "2 jam lagi" / "Besok 08:00" labels to upcoming classes."""
+        now = timezone.now()
+        bookings = list(queryset)
+        for booking in bookings:
+            start = timezone.make_aware(
+                datetime.combine(booking.date, booking.start_time)
+            )
+            end = timezone.make_aware(datetime.combine(booking.date, booking.end_time))
+            booking.when_label, booking.when_soon = _class_when_label(start, end, now)
+        return bookings
 
 
 class MemberHistoryView(MemberRequiredMixin, TemplateView):

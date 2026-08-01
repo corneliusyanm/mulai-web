@@ -351,7 +351,7 @@ class MemberViewsTest(TestCase):
         past_booked = response.context["past_booked_classes"]
 
         # Should have today and tomorrow in upcoming
-        self.assertEqual(upcoming_booked.count(), 2)
+        self.assertEqual(len(upcoming_booked), 2)
         self.assertIn(today_instance, upcoming_booked)
         self.assertIn(future_instance, upcoming_booked)
 
@@ -409,7 +409,7 @@ class MemberViewsTest(TestCase):
         past_waitlisted = response.context["past_waitlisted_classes"]
 
         # Should have only tomorrow in upcoming
-        self.assertEqual(upcoming_waitlisted.count(), 1)
+        self.assertEqual(len(upcoming_waitlisted), 1)
         self.assertIn(future_waitlist_instance, upcoming_waitlisted)
 
         # Should have yesterday in past
@@ -428,9 +428,9 @@ class MemberViewsTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
         # All class querysets should be empty
-        self.assertEqual(response.context["upcoming_booked_classes"].count(), 0)
+        self.assertEqual(len(response.context["upcoming_booked_classes"]), 0)
         self.assertEqual(response.context["past_booked_classes"].count(), 0)
-        self.assertEqual(response.context["upcoming_waitlisted_classes"].count(), 0)
+        self.assertEqual(len(response.context["upcoming_waitlisted_classes"]), 0)
         self.assertEqual(response.context["past_waitlisted_classes"].count(), 0)
 
 
@@ -1409,3 +1409,277 @@ class MemberHistoryViewTest(TestCase):
         self.assertTrue(response.context["has_more_past_classes"])
         self.assertEqual(response.context["total_past_classes"], 11)
         self.assertContains(response, "Lihat Semua Riwayat Kelas")
+
+
+class UpcomingClassCountdownTest(TestCase):
+    """The account page says when a class starts, in words."""
+
+    def setUp(self):
+        from classes.models import Class, ClassSchedule, ClassInstance
+
+        self.Class = Class
+        self.ClassSchedule = ClassSchedule
+        self.ClassInstance = ClassInstance
+        self.member = Member.objects.create(
+            name="Countdown Member",
+            email="countdown@example.com",
+            phone_number="628560000111",
+            gender="M",
+            age=25,
+            height=170,
+            weight=70,
+            years_of_working_out="1 tahun",
+            goals="Stay fit",
+            know_mulai_gym_from="friends",
+            active_until=timezone.now() + timedelta(days=30),
+        )
+        self.class_obj = Class.objects.create(
+            name="Kelas Pemula", description="Beginner", max_members=10
+        )
+
+    def book_at(self, start_dt, hours=1):
+        local_start = timezone.localtime(start_dt)
+        schedule, _ = self.ClassSchedule.objects.get_or_create(
+            class_obj=self.class_obj,
+            day_of_week=local_start.weekday(),
+            start_time=local_start.time().replace(second=0, microsecond=0),
+            defaults={
+                "end_time": (local_start + timedelta(hours=hours))
+                .time()
+                .replace(second=0, microsecond=0)
+            },
+        )
+        instance = self.ClassInstance.objects.create(
+            class_schedule=schedule,
+            date=local_start.date(),
+            start_time=schedule.start_time,
+            end_time=schedule.end_time,
+        )
+        instance.booked_members.add(self.member)
+        return instance
+
+    def login(self):
+        session = self.client.session
+        session["member_email"] = self.member.email
+        session.save()
+
+    def upcoming(self, response):
+        return response.context["upcoming_booked_classes"]
+
+    def test_minutes_when_it_starts_very_soon(self):
+        self.book_at(timezone.now() + timedelta(minutes=40))
+        self.login()
+
+        booking = self.upcoming(self.client.get(reverse("member_details")))[0]
+
+        self.assertIn("menit lagi", booking.when_label)
+        self.assertTrue(booking.when_soon)
+
+    def test_hours_when_it_starts_later_today(self):
+        start = timezone.now() + timedelta(hours=4)
+        if timezone.localtime(start).date() != timezone.localdate():
+            self.skipTest("4 hours from now is tomorrow, timing-specific case")
+        self.book_at(start)
+        self.login()
+
+        booking = self.upcoming(self.client.get(reverse("member_details")))[0]
+
+        self.assertIn("jam lagi", booking.when_label)
+        self.assertTrue(booking.when_soon)
+
+    def test_tomorrow_shows_the_clock_time(self):
+        start = timezone.localtime(timezone.now()) + timedelta(days=1)
+        self.book_at(start)
+        self.login()
+
+        booking = self.upcoming(self.client.get(reverse("member_details")))[0]
+
+        self.assertTrue(booking.when_label.startswith("Besok"))
+        self.assertFalse(booking.when_soon)
+
+    def test_further_away_counts_days(self):
+        self.book_at(timezone.localtime(timezone.now()) + timedelta(days=3))
+        self.login()
+
+        booking = self.upcoming(self.client.get(reverse("member_details")))[0]
+
+        self.assertEqual(booking.when_label, "3 hari lagi")
+        self.assertFalse(booking.when_soon)
+
+    def test_running_right_now(self):
+        self.book_at(timezone.now() - timedelta(minutes=20))
+        self.login()
+
+        booking = self.upcoming(self.client.get(reverse("member_details")))[0]
+
+        self.assertEqual(booking.when_label, "Sedang berlangsung")
+        self.assertTrue(booking.when_soon)
+
+    def test_cancel_nudge_shows_only_with_upcoming_classes(self):
+        self.login()
+        without = self.client.get(reverse("member_details"))
+        self.assertNotContains(without, "biar member lain kebagian")
+
+        self.book_at(timezone.now() + timedelta(days=1))
+        with_class = self.client.get(reverse("member_details"))
+        self.assertContains(with_class, "biar member lain kebagian")
+
+
+class VisitHabitStatsTest(TestCase):
+    """Monthly count and week streak on the account page."""
+
+    def setUp(self):
+        self.member = Member.objects.create(
+            name="Habit Member",
+            email="habit@example.com",
+            phone_number="628561000111",
+            gender="M",
+            age=25,
+            height=170,
+            weight=70,
+            years_of_working_out="1 tahun",
+            goals="Stay fit",
+            know_mulai_gym_from="friends",
+            active_until=timezone.now() + timedelta(days=30),
+        )
+
+    def visit_days_ago(self, days):
+        visit = Visit.objects.create(member=self.member)
+        Visit.objects.filter(pk=visit.pk).update(
+            check_in_time=timezone.now() - timedelta(days=days)
+        )
+
+    def login(self):
+        session = self.client.session
+        session["member_email"] = self.member.email
+        session.save()
+
+    def stats(self):
+        response = self.client.get(reverse("member_details"))
+        return response, (
+            response.context["visits_this_month"],
+            response.context["visit_streak_weeks"],
+        )
+
+    def test_no_visits_no_tiles(self):
+        self.login()
+        response, (this_month, streak) = self.stats()
+
+        self.assertEqual(this_month, 0)
+        self.assertEqual(streak, 0)
+        self.assertNotContains(response, "Minggu Berturut")
+
+    def test_counts_visits_this_month(self):
+        today = timezone.localdate()
+        self.visit_days_ago(0)
+        self.visit_days_ago(1)
+        self.visit_days_ago(2)
+        self.login()
+
+        response, (this_month, _) = self.stats()
+
+        expected = sum(
+            1
+            for days in (0, 1, 2)
+            if (today - timedelta(days=days)).month == today.month
+        )
+        self.assertEqual(this_month, expected)
+        self.assertContains(response, "Minggu Berturut")
+
+    def test_streak_counts_consecutive_weeks(self):
+        for weeks in range(4):
+            self.visit_days_ago(weeks * 7)
+        self.login()
+
+        _, (_, streak) = self.stats()
+
+        self.assertEqual(streak, 4)
+
+    def test_streak_survives_a_quiet_current_week(self):
+        # Last visit was last week, this week has none yet
+        self.visit_days_ago(8)
+        self.visit_days_ago(15)
+        self.login()
+
+        _, (_, streak) = self.stats()
+
+        self.assertEqual(streak, 2)
+
+    def test_streak_breaks_after_a_missed_week(self):
+        self.visit_days_ago(0)
+        self.visit_days_ago(21)  # three weeks ago, gap in between
+        self.login()
+
+        _, (_, streak) = self.stats()
+
+        self.assertEqual(streak, 1)
+
+    def test_old_visits_alone_give_no_streak(self):
+        self.visit_days_ago(60)
+        self.login()
+
+        _, (_, streak) = self.stats()
+
+        self.assertEqual(streak, 0)
+
+
+class AccountWaitlistPlaceTest(TestCase):
+    """The account page tells a waitlisted member their place in the queue."""
+
+    def setUp(self):
+        from classes.models import Class, ClassSchedule, ClassInstance
+
+        self.member = Member.objects.create(
+            name="Queued Member",
+            email="queued@example.com",
+            phone_number="628563000111",
+            gender="M",
+            age=25,
+            height=170,
+            weight=70,
+            years_of_working_out="1 tahun",
+            goals="Stay fit",
+            know_mulai_gym_from="friends",
+            active_until=timezone.now() + timedelta(days=30),
+        )
+        ahead = Member.objects.create(
+            name="Ahead Member",
+            email="ahead@example.com",
+            phone_number="628563000222",
+            gender="M",
+            age=25,
+            height=170,
+            weight=70,
+            years_of_working_out="1 tahun",
+            goals="Stay fit",
+            know_mulai_gym_from="friends",
+        )
+        class_obj = Class.objects.create(
+            name="Semi Private", description="Semi private", max_members=1
+        )
+        tomorrow = timezone.localdate() + timedelta(days=1)
+        schedule = ClassSchedule.objects.create(
+            class_obj=class_obj,
+            day_of_week=tomorrow.weekday(),
+            start_time=time(16, 0),
+            end_time=time(17, 0),
+        )
+        self.instance = ClassInstance.objects.create(
+            class_schedule=schedule,
+            date=tomorrow,
+            start_time=time(16, 0),
+            end_time=time(17, 0),
+        )
+        self.instance.waitlisted_members.add(ahead)
+        self.instance.waitlisted_members.add(self.member)
+
+    def test_place_shown_on_account_page(self):
+        session = self.client.session
+        session["member_email"] = self.member.email
+        session.save()
+
+        response = self.client.get(reverse("member_details"))
+
+        booking = response.context["upcoming_waitlisted_classes"][0]
+        self.assertEqual(booking.waitlist_place, 2)
+        self.assertContains(response, "ke-2")
