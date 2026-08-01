@@ -15,7 +15,7 @@ from .models import User
 from .views import VISIT_MILESTONES, _visit_milestone
 from visits.admin import admin_site
 from visits.models import Visit
-from payments.models import Payment
+from payments.models import Package, Payment
 from purchases.models import Product, Sale, SaleItem
 
 
@@ -2108,3 +2108,75 @@ class WebManifestTest(TestCase):
 
         self.assertContains(response, "Simpan Mulai Gym di HP kamu")
         self.assertContains(response, 'rel="manifest"')
+
+
+class PaymentRowTest(TestCase):
+    """Payment rows on /akun.
+
+    They used to render `payment.duration_choice` and `get_duration_choice_display`,
+    neither of which exists on Payment. Django resolves a missing attribute to an
+    empty string, so every row carried a blank line where the duration should be.
+    """
+
+    def setUp(self):
+        self.member = Member.objects.create(
+            name="Payment Member",
+            email="payments@example.com",
+            phone_number="628560000666",
+            gender="M",
+            age=25,
+            height=170,
+            weight=70,
+            years_of_working_out="1 tahun",
+            goals="Stay fit",
+            know_mulai_gym_from="friends",
+        )
+        self.package = Package.objects.create(
+            code="0-BRONZE-1",
+            default_price=400000,
+            description="Gym Reguler 1 bulan",
+        )
+        session = self.client.session
+        session["member_email"] = self.member.email
+        session.save()
+
+    def test_row_names_the_package_that_was_bought(self):
+        Payment.objects.create(
+            member=self.member,
+            package=self.package,
+            amount=400000,
+            payment_date=timezone.now(),
+            payment_method="CASH",
+        )
+
+        response = self.client.get(reverse("member_details"))
+
+        self.assertContains(response, "Gym Reguler 1 bulan")
+        self.assertContains(response, "Rp 400,000")
+
+    def test_installments_are_flagged_and_nothing_else_is(self):
+        Payment.objects.create(
+            member=self.member,
+            package=self.package,
+            amount=200000,
+            payment_date=timezone.now(),
+            payment_method="TRANSFER",
+            apakah_nyicil=True,
+        )
+
+        response = self.client.get(reverse("member_details"))
+
+        self.assertContains(response, "Cicilan")
+
+    def test_a_plain_payment_says_nothing_about_installments(self):
+        Payment.objects.create(
+            member=self.member,
+            package=self.package,
+            amount=400000,
+            payment_date=timezone.now(),
+            payment_method="CASH",
+        )
+
+        response = self.client.get(reverse("member_details"))
+
+        self.assertNotContains(response, "Cicilan")

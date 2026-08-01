@@ -231,20 +231,17 @@
                                           </div>
                                           <div>
                                               <div class="fw-bold text-success">Rp {{ payment.amount|floatformat:0|intcomma }}</div>
-                                              <small class="text-muted">{{ payment.payment_date|date:"d M Y" }}</small>
+                                              <small class="text-muted">
+                                                  {{ payment.payment_date|date:"d M Y" }}
+                                                  {% if payment.package %} &middot; {{ payment.package.description }}{% endif %}
+                                              </small>
                                           </div>
                                       </div>
                                       <div class="text-end">
-                                          <div class="badge bg-secondary rounded-pill mb-1">{{ payment.get_payment_method_display }}</div>
-                                          <div>
-                                              <small class="text-muted">
-                                                  {% if payment.duration_choice == 0 %}
-                                                      {{ payment.duration_days }} hari
-                                                  {% else %}
-                                                      {{ payment.get_duration_choice_display }}
-                                                  {% endif %}
-                                              </small>
-                                          </div>
+                                          <div class="badge bg-secondary rounded-pill">{{ payment.get_payment_method_display }}</div>
+                                          {% if payment.apakah_nyicil %}
+                                              <div><small class="text-muted">Cicilan</small></div>
+                                          {% endif %}
                                       </div>
                                   </div>
                               </div>
