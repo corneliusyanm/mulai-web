@@ -1052,10 +1052,6 @@ section {
   margin-bottom: 10px;
 }
 
-.gizi-topbar-emoji {
-  margin-right: 2px;
-}
-
 .gizi-topbar-count {
   margin-left: auto;
   flex-shrink: 0;
@@ -1127,12 +1123,6 @@ section {
   padding: 18px;
   margin-bottom: 12px;
   box-shadow: 0 6px 20px rgba(20, 20, 80, 0.14);
-}
-
-.gizi-card-emoji {
-  font-size: 1.9rem;
-  line-height: 1;
-  margin-bottom: 8px;
 }
 
 .gizi-card-title {

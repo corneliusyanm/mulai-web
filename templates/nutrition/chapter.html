@@ -10,10 +10,7 @@
                 <a href="{% url 'nutrition:index' %}" class="gizi-back" id="gizi-back" aria-label="Kembali">
                     <i class="fas fa-chevron-left"></i>
                 </a>
-                <div class="gizi-topbar-title">
-                    <span class="gizi-topbar-emoji">{{ chapter.emoji }}</span>
-                    Bab {{ chapter.number }} &middot; {{ chapter.title }}
-                </div>
+                <div class="gizi-topbar-title">Bab {{ chapter.number }} &middot; {{ chapter.title }}</div>
                 <div class="gizi-topbar-count" id="gizi-count"></div>
             </div>
             <div class="gizi-stepbar"><div class="gizi-stepbar-fill" id="gizi-stepbar"></div></div>
@@ -40,8 +37,12 @@
                             {% if next_chapter %}
                                 <a href="{% url 'nutrition:chapter' next_chapter.slug %}"
                                    class="btn btn-primary rounded-pill fw-bold">
-                                    {{ next_chapter.emoji }} Lanjut: Bab {{ next_chapter.number }} {{ next_chapter.title }}
+                                    Lanjut: Bab {{ next_chapter.number }} {{ next_chapter.title }}
                                     <i class="fas fa-chevron-right ms-1"></i>
+                                </a>
+                                <a href="{% url 'nutrition:index' %}"
+                                   class="btn btn-sm btn-outline-primary rounded-pill fw-bold">
+                                    <i class="fas fa-list me-1"></i>Semua bab
                                 </a>
                             {% else %}
                                 <a href="{% url 'nutrition:index' %}" class="btn btn-primary rounded-pill fw-bold">

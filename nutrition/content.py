@@ -57,7 +57,6 @@ CHAPTERS = [
         "blocks": [
             {
                 "type": "card",
-                "emoji": "🧮",
                 "title": "Badan kamu cuma ngitung satu hal",
                 "body": [
                     "Berat badan naik atau turun itu soal satu hal: kalori yang masuk "
@@ -69,7 +68,6 @@ CHAPTERS = [
             },
             {
                 "type": "card",
-                "emoji": "👀",
                 "title": "Kalori nggak kelihatan dari porsinya",
                 "body": [
                     "Semangkok sayur bening kira-kira 50 kalori. Dua bala-bala yang "
@@ -116,7 +114,6 @@ CHAPTERS = [
             },
             {
                 "type": "card",
-                "emoji": "🍚",
                 "title": "Yang bikin kebobolan biasanya bukan nasinya",
                 "body": [
                     "Nasi paling sering disalahin, padahal 1 porsi kira-kira 250 kalori "
@@ -143,7 +140,6 @@ CHAPTERS = [
             },
             {
                 "type": "card",
-                "emoji": "✌️",
                 "title": "Kamu nggak perlu ngitung seumur hidup",
                 "body": [
                     "Nggak usah nimbang tiap suapan. Cukup tau mana yang padat kalori "
@@ -206,7 +202,6 @@ CHAPTERS = [
         "blocks": [
             {
                 "type": "card",
-                "emoji": "🍗",
                 "title": "Nasi banyak, lauk dikit",
                 "body": [
                     "Dari semua soal makan, protein yang paling sering kurang di sini. "
@@ -217,7 +212,6 @@ CHAPTERS = [
             },
             {
                 "type": "card",
-                "emoji": "🎯",
                 "title": "Butuh berapa banyak?",
                 "body": [
                     "Patokan gampang buat yang latihan: kira-kira 1,6 gram protein per "
@@ -301,7 +295,6 @@ CHAPTERS = [
             },
             {
                 "type": "card",
-                "emoji": "🥚",
                 "title": "Cara naikin protein tanpa ribet",
                 "body": [
                     "Satu: tiap makan besar, tentuin lauk proteinnya dulu, nasinya nyusul.",
@@ -339,7 +332,6 @@ CHAPTERS = [
         "blocks": [
             {
                 "type": "card",
-                "emoji": "🥤",
                 "title": "Diminum 2 menit, kalorinya sepiring makan",
                 "body": [
                     "Minuman manis itu kalori yang nggak bikin kenyang sama sekali. "
@@ -385,7 +377,6 @@ CHAPTERS = [
             },
             {
                 "type": "card",
-                "emoji": "🍯",
                 "title": "Kental manis itu bukan susu",
                 "body": [
                     "Susu kental manis kira-kira separuhnya gula. Proteinnya cuma sekitar "
@@ -458,7 +449,6 @@ CHAPTERS = [
         "blocks": [
             {
                 "type": "card",
-                "emoji": "🛢️",
                 "title": "Minyak itu kalori paling padat",
                 "body": [
                     "Satu sendok makan minyak kira-kira 120 kalori. Nggak nambah rasa "
@@ -539,7 +529,6 @@ CHAPTERS = [
             },
             {
                 "type": "card",
-                "emoji": "🔥",
                 "title": "Ganti cara masak, bukan ganti lauk",
                 "body": [
                     "Kamu nggak harus ganti menu. Ayam tetep ayam, ikan tetep ikan. Yang "
@@ -594,7 +583,6 @@ CHAPTERS = [
         "blocks": [
             {
                 "type": "card",
-                "emoji": "🕒",
                 "title": "Kalori banyak, kenyang sebentar",
                 "body": [
                     "Nasi, gorengan, kerupuk, minuman manis. Kalorinya gede, tapi jam 3 "
@@ -643,7 +631,6 @@ CHAPTERS = [
             },
             {
                 "type": "card",
-                "emoji": "🍽️",
                 "title": "Trik piring yang gampang diingat",
                 "body": [
                     "Bayangin piring kamu dibagi: separuh sayur, seperempat lauk protein, "
@@ -714,7 +701,6 @@ CHAPTERS = [
         "blocks": [
             {
                 "type": "card",
-                "emoji": "\u2696\ufe0f",
                 "title": "Bukan pilih salah satu",
                 "body": [
                     "Angkat beban dan kardio kerjanya beda, dan nggak saling gantiin. "
@@ -726,7 +712,6 @@ CHAPTERS = [
             },
             {
                 "type": "card",
-                "emoji": "\u2764\ufe0f",
                 "title": "Yang berubah di dalam badan",
                 "body": [
                     "Kardio: jantung mompa lebih efisien, denyut waktu istirahat turun, "
@@ -740,7 +725,6 @@ CHAPTERS = [
             },
             {
                 "type": "card",
-                "emoji": "\U0001f60c",
                 "title": "Yang kerasa di luar",
                 "body": [
                     "Tidur lebih gampang, stres lebih ketahan, tenaga harian naik. Banyak "
@@ -864,7 +848,6 @@ CHAPTERS = [
         "blocks": [
             {
                 "type": "card",
-                "emoji": "🧱",
                 "title": "Cuma tiga bahannya",
                 "body": [
                     "Otot tumbuh dari tiga hal: latihan yang makin berat, protein yang "
@@ -876,7 +859,6 @@ CHAPTERS = [
             },
             {
                 "type": "card",
-                "emoji": "📈",
                 "title": "Naik dikit-dikit, tapi naik",
                 "body": [
                     "Badan cuma berubah kalau dipaksa. Kalau beban dan repetisi kamu sama "
@@ -904,7 +886,6 @@ CHAPTERS = [
             },
             {
                 "type": "card",
-                "emoji": "😴",
                 "title": "Tidur itu bagian dari latihan",
                 "body": [
                     "Otot dibangun waktu kamu tidur, bukan waktu kamu latihan. Latihan cuma "
@@ -1007,7 +988,6 @@ CHAPTERS = [
         "blocks": [
             {
                 "type": "card",
-                "emoji": "🗣️",
                 "title": "Kenapa mitos ini nempel",
                 "body": [
                     "Hampir semua mitos diet punya satu kesamaan: ada yang kelihatan "
@@ -1130,7 +1110,6 @@ CHAPTERS = [
         "blocks": [
             {
                 "type": "card",
-                "emoji": "📦",
                 "title": "Kemasan nggak otomatis jahat",
                 "body": [
                     "Susu UHT, tuna kaleng, telur, oat, tempe, kacang. Semuanya kemasan, "
@@ -1142,7 +1121,6 @@ CHAPTERS = [
             },
             {
                 "type": "card",
-                "emoji": "🔍",
                 "title": "Baca label dalam 10 detik",
                 "body": [
                     "Satu: cek 'per sajian' atau 'per kemasan'. Satu bungkus sering dihitung "

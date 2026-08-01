@@ -1,6 +1,5 @@
 {% comment %}One idea per screen. Expects `block` (see nutrition/content.py).{% endcomment %}
 <div class="gizi-card">
-    {% if block.emoji %}<div class="gizi-card-emoji">{{ block.emoji }}</div>{% endif %}
     <h2 class="gizi-card-title">{{ block.title }}</h2>
     {% for paragraph in block.body %}
         <p class="gizi-card-body">{{ paragraph }}</p>
