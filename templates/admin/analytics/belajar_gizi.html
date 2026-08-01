@@ -1,0 +1,171 @@
+{% extends "admin/base_site.html" %}
+
+{% block title %}{{ title }} | {{ site_title|default:"Mulai Gym Admin" }}{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+    .gz-wrap { margin: 20px 0; max-width: 1100px; }
+    .gz-tiles {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 14px;
+        margin-bottom: 24px;
+    }
+    .gz-tile {
+        background: #fff;
+        border-radius: 8px;
+        padding: 16px;
+        box-shadow: 0 2px 10px rgba(0,0,0,.08);
+    }
+    .gz-tile-value { font-size: 26px; font-weight: 700; color: #4B4BEC; line-height: 1.1; }
+    .gz-tile-label { font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: .04em; }
+    .gz-card {
+        background: #fff;
+        border-radius: 8px;
+        padding: 18px;
+        box-shadow: 0 2px 10px rgba(0,0,0,.08);
+        margin-bottom: 24px;
+    }
+    .gz-card h2 { margin: 0 0 4px; font-size: 17px; }
+    .gz-card .gz-sub { color: #666; font-size: 12px; margin: 0 0 14px; }
+    table.gz { width: 100%; border-collapse: collapse; }
+    table.gz th, table.gz td { padding: 9px 10px; text-align: left; border-bottom: 1px solid #eee; font-size: 13px; vertical-align: top; }
+    table.gz th { background: #f7f7fb; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #555; }
+    table.gz td.num, table.gz th.num { text-align: right; white-space: nowrap; }
+    .gz-miss { font-weight: 700; }
+    .gz-miss-high { color: #c62828; }
+    .gz-miss-mid { color: #ef6c00; }
+    .gz-miss-low { color: #2e7d32; }
+    .gz-q { font-weight: 600; color: #222; }
+    .gz-answer { color: #2e7d32; font-size: 12px; }
+    .gz-wrong { color: #c62828; font-size: 12px; }
+    .gz-empty { color: #888; font-style: italic; padding: 14px 0; }
+    .gz-bar { height: 8px; background: #eee; border-radius: 4px; overflow: hidden; min-width: 70px; }
+    .gz-bar span { display: block; height: 100%; background: #c62828; border-radius: 4px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="gz-wrap">
+    <div class="gz-tiles">
+        <div class="gz-tile">
+            <div class="gz-tile-value">{{ members_started }}</div>
+            <div class="gz-tile-label">Member mulai belajar</div>
+        </div>
+        <div class="gz-tile">
+            <div class="gz-tile-value">{{ members_all_done }}</div>
+            <div class="gz-tile-label">Selesai {{ total_chapters }} bab</div>
+        </div>
+        <div class="gz-tile">
+            <div class="gz-tile-value">{{ answers_recorded }}</div>
+            <div class="gz-tile-label">Jawaban tercatat</div>
+        </div>
+    </div>
+
+    <div class="gz-card">
+        <h2>Yang paling sering salah</h2>
+        <p class="gz-sub">
+            Dihitung dari jawaban <strong>pertama</strong> tiap member per soal, bukan
+            setelah mereka baca penjelasannya dan coba lagi. Yang di atas ini yang paling
+            perlu dijelasin langsung di gym.
+        </p>
+        {% if answers_recorded %}
+            <table class="gz">
+                <thead>
+                    <tr>
+                        <th>Soal</th>
+                        <th class="num">Dijawab</th>
+                        <th class="num">Salah</th>
+                        <th style="width: 120px;">Tingkat salah</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in question_stats %}
+                        <tr>
+                            <td>
+                                <div class="gz-q">{{ row.chapter }}: {{ row.question }}</div>
+                                <div class="gz-answer">Jawaban benar: {{ row.answer_text }}</div>
+                                {% if row.top_wrong_text %}
+                                    <div class="gz-wrong">
+                                        Paling sering dipilih (salah): {{ row.top_wrong_text }}
+                                        ({{ row.top_wrong_count }} orang)
+                                    </div>
+                                {% endif %}
+                            </td>
+                            <td class="num">{{ row.answered }}</td>
+                            <td class="num">{{ row.wrong }}</td>
+                            <td>
+                                <div class="gz-miss {% if row.miss_percent >= 50 %}gz-miss-high{% elif row.miss_percent >= 25 %}gz-miss-mid{% else %}gz-miss-low{% endif %}">
+                                    {{ row.miss_percent }}%
+                                </div>
+                                <div class="gz-bar"><span style="width: {{ row.miss_percent }}%"></span></div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="gz-empty">Belum ada yang jawab kuisnya. Angkanya muncul begitu member mulai.</p>
+        {% endif %}
+    </div>
+
+    <div class="gz-card">
+        <h2>Per bab</h2>
+        <p class="gz-sub">Skor yang dipakai skor terbaik tiap member, sama kayak lencana yang mereka simpan.</p>
+        <table class="gz">
+            <thead>
+                <tr>
+                    <th>Bab</th>
+                    <th class="num">Member selesai</th>
+                    <th class="num">Rata-rata benar</th>
+                    <th class="num">Nilai penuh</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in chapter_stats %}
+                    <tr>
+                        <td>Bab {{ row.number }} &middot; {{ row.title }}</td>
+                        <td class="num">{{ row.members }}</td>
+                        <td class="num">
+                            {% if row.average_correct %}{{ row.average_correct }} / {{ row.quiz_count }}{% else %}-{% endif %}
+                        </td>
+                        <td class="num">{{ row.perfect }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="gz-card">
+        <h2>Terakhir selesai</h2>
+        <p class="gz-sub">25 penyelesaian bab terakhir.</p>
+        {% if recent %}
+            <table class="gz">
+                <thead>
+                    <tr>
+                        <th>Member</th>
+                        <th>Bab</th>
+                        <th class="num">Skor terbaik</th>
+                        <th class="num">Percobaan</th>
+                        <th class="num">Terakhir</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in recent %}
+                        <tr>
+                            <td>{{ row.member.name }}</td>
+                            <td>{{ row.chapter_slug }}</td>
+                            <td class="num">{{ row.best_correct }}/{{ row.total }}</td>
+                            <td class="num">{{ row.attempts }}</td>
+                            <td class="num">{{ row.last_finished_at|date:"d M Y H:i" }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="gz-empty">Belum ada.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

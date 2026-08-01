@@ -29,6 +29,7 @@ from payments.models import Payment, Package
 from purchases.models import Sale, Product, SaleItem
 from equipment.models import Equipment
 from classes.models import ClassInstance
+from nutrition.analytics import nutrition_analytics_view
 
 
 def normalize_referral_source(raw_value):
@@ -212,6 +213,13 @@ class CustomAdminSite(admin.AdminSite):
                         "view_only": True,
                         "perms": {"view": True},
                     },
+                    {
+                        "name": "Belajar Gizi",
+                        "object_name": "Belajar Gizi",
+                        "admin_url": reverse("admin:belajar-gizi"),
+                        "view_only": True,
+                        "perms": {"view": True},
+                    },
                 ],
             }
             app_list.append(analytics_app)
@@ -245,6 +253,11 @@ def get_custom_admin_urls():
             "analytics/class-no-shows/",
             class_no_shows_view,
             name="class-no-shows",
+        ),
+        path(
+            "analytics/belajar-gizi/",
+            nutrition_analytics_view,
+            name="belajar-gizi",
         ),
         path(
             "analytics/members-by-date/",
