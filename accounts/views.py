@@ -15,6 +15,7 @@ from django.views.generic.edit import CreateView, UpdateView
 
 from classes.sharing import whatsapp_invite_url
 from homepage.models import ReviewSummary, Testimonial
+from nutrition import progress as nutrition_progress
 from payments.models import Payment
 from visits.busy_hours import quiet_hours
 from visits.models import Visit
@@ -454,6 +455,10 @@ class MemberDetailView(MemberRequiredMixin, DetailView):
         # "Come when it is quiet" strip. Reads the whole gym's history, not this
         # member's, so it is the same for everyone and cached per weekday.
         context["quiet_hours"] = quiet_hours()
+
+        # Belajar Gizi teaser: members live on this page, so this is where a
+        # half-finished chapter gets picked back up.
+        context["gizi"] = nutrition_progress.summary(member)
         return context
 
     def _with_when_labels(self, queryset):

@@ -1,0 +1,29 @@
+{% comment %}
+Belajar Gizi teaser on /akun. Expects `gizi` (nutrition.progress.summary).
+
+Members live on this page, so this is where a half-finished chapter gets picked
+back up. Deliberately small: it is a nudge, not the feature.
+{% endcomment %}
+{% if gizi %}
+<a href="{% url 'nutrition:index' %}" class="card border-0 shadow-sm rounded-3 mb-4 gizi-akun-card">
+    <div class="card-body p-3 d-flex align-items-center gap-3">
+        <div class="gizi-ring" style="--pct: {{ gizi.percent }}">
+            <span>{{ gizi.finished_count }}/{{ gizi.total_chapters }}</span>
+        </div>
+        <div class="flex-grow-1">
+            <div class="gizi-level-label">Belajar Gizi</div>
+            <div class="gizi-level-name">{{ gizi.level }}</div>
+            <div class="gizi-level-note">
+                {% if gizi.all_done %}
+                    Semua bab selesai. Mantap.
+                {% elif gizi.finished_count %}
+                    Lanjut: Bab {{ gizi.up_next.number }} {{ gizi.up_next.title }}
+                {% else %}
+                    Kalori, protein, gula cair. Kira-kira 15 menit.
+                {% endif %}
+            </div>
+        </div>
+        <div class="gizi-chapter-go"><i class="fas fa-chevron-right"></i></div>
+    </div>
+</a>
+{% endif %}
