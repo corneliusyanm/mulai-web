@@ -11,6 +11,7 @@ from django.utils.timezone import localtime
 from django.views.generic import DetailView, TemplateView
 from django.views.generic.edit import CreateView, UpdateView
 
+from homepage.instagram import INSTAGRAM_PROFILE_URL, get_tiles
 from homepage.models import ReviewSummary, Testimonial
 from payments.models import Payment
 from visits.models import Visit
@@ -576,6 +577,8 @@ def home(request):
         {
             "review_summary": summary,
             "testimonials": Testimonial.get_active()[:TESTIMONIALS_ON_HOME],
+            "instagram_tiles": get_tiles(),
+            "instagram_profile_url": INSTAGRAM_PROFILE_URL,
         },
     )
 

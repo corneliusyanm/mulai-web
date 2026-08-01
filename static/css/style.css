@@ -787,6 +787,77 @@ section {
   }
 }
 
+/* Homepage: Instagram grid */
+.instagram-section {
+  padding: 10px 0 40px;
+  color: var(--light);
+  text-align: center;
+}
+
+.instagram-title {
+  font-weight: 700;
+  font-size: 1.6rem;
+  margin-bottom: 4px;
+}
+
+.instagram-handle {
+  display: inline-block;
+  margin-bottom: 16px;
+  color: var(--light);
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+  opacity: 0.9;
+}
+
+.instagram-handle:hover {
+  color: var(--secondary);
+}
+
+.instagram-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 18px;
+}
+
+.instagram-tile {
+  position: relative;
+  display: block;
+  aspect-ratio: 1 / 1;
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.instagram-tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.3s ease;
+}
+
+.instagram-tile:hover img {
+  transform: scale(1.05);
+}
+
+.instagram-cta {
+  display: inline-block;
+  padding: 12px 30px;
+  border-radius: 999px;
+  background: #000;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-decoration: none;
+}
+
+.instagram-cta:hover {
+  background: #1a1a1a;
+  color: #fff;
+}
+
 /* Membership expiry / come back nudge on the account page */
 .membership-nudge {
   display: flex;

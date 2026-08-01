@@ -1,0 +1,31 @@
+{% comment %}
+Instagram grid. Tiles come from homepage/instagram.py and their files ship with
+the deploy, so there is no API token to expire and nothing to go blank.
+Hidden entirely while the tile list is empty.
+{% endcomment %}
+{% load static %}
+{% if instagram_tiles %}
+<section id="instagram" class="instagram-section">
+    <div class="container-fluid px-4">
+        <h2 class="instagram-title">Ikuti Kami</h2>
+        <a href="{{ instagram_profile_url }}" target="_blank" rel="noopener noreferrer" class="instagram-handle">
+            <i class="fab fa-instagram me-1"></i>@mulaigym.id
+        </a>
+
+        <div class="instagram-grid">
+            {% for tile in instagram_tiles %}
+                <a href="{% if tile.post_url %}{{ tile.post_url }}{% else %}{{ instagram_profile_url }}{% endif %}"
+                   target="_blank" rel="noopener noreferrer" class="instagram-tile">
+                    <img src="{% static tile.image %}" alt="{{ tile.alt }}" loading="lazy" decoding="async">
+                </a>
+            {% endfor %}
+        </div>
+
+        <div class="text-center">
+            <a href="{{ instagram_profile_url }}" target="_blank" rel="noopener noreferrer" class="instagram-cta">
+                Lihat Semua
+            </a>
+        </div>
+    </div>
+</section>
+{% endif %}
