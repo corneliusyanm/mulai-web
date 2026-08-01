@@ -10,6 +10,7 @@ from accounts.views import MemberRequiredMixin
 from django.contrib import messages
 from django.utils import timezone
 from django.views.decorators.http import require_POST
+
 from .models import (
     MAX_CLASSES_PER_DAY,
     ClassInstance,
@@ -46,6 +47,7 @@ class ClassListView(MemberRequiredMixin, ListView):
         all_instances = (
             ClassInstance.objects.filter(status__in=["OPEN", "FULL"])
             .select_related("class_schedule__class_obj")
+            .prefetch_related("booked_members")
             .annotate(booked_count=Count("booked_members", distinct=True))
             .order_by("date", "start_time")
         )
@@ -77,6 +79,7 @@ class ClassListView(MemberRequiredMixin, ListView):
         # cost several queries per card.
         booked_ids = set()
         waitlisted_ids = set()
+        waitlist_positions = {}
         held_by_date = defaultdict(list)
         if member and instances:
             dates = {instance.date for instance in instances}
@@ -90,6 +93,7 @@ class ClassListView(MemberRequiredMixin, ListView):
                     "id", flat=True
                 )
             )
+            waitlist_positions = self._waitlist_positions(member, waitlisted_ids)
             # Counted per date over every class that day, not just the ones still
             # listed here: a class that already started this morning is gone from
             # the list but still uses up the member's quota for today.
@@ -99,13 +103,27 @@ class ClassListView(MemberRequiredMixin, ListView):
 
         date_groups = []
         for instance in instances:
-            instance.slots_left = max(
-                0,
-                instance.class_schedule.class_obj.max_members
-                - getattr(instance, "booked_count", 0),
+            max_members = instance.class_schedule.class_obj.max_members
+            booked_count = getattr(instance, "booked_count", 0)
+            instance.slots_left = max(0, max_members - booked_count)
+            instance.booked_percent = (
+                min(100, round(booked_count * 100 / max_members)) if max_members else 0
             )
+            # A few faces so booking feels like joining people, not reserving a
+            # slot. By name, so the row is stable between page loads (Member's
+            # own ordering is newest first, which would look random here).
+            booked_members = sorted(
+                instance.booked_members.all(), key=lambda m: m.name.lower()
+            )[:5]
+            instance.booked_preview = [
+                {"initial": m.name[:1].upper(), "first_name": m.name.split()[0]}
+                for m in booked_members
+                if m.name
+            ]
+            instance.booked_extra = max(0, booked_count - len(booked_members))
             instance.member_is_booked = instance.id in booked_ids
             instance.member_is_waitlisted = instance.id in waitlisted_ids
+            instance.waitlist_place = waitlist_positions.get(instance.id)
             instance.booking_block = None
             if (
                 member
@@ -130,6 +148,28 @@ class ClassListView(MemberRequiredMixin, ListView):
 
         context["date_groups"] = date_groups
         return context
+
+    @staticmethod
+    def _waitlist_positions(member, instance_ids):
+        """{instance_id: place in the queue} for the member's waitlisted classes.
+
+        One query for every card, instead of ClassInstance.waitlist_position()
+        per card. Same FIFO order (through table id).
+        """
+        if not instance_ids:
+            return {}
+        through = ClassInstance.waitlisted_members.through
+        places = {}
+        seen = defaultdict(int)
+        for instance_id, member_id in (
+            through.objects.filter(classinstance_id__in=instance_ids)
+            .order_by("id")
+            .values_list("classinstance_id", "member_id")
+        ):
+            seen[instance_id] += 1
+            if member_id == member.id:
+                places[instance_id] = seen[instance_id]
+        return places
 
 
 class ClassDetailView(MemberRequiredMixin, DetailView):
@@ -165,6 +205,10 @@ class ClassDetailView(MemberRequiredMixin, DetailView):
             )
         context["booking_block"] = block
         context["day_limit_reached"] = bool(block) and block["code"] == "DAY_LIMIT"
+
+        context["waitlist_place"] = (
+            self.object.waitlist_position(member) if member else None
+        )
         return context
 
 

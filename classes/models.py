@@ -110,6 +110,22 @@ class ClassInstance(models.Model):
             self.status = "OPEN"
         self.save()
 
+    def waitlist_position(self, member):
+        """Member's 1-based place in the waitlist, or None if not waitlisted.
+
+        Same FIFO order move_from_waitlist() promotes in, so what a member is
+        told matches who actually gets the next free spot.
+        """
+        through = self.waitlisted_members.through
+        queue = list(
+            through.objects.filter(classinstance=self)
+            .order_by("id")
+            .values_list("member_id", flat=True)
+        )
+        if member.id in queue:
+            return queue.index(member.id) + 1
+        return None
+
     def move_from_waitlist(self):
         if (
             self.waitlisted_members.exists()

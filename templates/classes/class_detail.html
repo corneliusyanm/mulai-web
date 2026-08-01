@@ -88,6 +88,13 @@
                                         <i class="fas fa-times me-2"></i>Batalkan Booking
                                     </button>
                                 {% elif member in instance.waitlisted_members.all %}
+                                    {% if waitlist_place %}
+                                        <div class="mb-2">
+                                            <span class="badge bg-warning text-dark rounded-pill px-3 py-2">
+                                                <i class="fas fa-hourglass-half me-1"></i>Kamu antrian ke-{{ waitlist_place }}
+                                            </span>
+                                        </div>
+                                    {% endif %}
                                     <button type="submit" class="btn btn-warning px-4 py-2 rounded-pill fw-bold shadow">
                                         <i class="fas fa-clock me-2"></i>Keluar dari Antrian
                                     </button>

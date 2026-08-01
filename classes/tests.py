@@ -1643,11 +1643,204 @@ class ListPageBookingTest(TestCase):
 
         # Everything a card needs is precomputed, so the query count must stay
         # flat no matter how many classes are listed.
-        with self.assertNumQueries(5):
+        with self.assertNumQueries(6):
             self.client.get(reverse("classes:class_list"))
 
         for hour in (7, 9, 11, 13, 15, 17):
             self.make_instance(self.pemula, hour)
 
-        with self.assertNumQueries(5):
+        with self.assertNumQueries(6):
             self.client.get(reverse("classes:class_list"))
+
+
+class WaitlistPositionTest(TestCase):
+    """Members are told their place in the queue, matching FIFO promotion order."""
+
+    def setUp(self):
+        self.semi_private = Class.objects.create(
+            name="Semi Private", description="Semi private", max_members=1
+        )
+        self.tomorrow = timezone.now().date() + timedelta(days=1)
+        schedule = ClassSchedule.objects.create(
+            class_obj=self.semi_private,
+            day_of_week=self.tomorrow.weekday(),
+            start_time="09:00:00",
+            end_time="10:00:00",
+        )
+        self.instance = ClassInstance.objects.create(
+            class_schedule=schedule,
+            date=self.tomorrow,
+            start_time="09:00:00",
+            end_time="10:00:00",
+        )
+        self.members = []
+        for i in range(4):
+            self.members.append(
+                Member.objects.create(
+                    name=f"Queue Member {i}",
+                    email=f"queue{i}@example.com",
+                    phone_number=f"62855700000{i}",
+                    age=25,
+                    height=170.0,
+                    weight=70.0,
+                    gender="M",
+                    goals="Stay fit",
+                    years_of_working_out="1-2 years",
+                    active_until=timezone.now() + timedelta(days=30),
+                    semi_private_active_until=timezone.now() + timedelta(days=30),
+                )
+            )
+
+    def test_position_follows_join_order(self):
+        self.instance.booked_members.add(self.members[0])
+        for member in self.members[1:]:
+            self.instance.waitlisted_members.add(member)
+
+        self.assertIsNone(self.instance.waitlist_position(self.members[0]))
+        self.assertEqual(self.instance.waitlist_position(self.members[1]), 1)
+        self.assertEqual(self.instance.waitlist_position(self.members[2]), 2)
+        self.assertEqual(self.instance.waitlist_position(self.members[3]), 3)
+
+    def test_position_matches_who_gets_promoted(self):
+        self.instance.booked_members.add(self.members[0])
+        self.instance.waitlisted_members.add(self.members[1])
+        self.instance.waitlisted_members.add(self.members[2])
+        first_in_line = self.members[1]
+        self.assertEqual(self.instance.waitlist_position(first_in_line), 1)
+
+        self.instance.booked_members.remove(self.members[0])
+        self.instance.move_from_waitlist()
+
+        self.assertIn(first_in_line, self.instance.booked_members.all())
+        # The member behind moves up
+        self.assertEqual(self.instance.waitlist_position(self.members[2]), 1)
+
+    def test_position_shown_on_detail_page(self):
+        self.instance.booked_members.add(self.members[0])
+        self.instance.waitlisted_members.add(self.members[1])
+        self.instance.waitlisted_members.add(self.members[2])
+
+        session = self.client.session
+        session["member_email"] = self.members[2].email
+        session.save()
+        response = self.client.get(
+            reverse("classes:class_detail", args=[self.instance.id])
+        )
+
+        self.assertEqual(response.context["waitlist_place"], 2)
+        self.assertContains(response, "Kamu antrian ke-2")
+
+    def test_position_shown_on_list_page(self):
+        self.instance.booked_members.add(self.members[0])
+        self.instance.waitlisted_members.add(self.members[1])
+        self.instance.waitlisted_members.add(self.members[2])
+
+        session = self.client.session
+        session["member_email"] = self.members[2].email
+        session.save()
+        response = self.client.get(reverse("classes:class_list"))
+
+        listed = response.context["class_instances"][0]
+        self.assertEqual(listed.waitlist_place, 2)
+        self.assertContains(response, "Antrian ke-2")
+
+
+class ClassCapacityDisplayTest(TestCase):
+    """The card shows how full a class is and who is already in it."""
+
+    def setUp(self):
+        self.pemula = Class.objects.create(
+            name="Kelas Pemula", description="Beginner", max_members=10
+        )
+        self.tomorrow = timezone.now().date() + timedelta(days=1)
+        schedule = ClassSchedule.objects.create(
+            class_obj=self.pemula,
+            day_of_week=self.tomorrow.weekday(),
+            start_time="08:00:00",
+            end_time="09:00:00",
+        )
+        self.instance = ClassInstance.objects.create(
+            class_schedule=schedule,
+            date=self.tomorrow,
+            start_time="08:00:00",
+            end_time="09:00:00",
+        )
+        self.member = Member.objects.create(
+            name="Viewer Member",
+            email="viewer@example.com",
+            phone_number="628558000111",
+            age=25,
+            height=170.0,
+            weight=70.0,
+            gender="M",
+            goals="Stay fit",
+            years_of_working_out="1-2 years",
+            active_until=timezone.now() + timedelta(days=30),
+            pemula_active_until=timezone.now() + timedelta(days=30),
+        )
+
+    def add_booked(self, count, first_letter="A"):
+        for i in range(count):
+            self.instance.booked_members.add(
+                Member.objects.create(
+                    name=f"{first_letter}nggota {i}",
+                    email=f"anggota{i}@example.com",
+                    phone_number=f"6285581000{i:02d}",
+                    age=25,
+                    height=170.0,
+                    weight=70.0,
+                    gender="M",
+                    goals="Stay fit",
+                    years_of_working_out="1-2 years",
+                )
+            )
+
+    def login(self):
+        session = self.client.session
+        session["member_email"] = self.member.email
+        session.save()
+
+    def test_shows_booked_count_and_percent(self):
+        self.add_booked(4)
+        self.login()
+
+        response = self.client.get(reverse("classes:class_list"))
+        listed = response.context["class_instances"][0]
+
+        self.assertEqual(listed.booked_count, 4)
+        self.assertEqual(listed.slots_left, 6)
+        self.assertEqual(listed.booked_percent, 40)
+        self.assertContains(response, "dari 10 sudah booking")
+
+    def test_shows_up_to_five_initials_then_a_counter(self):
+        self.add_booked(7)
+        self.login()
+
+        response = self.client.get(reverse("classes:class_list"))
+        listed = response.context["class_instances"][0]
+
+        self.assertEqual(len(listed.booked_preview), 5)
+        self.assertEqual(listed.booked_extra, 2)
+        self.assertContains(response, "+2")
+        self.assertEqual(listed.booked_preview[0]["initial"], "A")
+
+    def test_empty_class_has_no_initials(self):
+        self.login()
+
+        response = self.client.get(reverse("classes:class_list"))
+        listed = response.context["class_instances"][0]
+
+        self.assertEqual(listed.booked_preview, [])
+        self.assertEqual(listed.booked_percent, 0)
+        self.assertEqual(listed.slots_left, 10)
+
+    def test_full_class_reports_hundred_percent(self):
+        self.add_booked(10)
+        self.instance.update_status()
+        self.login()
+
+        response = self.client.get(reverse("classes:class_list"))
+        listed = response.context["class_instances"][0]
+
+        self.assertEqual(listed.booked_percent, 100)
+        self.assertEqual(listed.slots_left, 0)

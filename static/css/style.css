@@ -618,6 +618,56 @@ section {
   background-color: transparent;
 }
 
+/* How full a class is, on the class list cards */
+.class-capacity {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.class-capacity-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--primary);
+  transition: width 0.3s ease;
+}
+
+.class-capacity-fill.is-low {
+  background: #fd7e14;
+}
+
+.class-capacity-fill.is-full {
+  background: #dc3545;
+}
+
+/* Initials of members already booked, so a class shows who is coming */
+.class-attendees {
+  display: flex;
+  align-items: center;
+}
+
+.class-attendee {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  margin-right: -6px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border: 2px solid #fff;
+  cursor: default;
+}
+
+.class-attendee-more {
+  background: #6c757d;
+  font-size: 0.65rem;
+}
+
 /* Shown once per day when the member already holds their max classes that day */
 .class-day-cap-note {
   background: rgba(255, 243, 205, 0.96);

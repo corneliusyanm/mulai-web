@@ -1,0 +1,34 @@
+{% comment %}
+How full a class is, plus a few of the members already in it. Seeing familiar
+people makes booking feel like joining friends rather than reserving a slot.
+Expects: instance, with the fields ClassListView precomputes.
+{% endcomment %}
+<div class="mb-3">
+    <div class="d-flex align-items-center justify-content-between mb-1">
+        <small class="text-muted">
+            <i class="fas fa-users text-info me-1"></i>
+            <span class="fw-bold text-dark">{{ instance.booked_count }}</span> dari {{ instance.class_schedule.class_obj.max_members }} sudah booking
+        </small>
+        {% if instance.slots_left > 0 %}
+            <small class="{% if instance.slots_left <= 2 %}text-danger fw-bold{% else %}text-muted{% endif %}">
+                sisa {{ instance.slots_left }}
+            </small>
+        {% endif %}
+    </div>
+
+    <div class="class-capacity">
+        <div class="class-capacity-fill{% if instance.slots_left == 0 %} is-full{% elif instance.slots_left <= 2 %} is-low{% endif %}"
+             style="width: {{ instance.booked_percent }}%;"></div>
+    </div>
+
+    {% if instance.booked_preview %}
+        <div class="class-attendees mt-2">
+            {% for person in instance.booked_preview %}
+                <span class="class-attendee" title="{{ person.first_name }}">{{ person.initial }}</span>
+            {% endfor %}
+            {% if instance.booked_extra %}
+                <span class="class-attendee class-attendee-more">+{{ instance.booked_extra }}</span>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
