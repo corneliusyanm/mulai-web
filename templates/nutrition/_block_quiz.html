@@ -1,0 +1,23 @@
+{% comment %}
+One question, answered on the spot. The correct key sits in the step's
+data-answer so the reveal is instant; the server grades it again for the record.
+{% endcomment %}
+<div class="gizi-card">
+    <div class="gizi-quiz-kicker">Soal {{ block.quiz_number }} dari {{ chapter.quiz_count }}</div>
+    <h2 class="gizi-card-title">{{ block.question }}</h2>
+    <div class="gizi-choices">
+        {% for choice in block.choices %}
+            <button type="button" class="gizi-choice" data-choice="{{ choice.key }}">
+                <span class="gizi-choice-key">{{ choice.key|upper }}</span>
+                <span class="gizi-choice-text">{{ choice.text }}</span>
+            </button>
+        {% endfor %}
+    </div>
+    <div class="gizi-explain">
+        <div class="gizi-verdict"></div>
+        <p class="gizi-card-body mb-0">{{ block.explanation }}</p>
+    </div>
+</div>
+<button type="button" class="btn btn-secondary w-100 rounded-pill fw-bold gizi-next">
+    Lanjut<i class="fas fa-chevron-right ms-1"></i>
+</button>

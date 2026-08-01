@@ -1,0 +1,15 @@
+{% comment %}One idea per screen. Expects `block` (see nutrition/content.py).{% endcomment %}
+<div class="gizi-card">
+    <h2 class="gizi-card-title">{{ block.title }}</h2>
+    {% for paragraph in block.body %}
+        <p class="gizi-card-body">{{ paragraph }}</p>
+    {% endfor %}
+    {% if block.highlight %}
+        <div class="gizi-highlight">
+            <i class="fas fa-lightbulb"></i><span>{{ block.highlight }}</span>
+        </div>
+    {% endif %}
+</div>
+<button type="button" class="btn btn-secondary w-100 rounded-pill fw-bold gizi-next">
+    Lanjut<i class="fas fa-chevron-right ms-1"></i>
+</button>

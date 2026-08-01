@@ -1,0 +1,191 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ chapter.title }} - Belajar Gizi - Mulai Gym{% endblock %}
+
+{% block content %}
+<div class="container py-4 gizi-page">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="gizi-topbar">
+                <a href="{% url 'nutrition:index' %}" class="gizi-back" id="gizi-back" aria-label="Kembali">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+                <div class="gizi-topbar-title">Bab {{ chapter.number }} &middot; {{ chapter.title }}</div>
+            </div>
+            <div class="gizi-stepbar"><div class="gizi-stepbar-fill" id="gizi-stepbar"></div></div>
+
+            <div id="gizi-steps"
+                 data-finish-url="{% url 'nutrition:finish' chapter.slug %}"
+                 data-csrf="{{ csrf_token }}">
+
+                {% for block in blocks %}
+                    <div class="gizi-step"
+                         {% if block.type == 'quiz' %}data-quiz="{{ block.key }}" data-answer="{{ block.answer }}"{% endif %}>
+                        {% include block.template %}
+                    </div>
+                {% endfor %}
+
+                <div class="gizi-step gizi-result-step">
+                    <div class="gizi-card text-center">
+                        <div class="gizi-medal gizi-medal-lg" id="gizi-medal"><i class="fas fa-medal"></i></div>
+                        <div class="gizi-result-score" id="gizi-score">&mdash;</div>
+                        <div class="gizi-result-label">soal bener di bab {{ chapter.title }}</div>
+                        <div class="gizi-result-level" id="gizi-level"></div>
+
+                        <div class="d-flex flex-column gap-2 mt-3">
+                            {% if next_chapter %}
+                                <a href="{% url 'nutrition:chapter' next_chapter.slug %}"
+                                   class="btn btn-primary rounded-pill fw-bold">
+                                    Lanjut: Bab {{ next_chapter.number }} {{ next_chapter.title }}
+                                    <i class="fas fa-chevron-right ms-1"></i>
+                                </a>
+                            {% else %}
+                                <a href="{% url 'nutrition:index' %}" class="btn btn-primary rounded-pill fw-bold">
+                                    <i class="fas fa-list me-1"></i>Lihat semua bab
+                                </a>
+                            {% endif %}
+                            <a href="{{ share_url }}" target="_blank" rel="noopener noreferrer"
+                               class="btn btn-sm btn-outline-success rounded-pill fw-bold">
+                                <i class="fab fa-whatsapp me-1"></i>Ajak temen belajar
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="gizi-card">
+                        <div class="gizi-trainer">
+                            <div class="gizi-trainer-title">Mau tanya buat kasus kamu sendiri?</div>
+                            <p class="gizi-card-body mb-2">
+                                Berat badan, jam kerja dan makanan tiap orang beda. Tanya aja
+                                ke tim Mulai, gratis.
+                            </p>
+                            <a href="{{ trainer_url }}" target="_blank" rel="noopener noreferrer"
+                               class="btn btn-sm btn-success rounded-pill fw-bold">
+                                <i class="fab fa-whatsapp me-1"></i>Tanya trainer
+                            </a>
+                        </div>
+                        <p class="gizi-disclaimer mb-0">{{ disclaimer }}</p>
+                    </div>
+
+                    {% if not member %}
+                        <div class="gizi-signin-note">
+                            <i class="fas fa-circle-info me-1"></i>
+                            <a href="{% url 'member_login' %}">Masuk</a> dulu kalau mau skor dan
+                            lencananya kesimpen.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var root = document.getElementById('gizi-steps');
+    if (!root) return;
+
+    var steps = Array.prototype.slice.call(root.querySelectorAll('.gizi-step'));
+    var bar = document.getElementById('gizi-stepbar');
+    var back = document.getElementById('gizi-back');
+    var answers = {};
+    var current = 0;
+    var submitted = false;
+
+    // Everything starts visible so the page still reads with JS off. The
+    // stepper is what hides it, right here.
+    root.querySelectorAll('.gizi-explain').forEach(function (el) { el.hidden = true; });
+    root.querySelectorAll('.gizi-step[data-quiz] .gizi-next').forEach(function (el) { el.hidden = true; });
+
+    function show(index) {
+        current = index;
+        steps.forEach(function (step, i) { step.hidden = i !== index; });
+        bar.style.width = Math.round(index * 100 / (steps.length - 1)) + '%';
+        window.scrollTo(0, 0);
+        if (steps[index].classList.contains('gizi-result-step')) submit();
+    }
+
+    root.querySelectorAll('.gizi-next').forEach(function (button) {
+        button.addEventListener('click', function () {
+            if (current < steps.length - 1) show(current + 1);
+        });
+    });
+
+    // The back arrow walks the chapter backwards first, and only leaves the
+    // page from the first step.
+    back.addEventListener('click', function (event) {
+        if (current > 0) {
+            event.preventDefault();
+            show(current - 1);
+        }
+    });
+
+    root.querySelectorAll('.gizi-choice').forEach(function (choice) {
+        choice.addEventListener('click', function () {
+            var step = choice.closest('.gizi-step');
+            if (step.dataset.answered) return;
+            step.dataset.answered = '1';
+
+            var picked = choice.dataset.choice;
+            var right = step.dataset.answer;
+            answers[step.dataset.quiz] = picked;
+
+            step.querySelectorAll('.gizi-choice').forEach(function (other) {
+                other.disabled = true;
+                if (other.dataset.choice === right) other.classList.add('is-correct');
+            });
+            if (picked !== right) choice.classList.add('is-wrong');
+
+            var verdict = step.querySelector('.gizi-verdict');
+            verdict.textContent = picked === right ? 'Bener!' : 'Belum tepat';
+            verdict.className = 'gizi-verdict ' + (picked === right ? 'is-correct' : 'is-wrong');
+            step.querySelector('.gizi-explain').hidden = false;
+            step.querySelector('.gizi-next').hidden = false;
+        });
+    });
+
+    function paint(data) {
+        var medal = document.getElementById('gizi-medal');
+        var score = document.getElementById('gizi-score');
+        var level = document.getElementById('gizi-level');
+
+        score.textContent = data.correct + '/' + data.total;
+        medal.className = 'gizi-medal gizi-medal-lg' + (data.medal ? ' gizi-medal-' + data.medal : '');
+        if (data.saved) {
+            level.textContent = 'Level kamu sekarang: ' + data.level +
+                ' (' + data.finished_count + '/' + data.total_chapters + ' bab)';
+        }
+    }
+
+    // Graded on the server, even for a guest: the answers are in this page, so
+    // the browser is the wrong place to decide what the score was.
+    function submit() {
+        if (submitted) return;
+        submitted = true;
+
+        fetch(root.dataset.finishUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': root.dataset.csrf },
+            body: JSON.stringify({ answers: answers })
+        })
+            .then(function (response) { return response.ok ? response.json() : null; })
+            .then(function (data) {
+                if (data) paint(data);
+                else fallback();
+            })
+            .catch(fallback);
+    }
+
+    function fallback() {
+        var correct = 0, total = 0;
+        root.querySelectorAll('.gizi-step[data-quiz]').forEach(function (step) {
+            total += 1;
+            if (answers[step.dataset.quiz] === step.dataset.answer) correct += 1;
+        });
+        paint({ correct: correct, total: total, medal: null, saved: false });
+        document.getElementById('gizi-level').textContent = 'Progres nggak kesimpen, koneksinya lagi ngambek.';
+    }
+
+    show(0);
+})();
+</script>
+{% endblock %}

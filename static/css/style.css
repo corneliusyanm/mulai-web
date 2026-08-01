@@ -854,6 +854,577 @@ section {
   letter-spacing: 0.03em;
 }
 
+/* ===== Belajar Gizi ===================================================== */
+
+.gizi-lead {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.9rem;
+  max-width: 30rem;
+  margin: 0 auto 1.25rem;
+}
+
+/* Progress ring, drawn with a conic gradient so no JS or SVG is needed */
+.gizi-ring {
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: conic-gradient(var(--primary) calc(var(--pct) * 1%), #e9e9f5 0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gizi-ring span {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--dark);
+}
+
+.gizi-level-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--gray);
+}
+
+.gizi-level-name {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--dark);
+  line-height: 1.2;
+}
+
+.gizi-level-note {
+  font-size: 0.78rem;
+  color: var(--gray);
+}
+
+.gizi-chapter-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  margin-bottom: 12px;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(20, 20, 80, 0.12);
+  text-decoration: none;
+  color: inherit;
+}
+
+.gizi-chapter-card:hover {
+  text-decoration: none;
+  color: inherit;
+  transform: translateY(-2px);
+  transition: transform 0.2s;
+}
+
+.gizi-chapter-icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(75, 75, 236, 0.1);
+  color: var(--primary);
+  font-size: 1.1rem;
+}
+
+.gizi-chapter-kicker {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.gizi-chapter-title {
+  font-weight: 700;
+  color: var(--dark);
+  line-height: 1.2;
+}
+
+.gizi-chapter-sub {
+  font-size: 0.8rem;
+  color: var(--gray);
+  line-height: 1.3;
+}
+
+.gizi-chapter-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+  font-size: 0.7rem;
+  color: var(--gray);
+}
+
+.gizi-chapter-score {
+  color: #1f8f4e;
+  font-weight: 700;
+}
+
+.gizi-chapter-go {
+  flex-shrink: 0;
+  color: #c9c9dd;
+}
+
+.gizi-medal {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f0f0f6;
+  color: #b9b9c9;
+  font-size: 1rem;
+}
+
+.gizi-medal-lg {
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 8px;
+  font-size: 1.6rem;
+}
+
+.gizi-medal-emas {
+  background: linear-gradient(135deg, #ffe07a 0%, #f0a500 100%);
+  color: #7a5200;
+}
+
+.gizi-medal-perak {
+  background: linear-gradient(135deg, #f2f2f6 0%, #c2c2cf 100%);
+  color: #5c5c66;
+}
+
+.gizi-medal-perunggu {
+  background: linear-gradient(135deg, #f0cba8 0%, #c98a4b 100%);
+  color: #6b3f16;
+}
+
+.gizi-levels {
+  margin-top: 1.25rem;
+  text-align: center;
+}
+
+.gizi-levels-title {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.75);
+  margin-bottom: 6px;
+}
+
+.gizi-level-chip {
+  display: inline-block;
+  margin: 0 3px 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  font-size: 0.7rem;
+}
+
+.gizi-level-chip.is-current {
+  background: #fff;
+  color: var(--primary);
+  font-weight: 700;
+}
+
+/* --- the chapter stepper --- */
+.gizi-topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.gizi-back {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+
+.gizi-back:hover {
+  background: rgba(255, 255, 255, 0.3);
+  color: #fff;
+}
+
+.gizi-topbar-title {
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.gizi-stepbar {
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.25);
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+
+.gizi-stepbar-fill {
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: var(--secondary);
+  transition: width 0.25s ease;
+}
+
+.gizi-step[hidden] {
+  display: none;
+}
+
+.gizi-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 18px;
+  margin-bottom: 12px;
+  box-shadow: 0 6px 20px rgba(20, 20, 80, 0.14);
+}
+
+.gizi-card-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--dark);
+  line-height: 1.3;
+  margin-bottom: 10px;
+}
+
+.gizi-card-body {
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: #4a4a55;
+  margin-bottom: 10px;
+}
+
+.gizi-highlight {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(75, 75, 236, 0.08);
+  color: var(--primary);
+  font-size: 0.84rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.gizi-note {
+  margin-top: 8px;
+  font-size: 0.7rem;
+  color: var(--gray);
+  font-style: italic;
+}
+
+.gizi-quiz-kicker {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--primary);
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.gizi-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gizi-choice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 12px;
+  border: 2px solid #e8e8f0;
+  border-radius: 12px;
+  background: #fff;
+  text-align: left;
+  font-size: 0.88rem;
+  line-height: 1.35;
+  color: var(--dark);
+}
+
+.gizi-choice:disabled {
+  opacity: 1; /* a disabled choice is still the answer, keep it readable */
+}
+
+.gizi-choice-key {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #f0f0f7;
+  color: var(--gray);
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gizi-choice.is-correct {
+  border-color: #2fa15e;
+  background: rgba(47, 161, 94, 0.08);
+}
+
+.gizi-choice.is-correct .gizi-choice-key {
+  background: #2fa15e;
+  color: #fff;
+}
+
+.gizi-choice.is-wrong {
+  border-color: #e0655a;
+  background: rgba(224, 101, 90, 0.08);
+}
+
+.gizi-choice.is-wrong .gizi-choice-key {
+  background: #e0655a;
+  color: #fff;
+}
+
+.gizi-explain {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #eee;
+}
+
+.gizi-explain[hidden] {
+  display: none;
+}
+
+.gizi-verdict {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.gizi-verdict.is-correct {
+  color: #2fa15e;
+}
+
+.gizi-verdict.is-wrong {
+  color: #e0655a;
+}
+
+/* --- the two data blocks --- */
+.gizi-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.gizi-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gizi-bar-label {
+  flex: 0 0 38%;
+  font-size: 0.76rem;
+  color: var(--dark);
+  line-height: 1.2;
+}
+
+.gizi-bar-track {
+  flex: 1 1 auto;
+  height: 14px;
+  border-radius: 4px;
+  background: #f2f2f8;
+  overflow: hidden;
+}
+
+.gizi-bar {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--primary);
+}
+
+.gizi-bar.is-muted {
+  background: #c9c9dd;
+}
+
+.gizi-bar-value {
+  flex: 0 0 2.2rem;
+  text-align: right;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--dark);
+}
+
+.gizi-bar-unit {
+  margin-top: 6px;
+  text-align: right;
+  font-size: 0.68rem;
+  color: var(--gray);
+}
+
+.gizi-swap {
+  display: flex;
+  gap: 8px;
+}
+
+.gizi-plate {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 10px;
+  border-radius: 12px;
+  background: #f6f6fa;
+}
+
+.gizi-plate.is-after {
+  background: rgba(75, 75, 236, 0.08);
+}
+
+.gizi-plate-label {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+  color: var(--gray);
+  margin-bottom: 6px;
+}
+
+.gizi-plate.is-after .gizi-plate-label {
+  color: var(--primary);
+}
+
+.gizi-plate-items {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 8px;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: #4a4a55;
+}
+
+.gizi-plate-stat {
+  font-size: 0.76rem;
+  color: var(--gray);
+}
+
+.gizi-plate-stat strong {
+  color: var(--dark);
+}
+
+.gizi-swap-delta {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.gizi-swap-delta span {
+  flex: 1 1 0;
+  text-align: center;
+  padding: 6px;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: #f2f2f8;
+  color: var(--gray);
+}
+
+.gizi-swap-delta .is-good {
+  background: rgba(47, 161, 94, 0.1);
+  color: #1f8f4e;
+}
+
+.gizi-swap-delta .is-up {
+  background: rgba(224, 101, 90, 0.1);
+  color: #c1483d;
+}
+
+/* --- the result screen --- */
+.gizi-result-score {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--dark);
+  line-height: 1;
+}
+
+.gizi-result-label {
+  font-size: 0.8rem;
+  color: var(--gray);
+}
+
+.gizi-result-level {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.gizi-trainer {
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #eee;
+}
+
+/* body sets white text for the purple page, so anything inside a white card
+   has to name its own colour or it disappears */
+.gizi-trainer-title {
+  font-weight: 700;
+  color: var(--dark);
+  margin-bottom: 4px;
+}
+
+.gizi-disclaimer {
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--gray);
+}
+
+.gizi-signin-note {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  font-size: 0.8rem;
+}
+
+.gizi-signin-note a {
+  color: #fff;
+  font-weight: 700;
+}
+
+/* Progress teaser on the account page */
+.gizi-akun-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.gizi-akun-card:hover {
+  color: inherit;
+  text-decoration: none;
+}
+
 /* "Save to home screen" hint at the bottom of the account page. Sits on the
    purple page background, so it needs its own edge to read as a card. */
 .install-hint {

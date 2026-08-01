@@ -1,0 +1,26 @@
+{% comment %}
+A ranking, drawn in plain CSS. `block.max` comes from the view so the bars can
+be scaled without template arithmetic. A `muted` row is a comparison, not a
+member of the list (whey among cheap proteins, a plate of food among drinks).
+{% endcomment %}
+<div class="gizi-card">
+    <h2 class="gizi-card-title">{{ block.title }}</h2>
+    <div class="gizi-bars">
+        {% for row in block.rows %}
+            <div class="gizi-bar-row">
+                <div class="gizi-bar-label">{{ row.label }}</div>
+                <div class="gizi-bar-track">
+                    <div class="gizi-bar{% if row.muted %} is-muted{% endif %}"
+                         style="width: {% widthratio row.value block.max 100 %}%"></div>
+                </div>
+                <div class="gizi-bar-value">{{ row.value }}</div>
+            </div>
+        {% endfor %}
+    </div>
+    <div class="gizi-bar-unit">dalam {{ block.unit }}</div>
+    {% if block.caption %}<p class="gizi-card-body mt-2 mb-0">{{ block.caption }}</p>{% endif %}
+    {% if block.note %}<p class="gizi-note mb-0">{{ block.note }}</p>{% endif %}
+</div>
+<button type="button" class="btn btn-secondary w-100 rounded-pill fw-bold gizi-next">
+    Lanjut<i class="fas fa-chevron-right ms-1"></i>
+</button>

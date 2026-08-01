@@ -1,0 +1,33 @@
+{% comment %}
+Two plates from the same warung, side by side. `plates` and the deltas come
+from the view: Django templates cannot subtract, and hard-coding the difference
+in content.py would let it drift from the numbers right above it.
+{% endcomment %}
+<div class="gizi-card">
+    <h2 class="gizi-card-title">{{ block.title }}</h2>
+    <div class="gizi-swap">
+        {% for plate in block.plates %}
+            <div class="gizi-plate{% if forloop.last %} is-after{% endif %}">
+                <div class="gizi-plate-label">{{ plate.label }}</div>
+                <ul class="gizi-plate-items">
+                    {% for item in plate.items %}<li>{{ item }}</li>{% endfor %}
+                </ul>
+                <div class="gizi-plate-stat"><strong>{{ plate.kcal }}</strong> kkal</div>
+                <div class="gizi-plate-stat"><strong>{{ plate.protein }}</strong> g protein</div>
+            </div>
+        {% endfor %}
+    </div>
+    <div class="gizi-swap-delta">
+        <span class="{% if block.delta_kcal <= 0 %}is-good{% else %}is-up{% endif %}">
+            {% if block.delta_kcal <= 0 %}&minus;{% else %}+{% endif %}{{ block.delta_kcal_abs }} kkal
+        </span>
+        <span class="{% if block.delta_protein >= 0 %}is-good{% else %}is-up{% endif %}">
+            {% if block.delta_protein >= 0 %}+{% else %}&minus;{% endif %}{{ block.delta_protein_abs }} g protein
+        </span>
+    </div>
+    {% if block.caption %}<p class="gizi-card-body mb-0">{{ block.caption }}</p>{% endif %}
+    {% if block.note %}<p class="gizi-note mb-0">{{ block.note }}</p>{% endif %}
+</div>
+<button type="button" class="btn btn-secondary w-100 rounded-pill fw-bold gizi-next">
+    Lanjut<i class="fas fa-chevron-right ms-1"></i>
+</button>

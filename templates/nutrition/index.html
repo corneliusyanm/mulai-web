@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+
+{% block title %}Belajar Gizi - Mulai Gym{% endblock %}
+
+{% block content %}
+<div class="container py-4 gizi-page">
+    <h1 class="section-title text-center mb-2">Belajar Gizi</h1>
+    <p class="gizi-lead text-center">
+        {{ summary.total_chapters }} bab, kira-kira 15 menit. Isinya makanan yang beneran
+        ada di Bandung, bukan teori.
+    </p>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm rounded-3 mb-4">
+                <div class="card-body p-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="gizi-ring" style="--pct: {{ summary.percent }}">
+                            <span>{{ summary.finished_count }}/{{ summary.total_chapters }}</span>
+                        </div>
+                        <div class="flex-grow-1">
+                            {% if member %}
+                                <div class="gizi-level-label">Level kamu</div>
+                                <div class="gizi-level-name">{{ summary.level }}</div>
+                                {% if summary.all_done %}
+                                    <div class="gizi-level-note">Semua bab selesai. Boleh diulang kapan aja.</div>
+                                {% else %}
+                                    <div class="gizi-level-note">Selesain 1 bab lagi buat naik level.</div>
+                                {% endif %}
+                            {% else %}
+                                <div class="gizi-level-label">Belum masuk</div>
+                                <div class="gizi-level-name">Bisa dibaca dulu</div>
+                                <div class="gizi-level-note">
+                                    <a href="{% url 'member_login' %}">Masuk</a> kalau mau progres
+                                    dan lencananya kesimpen.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if member %}
+                        <a href="{% url 'nutrition:chapter' summary.up_next.slug %}"
+                           class="btn btn-primary w-100 rounded-pill fw-bold mt-3">
+                            {% if summary.finished_count %}
+                                <i class="fas fa-play me-2"></i>Lanjut: Bab {{ summary.up_next.number }} {{ summary.up_next.title }}
+                            {% else %}
+                                <i class="fas fa-play me-2"></i>Mulai dari Bab 1
+                            {% endif %}
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% for chapter in chapters %}
+                <a href="{% url 'nutrition:chapter' chapter.slug %}" class="gizi-chapter-card">
+                    <div class="gizi-chapter-icon">
+                        <i class="{{ chapter.icon }}"></i>
+                    </div>
+                    <div class="flex-grow-1 min-width-0">
+                        <div class="gizi-chapter-kicker">Bab {{ chapter.number }}</div>
+                        <div class="gizi-chapter-title">{{ chapter.title }}</div>
+                        <div class="gizi-chapter-sub">{{ chapter.subtitle }}</div>
+                        <div class="gizi-chapter-meta">
+                            <span><i class="far fa-clock me-1"></i>{{ chapter.minutes }} menit</span>
+                            <span><i class="far fa-circle-question me-1"></i>{{ chapter.quiz_count }} soal</span>
+                            {% if chapter.done %}
+                                <span class="gizi-chapter-score">
+                                    <i class="fas fa-check me-1"></i>{{ chapter.done.best_correct }}/{{ chapter.done.total }} benar
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if chapter.medal %}
+                        <div class="gizi-medal gizi-medal-{{ chapter.medal }}" title="Lencana {{ chapter.medal }}">
+                            <i class="fas fa-medal"></i>
+                        </div>
+                    {% else %}
+                        <div class="gizi-chapter-go"><i class="fas fa-chevron-right"></i></div>
+                    {% endif %}
+                </a>
+            {% endfor %}
+
+            <div class="gizi-levels">
+                <div class="gizi-levels-title">Level</div>
+                {% for name in levels %}
+                    <span class="gizi-level-chip {% if member and name == summary.level %}is-current{% endif %}">
+                        {{ forloop.counter0 }} bab &middot; {{ name }}
+                    </span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
