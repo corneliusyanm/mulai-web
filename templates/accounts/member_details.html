@@ -60,6 +60,29 @@
                                 <div class="habit-stat-label">Total Kunjungan</div>
                             </div>
                         </div>
+                        {% if visit_milestone %}
+                            <div class="visit-milestone mt-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="visit-milestone-badge">
+                                        {% if visit_milestone.reached %}
+                                            <i class="fas fa-medal me-1"></i>{{ visit_milestone.reached }} kunjungan
+                                        {% else %}
+                                            <i class="fas fa-shoe-prints me-1"></i>Baru mulai
+                                        {% endif %}
+                                    </span>
+                                    {% if visit_milestone.next %}
+                                        <span class="visit-milestone-next">
+                                            {{ visit_milestone.remaining }} lagi ke {{ visit_milestone.next }}
+                                        </span>
+                                    {% else %}
+                                        <span class="visit-milestone-next">Luar biasa!</span>
+                                    {% endif %}
+                                </div>
+                                <div class="visit-milestone-track">
+                                    <div class="visit-milestone-fill" style="width: {{ visit_milestone.percent }}%"></div>
+                                </div>
+                            </div>
+                        {% endif %}
                         {% if visit_streak_weeks >= 2 %}
                             <p class="text-center text-muted small mb-0 mt-2">
                                 Keren, {{ visit_streak_weeks }} minggu berturut-turut. Jaga terus!

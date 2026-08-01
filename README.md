@@ -477,6 +477,7 @@ The account-related pages are accessible at the following URLs:
   - **Cancel nudge**: one line under the upcoming list, "Nggak bisa datang? Batalkan dulu biar member lain kebagian tempat." The daily cap stops members hoarding classes; this aims at the no-shows.
   - **Waitlist place**: waitlisted upcoming classes show "Antrian ke-2" (see `ClassInstance.waitlist_position`).
   - **Habit tiles**: visits this month, week streak, total visits. `_visit_streak_weeks()` counts consecutive weeks with at least one visit; the current week having no visit yet does **not** break the streak (nobody should lose 8 weeks because it is Monday morning), a fully missed week does. Hidden entirely for a member with no visits.
+  - **Visit milestone**: badge earned plus the next one to chase ("100 kunjungan", "17 lagi ke 200") and a progress bar. Steps are `VISIT_MILESTONES` (5, 10, 25, 50, 100, 200, 300), spaced to match the real spread: the median member has about 6 visits, nine in ten are under 60, the busiest has just over 200. Progress is measured **inside the current step**, so the bar moves every few visits instead of crawling towards 300, and a member who has just landed on a badge still gets a 4% sliver. Hidden for a member with no visits.
   - **Jam Lengang strip**: when the gym is usually quiet today, so a member can pick a calm hour. See below.
   - Note `upcoming_booked_classes` / `upcoming_waitlisted_classes` are now **lists**, not querysets, since each item carries these computed labels.
 

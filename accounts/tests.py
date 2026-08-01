@@ -8,6 +8,7 @@ from unittest.mock import Mock
 from .models import Member, ActiveMember, Tamu, Masukkan, Prospect
 from .admin import ProspectAdmin, MemberAdmin, ActiveMemberAdmin, SaleInline
 from .models import User
+from .views import VISIT_MILESTONES, _visit_milestone
 from visits.admin import admin_site
 from visits.models import Visit
 from payments.models import Payment
@@ -1862,3 +1863,83 @@ class MembershipNudgeTest(TestCase):
         self.assertTrue(nudge["whatsapp_url"].startswith("https://wa.me/628996940908?text="))
         self.assertIn("Nudge%20Member", nudge["whatsapp_url"])
         self.assertIn("628564000111", nudge["whatsapp_url"])
+
+
+class VisitMilestoneTest(TestCase):
+    """Milestone badge and progress bar under the habit tiles on /akun."""
+
+    def setUp(self):
+        self.member = Member.objects.create(
+            name="Milestone Member",
+            email="milestone@example.com",
+            phone_number="628561000222",
+            gender="F",
+            age=30,
+            height=160,
+            weight=55,
+            years_of_working_out="2 tahun",
+            goals="Stay fit",
+            know_mulai_gym_from="friends",
+            active_until=timezone.now() + timedelta(days=30),
+        )
+
+    def login(self):
+        session = self.client.session
+        session["member_email"] = self.member.email
+        session.save()
+
+    def add_visits(self, count):
+        for _ in range(count):
+            Visit.objects.create(member=self.member)
+
+    def test_member_with_no_visits_gets_no_milestone(self):
+        self.assertIsNone(_visit_milestone(0))
+
+    def test_before_the_first_badge_it_counts_down_to_it(self):
+        milestone = _visit_milestone(3)
+
+        self.assertIsNone(milestone["reached"])
+        self.assertEqual(milestone["next"], 5)
+        self.assertEqual(milestone["remaining"], 2)
+        self.assertEqual(milestone["percent"], 60)
+
+    def test_progress_is_measured_inside_the_current_step(self):
+        # 60 visits: past 50, chasing 100, so 10 of the 50-visit step is done.
+        milestone = _visit_milestone(60)
+
+        self.assertEqual(milestone["reached"], 50)
+        self.assertEqual(milestone["next"], 100)
+        self.assertEqual(milestone["remaining"], 40)
+        self.assertEqual(milestone["percent"], 20)
+
+    def test_landing_exactly_on_a_badge_keeps_a_sliver_of_bar(self):
+        milestone = _visit_milestone(50)
+
+        self.assertEqual(milestone["reached"], 50)
+        self.assertEqual(milestone["next"], 100)
+        self.assertEqual(milestone["percent"], 4)
+
+    def test_past_the_last_badge_there_is_nothing_left_to_chase(self):
+        milestone = _visit_milestone(VISIT_MILESTONES[-1] + 12)
+
+        self.assertEqual(milestone["reached"], VISIT_MILESTONES[-1])
+        self.assertIsNone(milestone["next"])
+        self.assertEqual(milestone["percent"], 100)
+
+    def test_account_page_shows_the_badge_and_the_next_target(self):
+        self.add_visits(12)
+        self.login()
+
+        response = self.client.get(reverse("member_details"))
+
+        self.assertEqual(response.context["visit_milestone"]["reached"], 10)
+        self.assertContains(response, "10 kunjungan")
+        self.assertContains(response, "13 lagi ke 25")
+
+    def test_nothing_is_rendered_for_a_member_who_never_visited(self):
+        self.login()
+
+        response = self.client.get(reverse("member_details"))
+
+        self.assertIsNone(response.context["visit_milestone"])
+        self.assertNotContains(response, "lagi ke")

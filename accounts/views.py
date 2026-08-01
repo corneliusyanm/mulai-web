@@ -62,6 +62,39 @@ MONTHS_ID = {
 }
 
 
+# Visit milestones on /akun. Spaced to match how members actually accumulate
+# visits: the median member has about 6, nine in ten are under 60, and the
+# busiest has just over 200. So the first badge is reachable in a fortnight and
+# the last one is a real long haul.
+VISIT_MILESTONES = (5, 10, 25, 50, 100, 200, 300)
+
+
+def _visit_milestone(total_visits):
+    """Badge earned and the next one to chase, or None for a member with no visits.
+
+    `percent` is progress inside the current step, not overall, so the bar moves
+    visibly every few visits instead of crawling towards 300.
+    """
+    if not total_visits:
+        return None
+
+    reached = max((m for m in VISIT_MILESTONES if total_visits >= m), default=None)
+    upcoming = next((m for m in VISIT_MILESTONES if total_visits < m), None)
+
+    if upcoming is None:
+        return {"reached": reached, "next": None, "remaining": 0, "percent": 100}
+
+    floor = reached or 0
+    percent = round((total_visits - floor) / (upcoming - floor) * 100)
+    return {
+        "reached": reached,
+        "next": upcoming,
+        "remaining": upcoming - total_visits,
+        # Keep a sliver so a freshly earned badge still shows a bar.
+        "percent": max(percent, 4),
+    }
+
+
 # Membership expiry nudge on /akun. Staff already get expiry reminders in the
 # admin; this is the member's own side of it.
 NUDGE_DAYS_BEFORE = 7
@@ -413,6 +446,7 @@ class MemberDetailView(MemberRequiredMixin, DetailView):
             1 for day in visit_dates if (day.year, day.month) == (today.year, today.month)
         )
         context["visit_streak_weeks"] = _visit_streak_weeks(visit_dates, today)
+        context["visit_milestone"] = _visit_milestone(total_visits)
 
         context["membership_nudge"] = _membership_nudge(member, today)
 
