@@ -1,9 +1,12 @@
+import json
 from datetime import timedelta, time
 from urllib.parse import quote
 
+from django.conf import settings
+from django.contrib.staticfiles import finders
 from django.test import TestCase, RequestFactory
 from django.utils import timezone
-from django.urls import reverse
+from django.urls import resolve, reverse
 from unittest.mock import Mock
 
 from .models import Member, ActiveMember, Tamu, Masukkan, Prospect
@@ -2043,3 +2046,65 @@ class AccountUpcomingClassActionsTest(TestCase):
 
         self.assertNotContains(response, "Ajak Temen")
         self.assertNotContains(response, "Kalender")
+
+
+class WebManifestTest(TestCase):
+    """The home-screen manifest, which shipped for a long time as the default
+    template: named "MyWebSite" with icon paths pointing at /images/, a folder
+    that does not exist. Nothing failed, the icons just never loaded.
+    """
+
+    def manifest(self):
+        path = finders.find("favicons/site.webmanifest")
+        self.assertIsNotNone(path, "site.webmanifest is not in the static files")
+        with open(path) as handle:
+            return json.load(handle)
+
+    def test_it_is_named_after_the_gym(self):
+        manifest = self.manifest()
+
+        self.assertEqual(manifest["name"], "Mulai Gym")
+        self.assertEqual(manifest["short_name"], "Mulai Gym")
+
+    def test_every_icon_path_actually_resolves(self):
+        icons = self.manifest()["icons"]
+        self.assertTrue(icons)
+
+        for icon in icons:
+            src = icon["src"]
+            self.assertTrue(
+                src.startswith(settings.STATIC_URL),
+                f"{src} is not under STATIC_URL, so it will 404",
+            )
+            relative = src[len(settings.STATIC_URL) :]
+            self.assertIsNotNone(
+                finders.find(relative), f"{src} does not point at a real file"
+            )
+
+    def test_it_opens_on_a_page_we_serve(self):
+        manifest = self.manifest()
+
+        # resolve() raises Resolver404 on a path no url pattern matches
+        self.assertEqual(resolve(manifest["start_url"]).view_name, "member_details")
+
+    def test_account_page_offers_the_install_hint(self):
+        member = Member.objects.create(
+            name="Install Member",
+            email="install@example.com",
+            phone_number="628560000555",
+            gender="M",
+            age=25,
+            height=170,
+            weight=70,
+            years_of_working_out="1 tahun",
+            goals="Stay fit",
+            know_mulai_gym_from="friends",
+        )
+        session = self.client.session
+        session["member_email"] = member.email
+        session.save()
+
+        response = self.client.get(reverse("member_details"))
+
+        self.assertContains(response, "Simpan Mulai Gym di HP kamu")
+        self.assertContains(response, 'rel="manifest"')

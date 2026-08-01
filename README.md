@@ -501,6 +501,16 @@ A small bar strip on `/akun` showing how busy each open hour usually is today, s
   - Kunjungan rows show the visit duration (`1j 15m`); classes tab merges booked and waitlisted past classes into one date-sorted list.
   - **Monthly visit chart** (kunjungan tab only): 12-month bar chart via Chart.js (same CDN the admin analytics pages use), data passed with `json_script`. Quiet months stay as zeros so the shape of the habit is honest. One series, one brand hue, no legend, recessive gridlines, value on hover. `_monthly_visit_chart()` returns `None` when there is nothing to draw, and then neither the card nor the Chart.js script is rendered.
 
+### Home Screen Install
+
+Members open `/akun` constantly, so the site can live on their home screen instead of behind a browser address bar.
+
+- **`static/favicons/site.webmanifest`** shipped for a long time as the default template: named `MyWebSite`, icons pointing at `/images/...`, a folder that does not exist. Nothing errored, the icons simply never loaded. It now carries the gym's name, `/static/favicons/...` icon paths (both `any` and `maskable`), `start_url: /akun/` (a member installing this wants their own page), `scope: /`, and the brand colours.
+- **`WebManifestTest` in `accounts/tests.py`** parses the manifest, asserts every icon `src` is under `STATIC_URL` and resolves through `staticfiles.finders`, and that `start_url` resolves to a real view. That is what would have caught the broken paths.
+- Unhashed static paths inside the manifest are fine under `CompressedManifestStaticFilesStorage`: `collectstatic` writes both the hashed and the original filename, so `/static/favicons/web-app-manifest-192x192.png` is served (just with a shorter cache).
+- **`base.html`** adds `theme-color` plus the `mobile-web-app-capable` / `apple-mobile-web-app-*` metas, so the status bar is brand purple and iOS opens the site without browser chrome.
+- **`templates/accounts/_install_hint.html`** is a dismissible strip at the bottom of `/akun`. It starts `hidden` and is only revealed by its own script, since the whole instruction is about a browser menu and there is nothing to say with JS off. Hidden when already running standalone (`display-mode: standalone`, or `navigator.standalone` on iOS), and dismissal is remembered in `localStorage`. Where the browser fires `beforeinstallprompt` it shows a real "Simpan" button that triggers the native prompt; otherwise it explains the manual route, with no browser named (the same phone may be on Safari or Chrome).
+
 ### Templates
 - `login.html`: Updated to include email and phone number fields (with country code).
 - `check_in.html`: Updated to include email and phone number fields (with country code).

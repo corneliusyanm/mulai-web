@@ -854,6 +854,75 @@ section {
   letter-spacing: 0.03em;
 }
 
+/* "Save to home screen" hint at the bottom of the account page. Sits on the
+   purple page background, so it needs its own edge to read as a card. */
+.install-hint {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 1.5rem;
+  padding: 12px 40px 12px 14px;
+  border-radius: 14px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+/* Text keeps the row; on a narrow phone the button drops to its own line
+   instead of squeezing the copy into four words per line. */
+.install-hint-text {
+  flex: 1 1 55%;
+  min-width: 160px;
+}
+
+#install-hint-action {
+  margin-left: auto;
+}
+
+.install-hint[hidden] {
+  display: none;
+}
+
+.install-hint-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.install-hint-title {
+  font-size: 0.9rem;
+}
+
+.install-hint-note {
+  opacity: 0.9;
+  line-height: 1.35;
+}
+
+.install-hint-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-size: 16px;
+  line-height: 1;
+}
+
 /* Upcoming class rows on the account page. The row is no longer one big anchor,
    because it now carries its own Kalender / Ajak Temen links and an anchor
    cannot sit inside an anchor. The top part stays a full-width tap target. */

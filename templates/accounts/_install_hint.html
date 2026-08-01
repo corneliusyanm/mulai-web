@@ -1,0 +1,75 @@
+{% comment %}
+"Save Mulai Gym to your phone" hint for /akun.
+
+Members open this page over and over, so an icon on the home screen saves them
+opening a browser and typing the address every time. Hidden when the app is
+already running standalone, and once dismissed it stays dismissed.
+
+Starts hidden and is only revealed by the script: with JS off there is nothing
+useful to show, since the whole instruction is about a browser menu.
+{% endcomment %}
+<div id="install-hint" class="install-hint" hidden>
+    <button type="button" class="install-hint-close" aria-label="Tutup">&times;</button>
+    <div class="install-hint-icon"><i class="fas fa-mobile-screen-button"></i></div>
+    <div class="install-hint-text">
+        <div class="fw-bold install-hint-title">Simpan Mulai Gym di HP kamu</div>
+        <div class="install-hint-note small"></div>
+    </div>
+    <button type="button" id="install-hint-action" class="btn btn-sm btn-light text-dark rounded-pill px-3 fw-bold" hidden>
+        Simpan
+    </button>
+</div>
+
+<script>
+(function () {
+    var hint = document.getElementById('install-hint');
+    if (!hint) return;
+
+    var KEY = 'mg_install_hint_dismissed';
+    function dismissed() {
+        try { return localStorage.getItem(KEY) === '1'; } catch (e) { return false; }
+    }
+    function remember() {
+        try { localStorage.setItem(KEY, '1'); } catch (e) {}
+    }
+
+    // Already installed: nothing to suggest.
+    var standalone =
+        (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+        window.navigator.standalone === true;
+    if (standalone || dismissed()) return;
+
+    var note = hint.querySelector('.install-hint-note');
+    var action = document.getElementById('install-hint-action');
+    var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent || '');
+
+    // No browser name on purpose: the same phone may be on Safari or Chrome.
+    note.textContent = isIOS
+        ? 'Ketuk tombol Bagikan di browser, lalu pilih "Tambahkan ke Layar Utama".'
+        : 'Buka menu browser, lalu pilih "Instal aplikasi" atau "Tambahkan ke layar utama".';
+    hint.hidden = false;
+
+    // Where the browser offers a real install prompt, use it instead of asking
+    // the member to go hunting through a menu.
+    var installPrompt = null;
+    window.addEventListener('beforeinstallprompt', function (event) {
+        event.preventDefault();
+        installPrompt = event;
+        note.textContent = 'Biar tinggal ketuk ikonnya, nggak perlu buka browser dulu.';
+        action.hidden = false;
+    });
+
+    action.addEventListener('click', function () {
+        if (!installPrompt) return;
+        installPrompt.prompt();
+        installPrompt = null;
+        hint.hidden = true;
+        remember();
+    });
+
+    hint.querySelector('.install-hint-close').addEventListener('click', function () {
+        hint.hidden = true;
+        remember();
+    });
+})();
+</script>
