@@ -98,7 +98,9 @@ Tests are not enough for a member-facing change: look at the page.
 
 ## Data safety
 
-- The local Postgres on port **5435** holds a copy of production: ~800 real members with real phone numbers. **Read from it freely, never write to it.** No test members, no test bookings, no `migrate` experiments.
+- The local Postgres on port **5435** holds a copy of production: ~800 real members with real phone numbers. **Read from it freely, never write content to it.** No test members, no test bookings, no fake payments.
+- **Migrations are the exception: apply them locally as soon as you add one** (`python manage.py migrate`). They are the same additive schema change the deploy will run, not test data. The test suite builds its own database, so a green suite says nothing about whether the dev database is up to date, and the first page load after adding a model will 500 with `relation ... does not exist`. Deploy itself is covered: `deploy.yml` runs `migrate` before `collectstatic`.
+- **After adding a model, load the affected page against the real local database**, not only a throwaway one. That is what catches an unapplied migration, a missing table, and anything that depends on production-shaped data.
 - Querying it for design decisions is encouraged and has already changed decisions (for example: the Silver and Gold add-ons have never expired on a different day from the gym membership, so the expiry nudge only checks `active_until`).
 - For anything that needs writes, use a throwaway SQLite or a scratch database, seeded by a script.
 - The Supabase MCP tools are available for schema questions and read-only queries on production. Do not apply migrations or edge functions through them without being asked.
