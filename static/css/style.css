@@ -854,6 +854,56 @@ section {
   letter-spacing: 0.03em;
 }
 
+/* Upcoming class rows on the account page. The row is no longer one big anchor,
+   because it now carries its own Kalender / Ajak Temen links and an anchor
+   cannot sit inside an anchor. The top part stays a full-width tap target. */
+.upcoming-class-row {
+  padding: 12px 14px;
+}
+
+.upcoming-class-plain {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+}
+
+.upcoming-class-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+
+.upcoming-class-link:hover {
+  text-decoration: none;
+  color: inherit;
+}
+
+.upcoming-class-icon {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.upcoming-class-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(0, 0, 0, 0.07);
+}
+
+/* The row buttons are secondary to the class itself, so trim the 10px/20px the
+   theme gives every outline button down to something that fits inside a card. */
+.upcoming-class-actions .btn {
+  padding-top: 4px;
+  padding-bottom: 4px;
+  border-width: 2px;
+  font-size: 0.78rem;
+}
+
 /* Visit milestone progress, under the habit tiles. Progress is inside the
    current step, so it moves every few visits instead of crawling to 300. */
 .visit-milestone {

@@ -4,11 +4,13 @@ from django.core.management import call_command
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth.models import User
 from django.urls import reverse
-from datetime import date, timedelta
+from datetime import date, time, timedelta
 from io import StringIO
+from urllib.parse import quote
 from accounts.models import Member
 from classes.models import Class, ClassSchedule, ClassInstance
 from classes.admin import ClassInstanceAdmin
+from classes.sharing import whatsapp_invite_url
 
 
 class ClassModelTest(TestCase):
@@ -1976,3 +1978,63 @@ class ClassCalendarExportTest(TestCase):
         self.assertNotContains(response, "Tambah ke Kalender")
         # Sharing a class you have not booked is still fine
         self.assertContains(response, "Ajak Temen")
+
+
+class WhatsAppInviteTest(TestCase):
+    """One invite text, used by both the class detail page and /akun."""
+
+    def setUp(self):
+        self.class_obj = Class.objects.create(
+            name="Semi Private", description="Small group", max_members=4
+        )
+        self.schedule = ClassSchedule.objects.create(
+            class_obj=self.class_obj,
+            day_of_week=0,
+            start_time=time(18, 0),
+            end_time=time(19, 0),
+        )
+        # 2026-03-16 is a Monday, so the label must read "Senin".
+        self.instance = ClassInstance.objects.create(
+            class_schedule=self.schedule,
+            date=date(2026, 3, 16),
+            start_time=time(18, 0),
+            end_time=time(19, 0),
+        )
+
+    def test_invite_carries_the_class_the_day_the_time_and_the_link(self):
+        url = whatsapp_invite_url(self.instance, "https://mulaigym.id/kelas/9/")
+
+        self.assertTrue(url.startswith("https://wa.me/?text="))
+        self.assertIn(quote("Yuk ikut kelas Semi Private di Mulai Gym"), url)
+        self.assertIn(quote("Senin"), url)
+        self.assertIn(quote("jam 18:00"), url)
+        self.assertIn(quote("https://mulaigym.id/kelas/9/"), url)
+
+    def test_detail_page_uses_the_same_builder(self):
+        member = Member.objects.create(
+            name="Invite Member",
+            email="invite@example.com",
+            phone_number="628560000444",
+            gender="M",
+            age=25,
+            height=170,
+            weight=70,
+            years_of_working_out="1 tahun",
+            goals="Stay fit",
+            know_mulai_gym_from="friends",
+            active_until=timezone.now() + timedelta(days=30),
+        )
+        session = self.client.session
+        session["member_email"] = member.email
+        session.save()
+
+        response = self.client.get(
+            reverse("classes:class_detail", args=[self.instance.id])
+        )
+
+        self.assertEqual(
+            response.context["whatsapp_share_url"],
+            whatsapp_invite_url(
+                self.instance, f"http://testserver/kelas/{self.instance.id}/"
+            ),
+        )

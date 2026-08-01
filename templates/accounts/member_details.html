@@ -105,70 +105,10 @@
                     {% if upcoming_booked_classes or upcoming_waitlisted_classes %}
                         <div class="list-group list-group-flush">
                             {% for booking in upcoming_booked_classes %}
-                                {% if "Kelas Pemula" in booking.class_schedule.class_obj.name %}
-                                    <a href="{% url 'classes:class_detail' booking.id %}" class="list-group-item list-group-item-action border-0 rounded-2 mb-2 shadow-lg hover-lift tier-silver-strong">
-                                {% elif "Semi Private" in booking.class_schedule.class_obj.name %}
-                                    <a href="{% url 'classes:class_detail' booking.id %}" class="list-group-item list-group-item-action border-0 rounded-2 mb-2 shadow-lg hover-lift tier-gold-strong">
-                                {% else %}
-                                    <a href="{% url 'classes:class_detail' booking.id %}" class="list-group-item list-group-item-action border-0 rounded-2 mb-2 shadow-sm hover-lift" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                                {% endif %}
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div class="d-flex align-items-center">
-                                            <div class="bg-success rounded-circle p-2 me-3" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;">
-                                                <i class="fas fa-check text-white small"></i>
-                                            </div>
-                                            <div>
-                                                <h6 class="mb-0 fw-bold text-dark">{{ booking.class_schedule.class_obj.name }}</h6>
-                                                <small class="text-muted">
-                                                    <i class="fas fa-calendar-alt me-1"></i>{{ booking.date|date:"d M Y" }}
-                                                    <i class="fas fa-clock ms-2 me-1"></i>{{ booking.start_time|time:"H:i" }}
-                                                </small>
-                                                {% if booking.when_label %}
-                                                    <div>
-                                                        <span class="badge rounded-pill {% if booking.when_soon %}bg-danger{% else %}bg-primary bg-opacity-75{% endif %} mt-1">
-                                                            <i class="fas fa-hourglass-half me-1"></i>{{ booking.when_label }}
-                                                        </span>
-                                                    </div>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                        <span class="badge bg-success text-white px-2 py-1 rounded-pill">Terdaftar</span>
-                                    </div>
-                                </a>
+                                {% include "accounts/_upcoming_class_row.html" with booking=booking waitlist=False %}
                             {% endfor %}
                             {% for booking in upcoming_waitlisted_classes %}
-                                {% if "Kelas Pemula" in booking.class_schedule.class_obj.name %}
-                                    <a href="{% url 'classes:class_detail' booking.id %}" class="list-group-item list-group-item-action border-0 rounded-2 mb-2 shadow-lg hover-lift tier-silver-strong">
-                                {% elif "Semi Private" in booking.class_schedule.class_obj.name %}
-                                    <a href="{% url 'classes:class_detail' booking.id %}" class="list-group-item list-group-item-action border-0 rounded-2 mb-2 shadow-lg hover-lift tier-gold-strong">
-                                {% else %}
-                                    <a href="{% url 'classes:class_detail' booking.id %}" class="list-group-item list-group-item-action border-0 rounded-2 mb-2 shadow-sm hover-lift" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                                {% endif %}
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div class="d-flex align-items-center">
-                                            <div class="bg-warning rounded-circle p-2 me-3" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;">
-                                                <i class="fas fa-clock text-white small"></i>
-                                            </div>
-                                            <div>
-                                                <h6 class="mb-0 fw-bold text-dark">{{ booking.class_schedule.class_obj.name }}</h6>
-                                                <small class="text-muted">
-                                                    <i class="fas fa-calendar-alt me-1"></i>{{ booking.date|date:"d M Y" }}
-                                                    <i class="fas fa-clock ms-2 me-1"></i>{{ booking.start_time|time:"H:i" }}
-                                                </small>
-                                                {% if booking.when_label %}
-                                                    <div>
-                                                        <span class="badge rounded-pill {% if booking.when_soon %}bg-danger{% else %}bg-primary bg-opacity-75{% endif %} mt-1">
-                                                            <i class="fas fa-hourglass-half me-1"></i>{{ booking.when_label }}
-                                                        </span>
-                                                    </div>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                        <span class="badge bg-warning text-white px-2 py-1 rounded-pill">
-                                            Antrian{% if booking.waitlist_place %} ke-{{ booking.waitlist_place }}{% endif %}
-                                        </span>
-                                    </div>
-                                </a>
+                                {% include "accounts/_upcoming_class_row.html" with booking=booking waitlist=True %}
                             {% endfor %}
                         </div>
                         <p class="text-muted small text-center mt-2 mb-0">

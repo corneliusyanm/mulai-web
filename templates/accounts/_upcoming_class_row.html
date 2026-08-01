@@ -1,0 +1,49 @@
+{% comment %}
+One upcoming class on /akun, booked or waitlisted.
+
+Expects `booking` (a ClassInstance carrying when_label / when_soon / share_url,
+and waitlist_place for a waitlisted one) and `waitlist` as a flag. The two lists
+used to be copy-pasted blocks, which meant every card tweak had to be made twice.
+{% endcomment %}
+{% with name=booking.class_schedule.class_obj.name %}
+<div class="upcoming-class-row border-0 rounded-2 mb-2 hover-lift {% if "Kelas Pemula" in name %}tier-silver-strong shadow-lg{% elif "Semi Private" in name %}tier-gold-strong shadow-lg{% else %}upcoming-class-plain shadow-sm{% endif %}">
+    <a href="{% url 'classes:class_detail' booking.id %}" class="upcoming-class-link">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+                <div class="upcoming-class-icon {% if waitlist %}bg-warning{% else %}bg-success{% endif %} rounded-circle me-3">
+                    <i class="fas {% if waitlist %}fa-clock{% else %}fa-check{% endif %} text-white small"></i>
+                </div>
+                <div>
+                    <h6 class="mb-0 fw-bold text-dark">{{ name }}</h6>
+                    <small class="text-muted">
+                        <i class="fas fa-calendar-alt me-1"></i>{{ booking.date|date:"d M Y" }}
+                        <i class="fas fa-clock ms-2 me-1"></i>{{ booking.start_time|time:"H:i" }}
+                    </small>
+                    {% if booking.when_label %}
+                        <div>
+                            <span class="badge rounded-pill {% if booking.when_soon %}bg-danger{% else %}bg-primary bg-opacity-75{% endif %} mt-1">
+                                <i class="fas fa-hourglass-half me-1"></i>{{ booking.when_label }}
+                            </span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% if waitlist %}
+                <span class="badge bg-warning text-white px-2 py-1 rounded-pill">
+                    Antrian{% if booking.waitlist_place %} ke-{{ booking.waitlist_place }}{% endif %}
+                </span>
+            {% else %}
+                <span class="badge bg-success text-white px-2 py-1 rounded-pill">Terdaftar</span>
+            {% endif %}
+        </div>
+    </a>
+    <div class="upcoming-class-actions">
+        <a href="{% url 'classes:class_calendar' booking.id %}" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold">
+            <i class="fas fa-calendar-plus me-1"></i>Kalender
+        </a>
+        <a href="{{ booking.share_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-success rounded-pill px-3 fw-bold">
+            <i class="fab fa-whatsapp me-1"></i>Ajak Temen
+        </a>
+    </div>
+</div>
+{% endwith %}

@@ -7,12 +7,13 @@ from django.contrib.auth.mixins import UserPassesTestMixin
 from django.core.exceptions import PermissionDenied
 from django.db import OperationalError, ProgrammingError
 from django.shortcuts import redirect, render
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.timezone import localtime
 from django.views.generic import DetailView, TemplateView
 from django.views.generic.edit import CreateView, UpdateView
 
+from classes.sharing import whatsapp_invite_url
 from homepage.models import ReviewSummary, Testimonial
 from payments.models import Payment
 from visits.busy_hours import quiet_hours
@@ -455,9 +456,8 @@ class MemberDetailView(MemberRequiredMixin, DetailView):
         context["quiet_hours"] = quiet_hours()
         return context
 
-    @staticmethod
-    def _with_when_labels(queryset):
-        """Attach "2 jam lagi" / "Besok 08:00" labels to upcoming classes."""
+    def _with_when_labels(self, queryset):
+        """Attach the countdown label and the invite link to upcoming classes."""
         now = timezone.now()
         bookings = list(queryset)
         for booking in bookings:
@@ -466,6 +466,12 @@ class MemberDetailView(MemberRequiredMixin, DetailView):
             )
             end = timezone.make_aware(datetime.combine(booking.date, booking.end_time))
             booking.when_label, booking.when_soon = _class_when_label(start, end, now)
+            booking.share_url = whatsapp_invite_url(
+                booking,
+                self.request.build_absolute_uri(
+                    reverse("classes:class_detail", args=[booking.id])
+                ),
+            )
         return bookings
 
 

@@ -1,5 +1,4 @@
 from collections import defaultdict
-from urllib.parse import quote
 
 from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
@@ -14,7 +13,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from .calendar_export import class_instance_to_ics, ics_filename
-from .templatetags.class_extras import indonesian_day
+from .sharing import whatsapp_invite_url
 from .models import (
     MAX_CLASSES_PER_DAY,
     ClassInstance,
@@ -215,14 +214,9 @@ class ClassDetailView(MemberRequiredMixin, DetailView):
         )
 
         # "Ajak temen": prefilled WhatsApp message with a link to this class
-        class_name = self.object.class_schedule.class_obj.name
-        share_text = (
-            f"Yuk ikut kelas {class_name} di Mulai Gym, "
-            f"{indonesian_day(self.object.date)} jam "
-            f"{self.object.start_time.strftime('%H:%M')}. "
-            f"Detailnya di sini: {self.request.build_absolute_uri()}"
+        context["whatsapp_share_url"] = whatsapp_invite_url(
+            self.object, self.request.build_absolute_uri()
         )
-        context["whatsapp_share_url"] = f"https://wa.me/?text={quote(share_text)}"
         return context
 
 

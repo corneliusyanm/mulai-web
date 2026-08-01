@@ -1,4 +1,5 @@
 from datetime import timedelta, time
+from urllib.parse import quote
 
 from django.test import TestCase, RequestFactory
 from django.utils import timezone
@@ -1943,3 +1944,102 @@ class VisitMilestoneTest(TestCase):
 
         self.assertIsNone(response.context["visit_milestone"])
         self.assertNotContains(response, "lagi ke")
+
+
+class AccountUpcomingClassActionsTest(TestCase):
+    """Kalender and Ajak Temen on the member's own upcoming classes.
+
+    Both already existed on the class detail page. A member checking their
+    bookings starts on /akun, so the row that lists a booking is where the two
+    are actually reached for.
+    """
+
+    def setUp(self):
+        from classes.models import Class, ClassSchedule, ClassInstance
+
+        self.ClassSchedule = ClassSchedule
+        self.ClassInstance = ClassInstance
+        self.member = Member.objects.create(
+            name="Actions Member",
+            email="actions@example.com",
+            phone_number="628560000333",
+            gender="M",
+            age=25,
+            height=170,
+            weight=70,
+            years_of_working_out="1 tahun",
+            goals="Stay fit",
+            know_mulai_gym_from="friends",
+            active_until=timezone.now() + timedelta(days=30),
+        )
+        self.class_obj = Class.objects.create(
+            name="Yoga Pagi", description="Yoga", max_members=10
+        )
+
+    def instance_tomorrow(self):
+        start = timezone.localtime(timezone.now()) + timedelta(days=1)
+        schedule = self.ClassSchedule.objects.create(
+            class_obj=self.class_obj,
+            day_of_week=start.weekday(),
+            start_time=time(8, 0),
+            end_time=time(9, 0),
+        )
+        return self.ClassInstance.objects.create(
+            class_schedule=schedule,
+            date=start.date(),
+            start_time=time(8, 0),
+            end_time=time(9, 0),
+        )
+
+    def login(self):
+        session = self.client.session
+        session["member_email"] = self.member.email
+        session.save()
+
+    def test_booked_row_offers_the_calendar_file_and_the_invite(self):
+        instance = self.instance_tomorrow()
+        instance.booked_members.add(self.member)
+        self.login()
+
+        response = self.client.get(reverse("member_details"))
+
+        self.assertContains(
+            response, reverse("classes:class_calendar", args=[instance.id])
+        )
+        self.assertContains(response, "Ajak Temen")
+        self.assertContains(response, "https://wa.me/?text=")
+
+    def test_waitlisted_row_offers_them_too(self):
+        instance = self.instance_tomorrow()
+        instance.waitlisted_members.add(self.member)
+        self.login()
+
+        response = self.client.get(reverse("member_details"))
+
+        self.assertContains(
+            response, reverse("classes:class_calendar", args=[instance.id])
+        )
+        self.assertContains(response, "Kalender")
+
+    def test_invite_names_the_class_and_links_to_it(self):
+        instance = self.instance_tomorrow()
+        instance.booked_members.add(self.member)
+        self.login()
+
+        response = self.client.get(reverse("member_details"))
+        share_url = response.context["upcoming_booked_classes"][0].share_url
+
+        self.assertIn(quote("Yuk ikut kelas Yoga Pagi di Mulai Gym"), share_url)
+        self.assertIn(quote("jam 08:00"), share_url)
+        self.assertIn(
+            quote(f"http://testserver/kelas/{instance.id}/"),
+            share_url,
+        )
+
+    def test_a_member_with_no_bookings_gets_no_action_buttons(self):
+        self.login()
+
+        response = self.client.get(reverse("member_details"))
+
+        self.assertNotContains(response, "Ajak Temen")
+        self.assertNotContains(response, "Kalender")
