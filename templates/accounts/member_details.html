@@ -40,25 +40,25 @@
 
     <div class="row">
         <div class="col-lg-4 mb-0 mb-lg-0">
-            {% include "accounts/member_card.html" with member=member %}
+            <div class="mg-reveal" style="--i: 0">{% include "accounts/member_card.html" with member=member %}</div>
 
             {% if total_visits %}
-                <div class="card border-0 shadow-sm rounded-3 mb-4">
+                <div class="card border-0 shadow-sm rounded-3 mb-4 mg-reveal" style="--i: 1">
                     <div class="card-body py-3 px-2">
                         <div class="row g-0 text-center">
                             <div class="col-4 habit-stat">
                                 <i class="fas fa-calendar-day habit-stat-icon mb-1"></i>
-                                <div class="habit-stat-value">{{ visits_this_month }}</div>
+                                <div class="habit-stat-value" data-count-up="{{ visits_this_month }}">{{ visits_this_month }}</div>
                                 <div class="habit-stat-label">Bulan Ini</div>
                             </div>
                             <div class="col-4 habit-stat">
                                 <i class="fas fa-fire habit-stat-icon mb-1"></i>
-                                <div class="habit-stat-value">{{ visit_streak_weeks }}</div>
+                                <div class="habit-stat-value" data-count-up="{{ visit_streak_weeks }}">{{ visit_streak_weeks }}</div>
                                 <div class="habit-stat-label">Minggu Berturut</div>
                             </div>
                             <div class="col-4 habit-stat">
                                 <i class="fas fa-dumbbell habit-stat-icon mb-1"></i>
-                                <div class="habit-stat-value">{{ total_visits }}</div>
+                                <div class="habit-stat-value" data-count-up="{{ total_visits }}">{{ total_visits }}</div>
                                 <div class="habit-stat-label">Total Kunjungan</div>
                             </div>
                         </div>
@@ -81,7 +81,8 @@
                                     {% endif %}
                                 </div>
                                 <div class="visit-milestone-track">
-                                    <div class="visit-milestone-fill" style="width: {{ visit_milestone.percent }}%"></div>
+                                    <div class="visit-milestone-fill" data-grow="{{ visit_milestone.percent }}%"
+                                         style="width: {{ visit_milestone.percent }}%"></div>
                                 </div>
                             </div>
                         {% endif %}
@@ -94,14 +95,14 @@
                 </div>
             {% endif %}
 
-            {% include "accounts/_quiet_hours.html" %}
+            <div class="mg-reveal" style="--i: 2">{% include "accounts/_quiet_hours.html" %}</div>
 
-            {% include "accounts/_gizi_progress.html" %}
+            <div class="mg-reveal" style="--i: 3">{% include "accounts/_gizi_progress.html" %}</div>
 
-            {% include "nutrition/_daily_card.html" %}
+            <div class="mg-reveal" style="--i: 4">{% include "nutrition/_daily_card.html" %}</div>
         </div>
         <div class="col-lg-8">
-            <div class="card border-0 shadow-lg rounded-3 overflow-hidden mb-4" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+            <div class="card border-0 shadow-lg rounded-3 overflow-hidden mb-4 mg-reveal" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
                 <div class="card-header bg-primary text-white p-3">
                     <h5 class="mb-0 fw-bold">
                         <i class="fas fa-calendar-check me-2"></i>Kelas yang Akan Datang
@@ -133,7 +134,7 @@
                 </div>
             </div>
 
-            <div class="card border-0 shadow-sm rounded-3 overflow-hidden mb-4">
+            <div class="card border-0 shadow-sm rounded-3 overflow-hidden mb-4 mg-reveal">
                 <div class="card-header bg-white border-0 p-3">
                     <h5 class="mb-0">Detail Profil</h5>
                 </div>
@@ -179,7 +180,7 @@
                 </div>
             </div>
 
-            <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+            <div class="card border-0 shadow-sm rounded-3 overflow-hidden mg-reveal">
                 <div class="card-header bg-white border-0 p-4">
                     <h3 class="mb-0">Riwayat Kunjungan</h3>
                 </div>
@@ -219,7 +220,7 @@
             </div>
 
             <!-- Riwayat Pembayaran -->
-            <div class="card border-0 shadow-sm rounded-3 overflow-hidden mb-4">
+            <div class="card border-0 shadow-sm rounded-3 overflow-hidden mb-4 mg-reveal">
               <div class="card-header bg-white border-0 p-3">
                   <h5 class="mb-0">
                       <i class="fas fa-credit-card me-2 text-success"></i>Riwayat Pembayaran
@@ -271,7 +272,7 @@
           </div>
 
           <!-- Riwayat Kelas -->
-          <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+          <div class="card border-0 shadow-sm rounded-3 overflow-hidden mg-reveal">
               <div class="card-header bg-white border-0 p-3">
                   <h5 class="mb-0">
                       <i class="fas fa-history me-2 text-primary"></i>Riwayat Kelas

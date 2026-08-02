@@ -156,7 +156,7 @@
     <h2 class="muscle-group-title">{{ muscle_group }}</h2>
     <div class="equipment-grid">
         {% for item in equipment_list %}
-        <a href="{% url 'equipment:detail' item.slug %}" class="equipment-card-link">
+        <a href="{% url 'equipment:detail' item.slug %}" class="equipment-card-link mg-reveal" style="--i: {{ forloop.counter0 }}">
           <div class="card-content">
             <h3><span>{{ item.name }}</span></h3>
             {% if item.get_youtube_embed_url %}

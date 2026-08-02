@@ -9,7 +9,7 @@ Django app running mulaigym.id, the site and admin system for Mulai Gym in Bandu
 - **Framework**: Django 4.2 (server-rendered templates, no SPA, no JS build step)
 - **Python**: 3.13, venv at `.venv/`
 - **Database**: PostgreSQL (Supabase in production, local Docker Postgres for dev)
-- **Frontend**: Bootstrap 5.3 + Font Awesome 6.4 from CDN, one hand-written `static/css/style.css`, vanilla JS inline in templates. Chart.js from CDN where a chart is needed.
+- **Frontend**: Bootstrap 5.3 + Font Awesome 6.4 from CDN, one hand-written `static/css/style.css`, page-specific vanilla JS inline in templates, plus one shared `static/js/mulai.js` for motion helpers. Chart.js from CDN where a chart is needed.
 - **Static files**: WhiteNoise
 - **Hosting**: Docker on a DigitalOcean droplet, Nginx in front, Cloudflare for DNS/SSL, deploy via `.github/workflows/deploy.yml`
 - **Cron on the droplet**: `generate_daily_class_instances.sh`, `generate_daily_reminders.sh` (both ~07:03 WIB), `generate_daily_penalties.sh` (21:00 WIB, after closing)
@@ -65,7 +65,8 @@ User-facing copy is **Indonesian**, informal and warm ("Kamu", "Yuk", "biar ngga
 - All templates live in the project-level `templates/`, not in app directories.
 - Member pages extend `base.html`; admin pages extend the admin base.
 - **The class list has 4 near-identical card variants** (Ramadan light / Kelas Pemula / Semi Private / other). Anything that goes on a card belongs in a partial (`templates/classes/_booking_actions.html`, `_class_capacity.html`) and is `{% include %}`d, never copied 4 times.
-- **Bump the CSS cache-buster** in `base.html` (`style.css?v=NN`) whenever you touch `static/css/style.css`, or members keep the old file for a year (`WHITENOISE_MAX_AGE`).
+- **Bump the CSS cache-buster** in `base.html` (`style.css?v=NN`) whenever you touch `static/css/style.css`, or members keep the old file for a year (`WHITENOISE_MAX_AGE`). Same for `js/mulai.js?v=N`.
+- **Motion is opt-in from the markup.** `static/js/mulai.js` reads `.mg-reveal` (fade up as it scrolls into view, `--i` for stagger), `data-count-up`, `data-grow` and `data-ring`. Everything it touches must render complete and correct without it: the only thing that hides content is `.mg-reveal`, gated on an `mg-js` class that `base.html` adds before paint and removes again if the file never loads. One `mgRise` keyframe for the whole site, and every effect is off under `prefers-reduced-motion`.
 - **A wrong `{% static %}` path is a 500, not a broken image.** Production uses `CompressedManifestStaticFilesStorage`, which raises on a file that is not in the manifest. Anywhere a static path comes from data or config rather than being written inline, check it resolves with `staticfiles.finders.find()` and skip it if it does not, and add a test that walks the configured paths.
 - **`btn-primary` is invisible outside a white card**, since it is the same purple as the page background. On the purple, use `btn-secondary` (lime). Same trap for text: `body` sets white type, so anything inside a white card must name its own colour or it disappears.
 - **Hand-written multiple choice drifts to the middle answer.** Authored by hand, 77 of 100 daily questions had the answer at B and none at C. Any new question set goes through `place_answer()` in `nutrition/shuffle.py`, and a test asserts no letter takes more than half.

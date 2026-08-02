@@ -1067,6 +1067,23 @@ So the correct answer is moved to a slot derived from an md5 of the question's `
 - **"Yang paling sering salah" counts each member's first answer per question** (`analytics.first_answers`, Postgres `DISTINCT ON`). A retake after reading the explanation would otherwise make everyone look like they understood it all along. It also names the wrong answer most people picked, which is the actual misunderstanding to explain on the floor.
 - Per-chapter table uses each member's best score, matching the badge they keep.
 
+## Shared motion (`static/js/mulai.js`)
+
+The member pages were static: correct, but they read like documents rather than an app. Four effects now run across `/akun`, `/kelas`, `/gizi`, `/alat` and `/papan`, asked for from the markup with data attributes so the file never needs to know about pages.
+
+| Markup | Effect |
+| --- | --- |
+| `.mg-reveal` (+ `--i` for stagger) | Fades and lifts in as it scrolls into view |
+| `data-count-up="18"` | Counts from zero, in `id-ID` formatting |
+| `data-grow="62%"` | Bar grows from zero to its width |
+| `data-ring="45"` | Conic-gradient ring sweeps from empty |
+
+- **Nothing here is required.** Every element renders complete and correct without the file: the numbers, the bar widths and the ring percentages are all in the server-rendered HTML.
+- **The one exception is `.mg-reveal`**, which needs to start hidden. That is gated on an `mg-js` class which `base.html` adds in an inline script **before first paint** (so a card does not flash in and then hide), with a 2.5 second timeout that removes it again if `mulai.js` never sets `window.mgReady`. JS off, blocked, or 404: everything is simply visible.
+- **Reveal uses IntersectionObserver**, so a long page animates as you reach each card rather than spending the whole budget above the fold. No observer, or reduced motion, and everything is shown at once.
+- **`prefers-reduced-motion` turns all of it off**, including the press-scale on buttons and the pulse on the unanswered Kuis Harian teaser.
+- One `mgRise` keyframe serves the whole site, and `SharedMotionAssetTest` fails if the file goes missing, since a `{% static %}` path that is not in the manifest is a 500 in production rather than a missing animation.
+
 ## Papan Peringkat (`leaderboard/`)
 
 A members-only leaderboard at `/papan/`, with a tab for this month and one for all time, plus a picker for past months once there is more than one. Top 30 shown, and the member's own points always, but **not their own rank**: a beginner discovering they are 78th is not encouraged by it, and the monthly board resets so newcomers have something winnable.

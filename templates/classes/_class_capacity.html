@@ -18,6 +18,7 @@ Expects: instance, with the fields ClassListView precomputes.
 
     <div class="class-capacity">
         <div class="class-capacity-fill{% if instance.slots_left == 0 %} is-full{% elif instance.slots_left <= 2 %} is-low{% endif %}"
+             data-grow="{{ instance.booked_percent }}%"
              style="width: {{ instance.booked_percent }}%;"></div>
     </div>
 

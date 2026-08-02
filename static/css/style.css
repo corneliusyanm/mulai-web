@@ -1177,10 +1177,10 @@ section {
 /* Each step rises in as it becomes the current one. `is-live` is added by the
    script, so a browser with JS off never animates and never waits. */
 .gizi-step.is-live > * {
-  animation: giziRise 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: mgRise 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-@keyframes giziRise {
+@keyframes mgRise {
   from { opacity: 0; transform: translateY(14px); }
   to { opacity: 1; transform: translateY(0); }
 }
@@ -1439,7 +1439,7 @@ section {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  animation: giziRise 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: mgRise 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
   animation-delay: calc(var(--i) * 60ms);
 }
 
@@ -1807,7 +1807,7 @@ section {
 
 /* Chapter cards on the index arrive in sequence rather than all at once */
 .gizi-chapter-card {
-  animation: giziRise 0.34s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: mgRise 0.34s cubic-bezier(0.16, 1, 0.3, 1) both;
   animation-delay: calc(var(--i) * 45ms);
 }
 
@@ -2779,7 +2779,7 @@ section {
   border-radius: 18px;
   background: linear-gradient(135deg, #ffffff 0%, #f3f3ff 100%);
   box-shadow: 0 10px 26px rgba(20, 20, 80, 0.2);
-  animation: boardRise 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: mgRise 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 /* A soft brand-coloured glow behind the avatar, so the card is not flat white */
@@ -2862,7 +2862,7 @@ section {
   text-align: center;
   background: #fff;
   box-shadow: 0 8px 22px rgba(20, 20, 80, 0.2);
-  animation: boardRise 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: mgRise 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
   animation-delay: calc(var(--i) * 90ms);
 }
 
@@ -3001,7 +3001,7 @@ section {
   align-items: center;
   gap: 9px;
   padding: 8px 12px;
-  animation: boardRise 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: mgRise 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
   animation-delay: calc(280ms + var(--i) * 35ms);
 }
 
@@ -3131,11 +3131,6 @@ section {
   line-height: 1.4;
 }
 
-@keyframes boardRise {
-  from { opacity: 0; transform: translateY(16px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
 @keyframes boardGrow {
   from { width: 0; }
   to { width: var(--share); }
@@ -3161,5 +3156,111 @@ section {
   .board-row-bar {
     animation: none;
     width: var(--share);
+  }
+}
+
+/* ===== Shared motion ==================================================== */
+
+/* Reveal on scroll. Only hidden when mulai.js has confirmed it is running
+   (`mg-js` on <html>), so JS off or a failed load never hides content. */
+.mg-js .mg-reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.45s ease, transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: calc(var(--i, 0) * 60ms);
+}
+
+.mg-js .mg-reveal.is-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Every button gets a small press. Cheap, and it makes the whole site feel
+   like something that responds rather than a page that reloads. */
+.btn {
+  transition: transform 0.12s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+/* Bars and rings animate to their final size, set by mulai.js from data-grow
+   and data-ring. Both are already correct without JS. */
+.class-capacity-fill,
+.visit-milestone-fill {
+  transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.gizi-ring {
+  transition: none; /* the sweep is driven by --pct, not a transition */
+}
+
+/* The habit tiles and any other counted number: keep the width steady while the
+   digits change, so nothing jumps around mid-count. */
+.habit-stat-value,
+.board-mine-total,
+.gizi-result-score {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Kuis Harian teaser breathes while today's question is unanswered, and stops
+   the moment it is done. One nudge, not a distraction. */
+.mg-js .daily-teaser:not(.is-done) .daily-teaser-icon {
+  animation: mgPulse 2.6s ease-in-out infinite;
+}
+
+@keyframes mgPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.45); }
+  50% { box-shadow: 0 0 0 8px rgba(255, 255, 255, 0); }
+}
+
+/* Class cards lift a little under the finger */
+.class-card-wrapper .list-group-item,
+.class-card-wrapper > div {
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.class-filter-chip {
+  transition: transform 0.12s ease, background-color 0.2s ease, color 0.2s ease;
+}
+
+.class-filter-chip:active {
+  transform: scale(0.96);
+}
+
+/* Flash messages arrive rather than appear */
+.mg-js .alert {
+  animation: mgPop 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes mgPop {
+  from { opacity: 0; transform: translateY(-10px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mg-js .mg-reveal,
+  .mg-js .mg-reveal.is-in {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .btn,
+  .class-capacity-fill,
+  .visit-milestone-fill,
+  .class-filter-chip {
+    transition: none;
+  }
+
+  .btn:active,
+  .class-filter-chip:active {
+    transform: none;
+  }
+
+  .mg-js .daily-teaser:not(.is-done) .daily-teaser-icon,
+  .mg-js .alert {
+    animation: none;
   }
 }

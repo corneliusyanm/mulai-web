@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=58">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=59">
     
     <link rel="icon" type="image/png" href="{% static 'favicons/favicon-96x96.png' %}" sizes="96x96" />
     <link rel="icon" type="image/svg+xml" href="{% static 'favicons/favicon.svg' %}" />
@@ -15,6 +15,23 @@
     <link rel="apple-touch-icon" sizes="180x180" href="{% static 'favicons/apple-touch-icon.png' %}" />
     <meta name="apple-mobile-web-app-title" content="Mulai Gym" />
     <link rel="manifest" href="{% static 'favicons/site.webmanifest' %}" />
+
+    {% comment %}
+    Set before first paint, so a card that is about to animate in starts hidden
+    instead of flashing visible and then disappearing. If mulai.js never loads
+    (blocked, 404, cache miss), the timeout takes the class back off and
+    everything is simply visible.
+    {% endcomment %}
+    <script>
+    (function () {
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        var root = document.documentElement;
+        root.classList.add('mg-js');
+        window.setTimeout(function () {
+            if (!window.mgReady) root.classList.remove('mg-js');
+        }, 2500);
+    })();
+    </script>
 
     {# Home-screen install: colours the status bar, and lets iOS open us without browser chrome #}
     <meta name="theme-color" content="#5555ef" />
@@ -297,6 +314,8 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {# Shared motion helpers: reveal on scroll, count-ups, bars, rings. Nothing here is needed for a page to work. #}
+    <script src="{% static 'js/mulai.js' %}?v=1" defer></script>
     <script>
     document.addEventListener('DOMContentLoaded', function() {
         const isHomePage = window.location.pathname === '/' || 

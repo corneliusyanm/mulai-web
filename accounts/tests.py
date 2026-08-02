@@ -2256,3 +2256,47 @@ class LocalDateOnTheAccountPageTest(TestCase):
 
         self.assertFalse(yesterday.is_bookable)
         self.assertTrue(today.is_bookable)
+
+
+class SharedMotionAssetTest(TestCase):
+    """The shared motion helper must exist and be reachable.
+
+    A `{% static %}` path that is not in the manifest raises in production
+    (CompressedManifestStaticFilesStorage), so a renamed or deleted file would
+    take every member page down rather than quietly dropping the animation.
+    """
+
+    def test_the_helper_file_is_there(self):
+        self.assertIsNotNone(finders.find("js/mulai.js"))
+
+    def test_every_page_loads_it(self):
+        member = Member.objects.create(
+            name="Motion Member",
+            email="motion@example.com",
+            phone_number="628560000999",
+            gender="M",
+            age=25,
+            height=170,
+            weight=70,
+            years_of_working_out="1 tahun",
+            goals="Stay fit",
+            know_mulai_gym_from="friends",
+        )
+        session = self.client.session
+        session["member_email"] = member.email
+        session.save()
+
+        response = self.client.get(reverse("member_details"))
+
+        self.assertContains(response, "js/mulai.js")
+        # The class that hides a revealing card is only ever added by script, so
+        # a browser without JS renders everything.
+        self.assertNotContains(response, 'class="mg-js"')
+
+    def test_it_claims_mg_ready_so_the_fallback_does_not_fire(self):
+        path = finders.find("js/mulai.js")
+        with open(path) as handle:
+            source = handle.read()
+
+        self.assertIn("window.mgReady = true", source)
+        self.assertIn("prefers-reduced-motion", source)

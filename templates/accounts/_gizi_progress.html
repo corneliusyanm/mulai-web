@@ -7,7 +7,7 @@ back up. Deliberately small: it is a nudge, not the feature.
 {% if gizi %}
 <a href="{% url 'nutrition:index' %}" class="card border-0 shadow-sm rounded-3 mb-4 gizi-akun-card">
     <div class="card-body p-3 d-flex align-items-center gap-3">
-        <div class="gizi-ring" style="--pct: {{ gizi.percent }}">
+        <div class="gizi-ring" data-ring="{{ gizi.percent }}" style="--pct: {{ gizi.percent }}">
             <span>{{ gizi.finished_count }}/{{ gizi.total_chapters }}</span>
         </div>
         <div class="flex-grow-1">
