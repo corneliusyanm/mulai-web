@@ -3161,20 +3161,6 @@ section {
 
 /* ===== Shared motion ==================================================== */
 
-/* Reveal on scroll. Only hidden when mulai.js has confirmed it is running
-   (`mg-js` on <html>), so JS off or a failed load never hides content. */
-.mg-js .mg-reveal {
-  opacity: 0;
-  transform: translateY(16px);
-  transition: opacity 0.45s ease, transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
-  transition-delay: calc(var(--i, 0) * 60ms);
-}
-
-.mg-js .mg-reveal.is-in {
-  opacity: 1;
-  transform: translateY(0);
-}
-
 /* Every button gets a small press. Cheap, and it makes the whole site feel
    like something that responds rather than a page that reloads. */
 .btn {
@@ -3240,13 +3226,6 @@ section {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .mg-js .mg-reveal,
-  .mg-js .mg-reveal.is-in {
-    opacity: 1;
-    transform: none;
-    transition: none;
-  }
-
   .btn,
   .class-capacity-fill,
   .visit-milestone-fill,

@@ -1069,21 +1069,22 @@ So the correct answer is moved to a slot derived from an md5 of the question's `
 
 ## Shared motion (`static/js/mulai.js`)
 
-The member pages were static: correct, but they read like documents rather than an app. Four effects now run across `/akun`, `/kelas`, `/gizi`, `/alat` and `/papan`, asked for from the markup with data attributes so the file never needs to know about pages.
+Three effects run across `/akun`, `/kelas` and `/gizi`, asked for from the markup with data attributes so the file never needs to know about pages.
 
 | Markup | Effect |
 | --- | --- |
-| `.mg-reveal` (+ `--i` for stagger) | Fades and lifts in as it scrolls into view |
 | `data-count-up="18"` | Counts from zero, in `id-ID` formatting |
 | `data-grow="62%"` | Bar grows from zero to its width |
 | `data-ring="45"` | Conic-gradient ring sweeps from empty |
 
-- **Nothing here is required.** Every element renders complete and correct without the file: the numbers, the bar widths and the ring percentages are all in the server-rendered HTML.
-- **The one exception is `.mg-reveal`**, which needs to start hidden. That is gated on an `mg-js` class which `base.html` adds in an inline script **before first paint** (so a card does not flash in and then hide), with a 2.5 second timeout that removes it again if `mulai.js` never sets `window.mgReady`. JS off, blocked, or 404: everything is simply visible.
-- **Reveal uses IntersectionObserver**, so a long page animates as you reach each card rather than spending the whole budget above the fold. No observer, or reduced motion, and everything is shown at once.
-- **`prefers-reduced-motion` turns all of it off**, including the press-scale on buttons and the pulse on the unanswered Kuis Harian teaser.
-- One `mgRise` keyframe serves the whole site, and `SharedMotionAssetTest` fails if the file goes missing, since a `{% static %}` path that is not in the manifest is a 500 in production rather than a missing animation.
-- **`window.mgGrow(el, to)`** is the one public function, for pages that decide their own timing. The Belajar Gizi chapter bars live inside hidden steps and must animate when their step appears, so they carry `data-width` (which the auto-init ignores) and call it directly.
+Plus CSS-only touches: a press-scale on every button, a pulse on the Kuis Harian teaser while today's question is unanswered, and flash messages that pop in. Those hang off an `mg-js` class that `base.html` adds before first paint, so they do not start a beat late.
+
+- **Nothing here is required.** Every number, bar width and ring percentage is in the server-rendered HTML. A browser with JS off, or a blocked request, loses an animation and nothing else. Nothing in this file hides content.
+- **`prefers-reduced-motion` turns all of it off**, including the press-scale and the pulse.
+- **`window.mgGrow(el, to)`** is the one public function, for pages that decide their own timing. The Belajar Gizi chapter bars sit inside hidden steps and must animate when their step appears, so they carry `data-width` (which the auto-init ignores) and call it directly.
+- One `mgRise` keyframe serves the whole site, and `SharedMotionAssetTest` fails if the file goes missing, since a `{% static %}` path that is not in the manifest is a 500 in production rather than a lost animation.
+
+**A reveal-on-scroll was built here and then removed.** Cards on `/akun`, `/kelas` and `/alat` faded up as they scrolled into view, with an IntersectionObserver and a class that hid them until then. It read as a page still loading: content that is ready but withheld feels slower than content that is simply there, and on a page of nine cards that is nine little waits. Do not add it back. The stagger that remains (the Belajar Gizi chapter list, the leaderboard rows) runs on load and finishes in under a second, which does not have the same problem.
 
 **The trap in animating a width from zero.** Setting `el.style.width = 0` does not jump to zero when `width` has a transition: it *animates towards* zero, and setting the target immediately after overrides that from wherever it had got to, so nothing moves. A nested `requestAnimationFrame` does not fix it and neither does forcing a reflow on its own. The start value has to be written with the transition switched off:
 
@@ -1095,7 +1096,7 @@ el.style.transition = "";
 el.style.width = to;
 ```
 
-This shipped broken in the chapter bars first (measured frame by frame: 153, then a dip to 88, then back to 153, instead of growing from 0). Sample the frames before believing a bar animates.
+This shipped broken in the chapter bars first (measured frame by frame: 153, a dip to 88, then back to 153, instead of growing from 0). Sample the frames before believing a bar animates.
 
 ## Papan Peringkat (`leaderboard/`)
 

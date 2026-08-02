@@ -33,7 +33,7 @@
 
     {% for group in date_groups %}
         <div class="class-date-group" data-date="{{ group.date|date:'Y-m-d' }}">
-        <h3 class="mt-4 mg-reveal">{{ group.date|indonesian_day }}</h3>
+        <h3 class="mt-4">{{ group.date|indonesian_day }}</h3>
         {% if group.day_limit_reached %}
             <div class="class-day-cap-note mb-3">
                 <div class="fw-bold mb-1">
@@ -53,7 +53,7 @@
         <div class="list-group">
             {% for instance in group.instances %}
                 {% if RAMADAN_MODE and "Kelas Pemula" in instance.class_schedule.class_obj.name and instance.start_time.hour < 10 and instance.date >= RAMADAN_START and instance.date <= RAMADAN_END %}
-                    <div class="class-card-wrapper list-group-item border-0 p-0 mb-3 mg-reveal" style="--i: {{ forloop.counter0 }}" id="kelas-{{ instance.id }}" data-class-type="{% if 'Semi Private' in instance.class_schedule.class_obj.name %}semi_private{% elif 'Kelas Pemula' in instance.class_schedule.class_obj.name %}pemula{% else %}other{% endif %}" data-time-slot="{% if instance.start_time.hour <= 12 %}pagi{% else %}sore{% endif %}">
+                    <div class="class-card-wrapper list-group-item border-0 p-0 mb-3" id="kelas-{{ instance.id }}" data-class-type="{% if 'Semi Private' in instance.class_schedule.class_obj.name %}semi_private{% elif 'Kelas Pemula' in instance.class_schedule.class_obj.name %}pemula{% else %}other{% endif %}" data-time-slot="{% if instance.start_time.hour <= 12 %}pagi{% else %}sore{% endif %}">
                     <div class="ramadan-light-card p-3" style="border-radius: 12px; margin: 0;">
                         <div class="ramadan-light-ribbon">
                             <i class="fas fa-moon"></i> Light &middot; Ramadan
@@ -80,7 +80,7 @@
                     </div>
                     </div>
                 {% elif "Kelas Pemula" in instance.class_schedule.class_obj.name %}
-                    <div class="class-card-wrapper list-group-item border-0 p-0 mb-3 mg-reveal" style="--i: {{ forloop.counter0 }}" id="kelas-{{ instance.id }}" data-class-type="pemula" data-time-slot="{% if instance.start_time.hour <= 12 %}pagi{% else %}sore{% endif %}">
+                    <div class="class-card-wrapper list-group-item border-0 p-0 mb-3" id="kelas-{{ instance.id }}" data-class-type="pemula" data-time-slot="{% if instance.start_time.hour <= 12 %}pagi{% else %}sore{% endif %}">
                     <div class="tier-silver-strong shadow-lg p-3" style="border-radius: 12px; margin: 0;">
                         <div class="d-flex w-100 justify-content-between align-items-start mb-2">
                             <div>
@@ -103,7 +103,7 @@
                     </div>
                     </div>
                 {% elif "Semi Private" in instance.class_schedule.class_obj.name %}
-                    <div class="class-card-wrapper list-group-item border-0 p-0 mb-3 mg-reveal" style="--i: {{ forloop.counter0 }}" id="kelas-{{ instance.id }}" data-class-type="semi_private" data-time-slot="{% if instance.start_time.hour <= 12 %}pagi{% else %}sore{% endif %}">
+                    <div class="class-card-wrapper list-group-item border-0 p-0 mb-3" id="kelas-{{ instance.id }}" data-class-type="semi_private" data-time-slot="{% if instance.start_time.hour <= 12 %}pagi{% else %}sore{% endif %}">
                     <div class="tier-gold-luxury shadow-lg p-3" style="border-radius: 12px; margin: 0;">
                         <div class="tier-gold-luxury-ribbon">
                             <i class="fas fa-star"></i> Semi Private
@@ -129,7 +129,7 @@
                     </div>
                     </div>
                 {% else %}
-                    <div class="class-card-wrapper list-group-item border-0 p-0 mb-3 mg-reveal" style="--i: {{ forloop.counter0 }}" id="kelas-{{ instance.id }}" data-class-type="other" data-time-slot="{% if instance.start_time.hour <= 12 %}pagi{% else %}sore{% endif %}">
+                    <div class="class-card-wrapper list-group-item border-0 p-0 mb-3" id="kelas-{{ instance.id }}" data-class-type="other" data-time-slot="{% if instance.start_time.hour <= 12 %}pagi{% else %}sore{% endif %}">
                     <div class="shadow-sm p-3" style="border-radius: 12px; margin: 0; background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
                         <div class="d-flex w-100 justify-content-between align-items-start mb-2">
                             <div>

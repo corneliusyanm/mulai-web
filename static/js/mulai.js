@@ -6,12 +6,15 @@
  * otherwise be copy-pasted into five templates: reveal on scroll, numbers
  * counting up, bars growing, and the progress rings filling.
  *
+ * There was a reveal-on-scroll here too, and it was removed on purpose: cards
+ * arriving as you scrolled read as a page still loading, which is worse than a
+ * page that is simply there. Nothing in this file hides content any more.
+ *
  * Rules it follows:
  *
  * - **Nothing here is required for the page to work.** Every element it touches
- *   renders complete and readable without it. The only thing that hides content
- *   is `.mg-reveal`, and that is gated on the `mg-js` class this file adds, so a
- *   browser with JS off never hides anything.
+ *   renders complete and readable without it, so a browser with JS off, or a
+ *   blocked request, loses an animation and nothing else.
  * - **prefers-reduced-motion wins.** Everything jumps straight to its final
  *   state, no transitions, no counting.
  * - **Opt in from the markup**, with data attributes, so a template asks for an
@@ -24,8 +27,8 @@
   var calm =
     window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  // base.html adds `mg-js` before first paint and takes it back off if this file
-  // never arrives. Claiming it here is what stops that fallback firing.
+  // base.html adds `mg-js` before first paint, which is what the teaser pulse and
+  // the message pop hang off. Nothing depends on this file being here.
   window.mgReady = true;
   if (calm) root.classList.remove("mg-js");
 
@@ -111,38 +114,8 @@
     });
   }
 
-  /* Reveal on scroll, so a long page animates as you reach it rather than
-     spending its whole budget above the fold. */
-  function reveal() {
-    var items = Array.prototype.slice.call(document.querySelectorAll(".mg-reveal"));
-    if (!items.length) return;
-
-    if (calm || !("IntersectionObserver" in window)) {
-      items.forEach(function (item) {
-        item.classList.add("is-in");
-      });
-      return;
-    }
-
-    var observer = new IntersectionObserver(
-      function (entries) {
-        entries.forEach(function (entry) {
-          if (!entry.isIntersecting) return;
-          entry.target.classList.add("is-in");
-          observer.unobserve(entry.target);
-          runEffectsIn(entry.target);
-        });
-      },
-      // Slightly before it scrolls in, so it is already settled on arrival.
-      { rootMargin: "0px 0px -40px 0px", threshold: 0.05 }
-    );
-    items.forEach(function (item) {
-      observer.observe(item);
-    });
-  }
-
-  /* Effects inside a container, run when it appears. Marked as done so a
-     nested element is never animated twice. */
+  /* Everything that opted in, in one pass. Marked as done so nothing is
+     animated twice. */
   function runEffectsIn(scope) {
     var selectors = [
       ["[data-count-up]", countUp],
@@ -161,8 +134,6 @@
   window.mgGrow = grow;
 
   function start() {
-    reveal();
-    // Anything not inside a .mg-reveal container still runs now.
     runEffectsIn(document);
   }
 
