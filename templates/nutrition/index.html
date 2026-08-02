@@ -50,6 +50,8 @@
                 </div>
             </div>
 
+            {% include "nutrition/_daily_card.html" %}
+
             {% for chapter in chapters %}
                 <a href="{% url 'nutrition:chapter' chapter.slug %}" class="gizi-chapter-card"
                    style="--i: {{ forloop.counter0 }}">

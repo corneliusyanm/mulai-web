@@ -17,6 +17,7 @@ from classes.penalties import member_state as class_penalty_state
 from classes.sharing import whatsapp_invite_url
 from homepage.models import ReviewSummary, Testimonial
 from nutrition import progress as nutrition_progress
+from nutrition.daily import state_for as daily_quiz_state
 from payments.models import Payment
 from visits.busy_hours import quiet_hours
 from visits.models import Visit
@@ -464,6 +465,9 @@ class MemberDetailView(MemberRequiredMixin, DetailView):
         # No-show record. None for a member who has never missed a booked class,
         # and then the section is not rendered at all.
         context["class_penalty"] = class_penalty_state(member, today)
+
+        # Today's one-question quiz, the reason to open the app on a rest day.
+        context["daily"] = daily_quiz_state(member)
         return context
 
     def _with_when_labels(self, queryset):

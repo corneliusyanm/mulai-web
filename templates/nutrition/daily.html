@@ -1,0 +1,194 @@
+{% extends 'base.html' %}
+
+{% block title %}Kuis Harian - Belajar Gizi - Mulai Gym{% endblock %}
+
+{% block content %}
+<div class="container py-4 gizi-page">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="gizi-topbar">
+                <a href="{% url 'nutrition:index' %}" class="gizi-back" aria-label="Kembali">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+                <div class="gizi-topbar-title">Kuis Harian</div>
+                {% if daily.streak %}
+                    <div class="gizi-topbar-count">{{ daily.streak }} hari</div>
+                {% endif %}
+            </div>
+
+            {% if not daily %}
+                <div class="gizi-card">
+                    <h2 class="gizi-card-title">Belum ada soal harian</h2>
+                    <p class="gizi-card-body mb-0">
+                        Soalnya belum disiapin. Sementara ini bisa baca babnya dulu di
+                        <a href="{% url 'nutrition:index' %}">Belajar Gizi</a>.
+                    </p>
+                </div>
+            {% else %}
+                {% comment %}
+                No data-answer here on purpose, unlike the chapter quiz. That one
+                reveals instantly so it has to know the answer; this one round
+                trips anyway, so the correct choice never reaches the page until
+                it has been answered. There is a leaderboard point on it.
+                {% endcomment %}
+                <div class="gizi-card" id="daily-card"
+                     data-answered="{% if daily.answered %}1{% endif %}">
+                    <div class="gizi-quiz-kicker">Soal hari ini &middot; {{ daily.day|date:"d M Y" }}</div>
+                    <h2 class="gizi-card-title">{{ daily.question.question }}</h2>
+
+                    <form method="post" action="{% url 'nutrition:daily_answer' %}" class="gizi-choices" id="daily-form">
+                        {% csrf_token %}
+                        {% for choice in daily.choices %}
+                            <button type="submit" name="choice" value="{{ choice.key }}"
+                                    class="gizi-choice{% if daily.answered %}{% if choice.is_answer %} is-correct{% elif choice.is_chosen %} is-wrong{% endif %}{% endif %}"
+                                    data-choice="{{ choice.key }}"
+                                    {% if daily.answered %}disabled{% endif %}>
+                                <span class="gizi-choice-key">{{ choice.key|upper }}</span>
+                                <span class="gizi-choice-text">{{ choice.text }}</span>
+                                {% if choice.percent is not None %}
+                                    <span class="daily-split">{{ choice.percent }}%</span>
+                                {% endif %}
+                            </button>
+                        {% endfor %}
+                    </form>
+
+                    <div class="gizi-explain" id="daily-explain" {% if not daily.answered %}hidden{% endif %}>
+                        <div class="gizi-verdict {% if daily.is_correct %}is-correct{% else %}is-wrong{% endif %}" id="daily-verdict">
+                            {% if daily.answered %}{% if daily.is_correct %}Bener!{% else %}Belum tepat{% endif %}{% endif %}
+                        </div>
+                        {% comment %}
+                        Only rendered once answered. The explanation names the
+                        right answer, so shipping it up front would hand it over
+                        to anyone who opens view-source. The script fills this in
+                        from the response instead.
+                        {% endcomment %}
+                        <p class="gizi-card-body mb-0" id="daily-explain-text">{% if daily.answered %}{{ daily.question.explanation }}{% endif %}</p>
+                        <p class="daily-split-note mb-0" id="daily-split-note">
+                            {% if daily.has_split %}Angka di tiap pilihan itu jawaban member lain.{% endif %}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="daily-footer" id="daily-footer" {% if not daily.answered %}hidden{% endif %}>
+                    {% if member %}
+                        <div class="daily-footer-line" id="daily-streak-line">
+                            {% if daily.streak > 1 %}
+                                {{ daily.streak }} hari berturut-turut. Besok ada soal baru.
+                            {% else %}
+                                Besok ada soal baru. Datang tiap hari biar nyambung.
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <div class="daily-footer-line">
+                            <a href="{% url 'member_login' %}">Masuk</a> dulu kalau mau jawabanmu
+                            kesimpen dan kehitung buat poin.
+                        </div>
+                    {% endif %}
+                    <a href="{% url 'nutrition:index' %}" class="btn btn-sm btn-secondary rounded-pill fw-bold">
+                        <i class="fas fa-list me-1"></i>Belajar Gizi
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% comment %}Same slide-up sheet as the chapters, so answering feels the same everywhere.{% endcomment %}
+<div class="gizi-sheet" id="daily-sheet" hidden>
+    <div class="gizi-sheet-inner">
+        <div class="gizi-sheet-head">
+            <span class="gizi-sheet-icon" id="daily-sheet-icon"><i class="fas fa-check"></i></span>
+            <span class="gizi-sheet-verdict" id="daily-sheet-verdict"></span>
+        </div>
+        <p class="gizi-sheet-text" id="daily-sheet-text"></p>
+        <button type="button" class="btn btn-secondary w-100 rounded-pill fw-bold" id="daily-sheet-close">
+            Oke, ngerti
+        </button>
+    </div>
+</div>
+
+<script>
+(function () {
+    var card = document.getElementById('daily-card');
+    if (!card || card.dataset.answered) return;
+
+    var form = document.getElementById('daily-form');
+    var sheet = document.getElementById('daily-sheet');
+    var calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    form.addEventListener('click', function (event) {
+        var button = event.target.closest('.gizi-choice');
+        if (!button || card.dataset.answered) return;
+        // The form still posts without JS; here we take over so the page does
+        // not reload and the explanation can slide up instead.
+        event.preventDefault();
+        card.dataset.answered = '1';
+        submit(button.dataset.choice);
+    });
+
+    function submit(chosen) {
+        var body = new FormData();
+        body.append('choice', chosen);
+        body.append('csrfmiddlewaretoken', form.querySelector('[name=csrfmiddlewaretoken]').value);
+
+        fetch(form.action, {
+            method: 'POST',
+            headers: { 'X-Gizi-Fetch': '1' },
+            body: body,
+        })
+            .then(function (response) { return response.ok ? response.json() : null; })
+            .then(function (data) { data ? paint(data) : form.submit(); })
+            .catch(function () { form.submit(); });
+    }
+
+    function paint(data) {
+        form.querySelectorAll('.gizi-choice').forEach(function (button) {
+            button.disabled = true;
+            var key = button.dataset.choice;
+            if (key === data.answer) button.classList.add('is-correct');
+            else if (key === data.chosen) button.classList.add('is-wrong');
+            if (data.split && data.split[key] !== undefined) {
+                var split = document.createElement('span');
+                split.className = 'daily-split';
+                split.textContent = data.split[key] + '%';
+                button.appendChild(split);
+            }
+        });
+
+        var verdict = document.getElementById('daily-verdict');
+        verdict.textContent = data.correct ? 'Bener!' : 'Belum tepat';
+        verdict.className = 'gizi-verdict ' + (data.correct ? 'is-correct' : 'is-wrong');
+        document.getElementById('daily-explain-text').textContent = data.explanation;
+        if (data.split && Object.keys(data.split).length) {
+            document.getElementById('daily-split-note').textContent =
+                'Angka di tiap pilihan itu jawaban member lain.';
+        }
+        // The sheet carries the explanation first, so it is not on screen twice.
+        // Closing the sheet reveals the copy in the card, for re-reading.
+        var line = document.getElementById('daily-streak-line');
+        if (line && data.streak > 1) {
+            line.textContent = data.streak + ' hari berturut-turut. Besok ada soal baru.';
+        }
+
+        document.getElementById('daily-sheet-verdict').textContent =
+            data.correct ? 'Bener!' : 'Belum tepat';
+        document.getElementById('daily-sheet-text').textContent = data.explanation;
+        document.getElementById('daily-sheet-icon').innerHTML = data.correct
+            ? '<i class="fas fa-check"></i>'
+            : '<i class="fas fa-xmark"></i>';
+        sheet.className = 'gizi-sheet ' + (data.correct ? 'is-right' : 'is-wrong');
+        sheet.hidden = false;
+        void sheet.offsetWidth;
+        sheet.classList.add('is-open');
+    }
+
+    document.getElementById('daily-sheet-close').addEventListener('click', function () {
+        sheet.classList.remove('is-open');
+        window.setTimeout(function () { sheet.hidden = true; }, calm ? 0 : 260);
+        document.getElementById('daily-explain').hidden = false;
+        var footer = document.getElementById('daily-footer');
+        if (footer) footer.hidden = false;
+    });
+})();
+</script>
+{% endblock %}

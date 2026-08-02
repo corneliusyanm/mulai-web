@@ -1,15 +1,18 @@
 import json
+from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.html import escape
 
 from accounts.models import Member
 
-from . import content
+from . import content, daily
 from .analytics import question_stats
-from .models import ChapterProgress, QuizAnswer
+from .models import ChapterProgress, DailyAnswer, DailyQuestion, QuizAnswer
+from .shuffle import place_answer
 
 User = get_user_model()
 
@@ -400,3 +403,387 @@ class AnalyticsTest(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertIn("login", response["Location"])
+
+
+class AnswerPlacementTest(TestCase):
+    """The correct answer must not sit in the same slot every time.
+
+    Authored by hand, 77 of the 100 daily questions had the answer at B and none
+    at C, so "always pick the middle one" scored 77% without reading a word. These
+    are the guardrails against that coming back.
+    """
+
+    def daily_answers(self):
+        from .daily_questions import QUESTIONS
+
+        return [question["answer"] for question in QUESTIONS]
+
+    def chapter_answers(self):
+        return [
+            block["answer"]
+            for chapter in content.CHAPTERS
+            for block in chapter["blocks"]
+            if block["type"] == "quiz"
+        ]
+
+    def test_no_letter_dominates_the_daily_set(self):
+        answers = self.daily_answers()
+        counts = {letter: answers.count(letter) for letter in "abc"}
+
+        self.assertEqual(sum(counts.values()), len(answers))
+        for letter, count in counts.items():
+            # Guessing blind on three choices is 33 out of 100. Anything over 50
+            # would mean a member can beat the quiz without reading it.
+            self.assertGreater(count, 15, f"{letter} is starved: {counts}")
+            self.assertLess(count, 50, f"{letter} dominates: {counts}")
+
+    def test_no_letter_dominates_the_chapter_set(self):
+        answers = self.chapter_answers()
+        counts = {letter: answers.count(letter) for letter in "abc"}
+
+        for letter, count in counts.items():
+            self.assertGreater(count, 4, f"{letter} is starved: {counts}")
+            self.assertLess(count, len(answers) / 2, f"{letter} dominates: {counts}")
+
+    def test_placement_is_stable_for_the_same_code(self):
+        choices = [{"key": "a", "text": "satu"}, {"key": "b", "text": "dua"}]
+
+        first = place_answer("dq-001", choices, "a")
+        second = place_answer("dq-001", choices, "a")
+
+        self.assertEqual(first, second)
+
+    def test_placement_moves_the_answer_without_losing_a_choice(self):
+        choices = [
+            {"key": "a", "text": "satu"},
+            {"key": "b", "text": "dua"},
+            {"key": "c", "text": "tiga"},
+        ]
+
+        placed, answer = place_answer("dq-042", choices, "b")
+
+        self.assertEqual([c["key"] for c in placed], ["a", "b", "c"])
+        self.assertEqual(
+            sorted(c["text"] for c in placed), ["dua", "satu", "tiga"]
+        )
+        # Whichever slot it landed in, it still points at the same text.
+        moved = next(c for c in placed if c["key"] == answer)
+        self.assertEqual(moved["text"], "dua")
+
+    def test_an_answer_naming_no_choice_is_left_alone(self):
+        choices = [{"key": "a", "text": "satu"}]
+
+        placed, answer = place_answer("dq-001", choices, "z")
+
+        self.assertEqual(placed, choices)
+        self.assertEqual(answer, "z")
+
+
+class DailyRotationTest(TestCase):
+    def test_the_same_day_gives_the_same_question_to_everyone(self):
+        day = daily.ROTATION_EPOCH + timedelta(days=5)
+
+        self.assertEqual(daily.question_for(day), daily.question_for(day))
+
+    def test_consecutive_days_give_different_questions(self):
+        first = daily.question_for(daily.ROTATION_EPOCH)
+        second = daily.question_for(daily.ROTATION_EPOCH + timedelta(days=1))
+
+        self.assertNotEqual(first.code, second.code)
+
+    def test_the_rotation_wraps_after_the_last_question(self):
+        total = DailyQuestion.rotation().count()
+
+        first = daily.question_for(daily.ROTATION_EPOCH)
+        wrapped = daily.question_for(daily.ROTATION_EPOCH + timedelta(days=total))
+
+        self.assertEqual(first.code, wrapped.code)
+
+    def test_dates_before_the_epoch_still_get_a_question(self):
+        self.assertIsNotNone(daily.question_for(daily.ROTATION_EPOCH - timedelta(days=3)))
+
+    def test_deactivated_questions_drop_out_of_the_rotation(self):
+        question = daily.question_for(daily.ROTATION_EPOCH)
+        question.is_active = False
+        question.save()
+
+        self.assertNotEqual(
+            daily.question_for(daily.ROTATION_EPOCH).code, question.code
+        )
+
+    def test_no_active_questions_means_no_state_rather_than_a_crash(self):
+        DailyQuestion.objects.update(is_active=False)
+
+        self.assertIsNone(daily.question_for())
+        self.assertIsNone(daily.state_for(None))
+
+
+class DailyAnswerTest(TestCase):
+    def setUp(self):
+        self.member = a_member()
+        self.today = timezone.localdate()
+        self.question = daily.question_for(self.today)
+
+    def login(self):
+        session = self.client.session
+        session["member_email"] = self.member.email
+        session.save()
+
+    def answer(self, choice):
+        return self.client.post(reverse("nutrition:daily_answer"), {"choice": choice})
+
+    def test_answering_correctly_is_recorded(self):
+        self.login()
+
+        self.answer(self.question.answer)
+
+        saved = DailyAnswer.objects.get()
+        self.assertEqual(saved.member, self.member)
+        self.assertEqual(saved.answer_date, self.today)
+        self.assertTrue(saved.is_correct)
+
+    def test_grading_happens_on_the_server(self):
+        self.login()
+        wrong = next(
+            c["key"] for c in self.question.choices if c["key"] != self.question.answer
+        )
+
+        self.answer(wrong)
+
+        self.assertFalse(DailyAnswer.objects.get().is_correct)
+
+    def test_only_one_shot_a_day(self):
+        self.login()
+        wrong = next(
+            c["key"] for c in self.question.choices if c["key"] != self.question.answer
+        )
+
+        self.answer(wrong)
+        self.answer(self.question.answer)  # trying again
+
+        saved = DailyAnswer.objects.get()
+        self.assertEqual(DailyAnswer.objects.count(), 1)
+        self.assertFalse(saved.is_correct)
+        self.assertEqual(saved.chosen, wrong)
+
+    def test_a_second_day_is_a_new_shot(self):
+        daily.record(self.member, self.today - timedelta(days=1), self.question, "a")
+        self.login()
+
+        self.answer(self.question.answer)
+
+        self.assertEqual(DailyAnswer.objects.count(), 2)
+
+    def test_a_guest_is_graded_but_not_stored(self):
+        response = self.answer(self.question.answer)
+
+        self.assertEqual(DailyAnswer.objects.count(), 0)
+        # Kept in the session so the explanation survives the redirect.
+        self.assertEqual(
+            self.client.session["daily_answer"]["date"], self.today.isoformat()
+        )
+        self.assertTrue(self.client.session["daily_answer"]["is_correct"])
+        self.assertEqual(response.status_code, 302)
+
+    def test_the_fetch_path_gets_json_with_the_explanation(self):
+        self.login()
+
+        response = self.client.post(
+            reverse("nutrition:daily_answer"),
+            {"choice": self.question.answer},
+            headers={"X-Gizi-Fetch": "1"},
+        )
+        body = response.json()
+
+        self.assertTrue(body["saved"])
+        self.assertTrue(body["correct"])
+        self.assertEqual(body["answer"], self.question.answer)
+        self.assertEqual(body["explanation"], self.question.explanation)
+
+    def test_get_is_not_allowed(self):
+        self.assertEqual(
+            self.client.get(reverse("nutrition:daily_answer")).status_code, 405
+        )
+
+
+class DailyStreakTest(TestCase):
+    def setUp(self):
+        self.member = a_member()
+        self.today = timezone.localdate()
+        self.question = daily.question_for(self.today)
+
+    def answered_on(self, *offsets):
+        for offset in offsets:
+            day = self.today - timedelta(days=offset)
+            DailyAnswer.objects.create(
+                member=self.member,
+                question=self.question,
+                answer_date=day,
+                chosen="a",
+                is_correct=True,
+            )
+
+    def test_no_answers_is_no_streak(self):
+        self.assertEqual(daily.streak(self.member, self.today), 0)
+
+    def test_three_days_in_a_row_counting_today(self):
+        self.answered_on(0, 1, 2)
+
+        self.assertEqual(daily.streak(self.member, self.today), 3)
+
+    def test_today_being_unanswered_does_not_break_it_yet(self):
+        # Otherwise every member sees a zero every morning.
+        self.answered_on(1, 2, 3)
+
+        self.assertEqual(daily.streak(self.member, self.today), 3)
+
+    def test_a_missed_day_resets_it(self):
+        self.answered_on(0, 1, 3, 4)
+
+        self.assertEqual(daily.streak(self.member, self.today), 2)
+
+    def test_a_wrong_answer_still_keeps_the_streak(self):
+        # Showing up is the habit; being right is the leaderboard's business.
+        DailyAnswer.objects.create(
+            member=self.member,
+            question=self.question,
+            answer_date=self.today,
+            chosen="z",
+            is_correct=False,
+        )
+
+        self.assertEqual(daily.streak(self.member, self.today), 1)
+
+    def test_a_guest_has_no_streak(self):
+        self.assertEqual(daily.streak(None, self.today), 0)
+
+
+class DailySplitTest(TestCase):
+    def setUp(self):
+        self.today = timezone.localdate()
+        self.question = daily.question_for(self.today)
+
+    def answers(self, chosen, count, correct=False):
+        for index in range(count):
+            member = a_member(f"split{chosen}{index}@example.com", f"62857100{chosen}{index:03}")
+            DailyAnswer.objects.create(
+                member=member,
+                question=self.question,
+                answer_date=self.today - timedelta(days=index),
+                chosen=chosen,
+                is_correct=correct,
+            )
+
+    def test_too_few_answers_shows_nothing(self):
+        self.answers("a", 3)
+
+        self.assertEqual(daily.choice_split(self.question), {})
+
+    def test_percentages_once_there_is_a_sample(self):
+        self.answers("a", 6)
+        self.answers("b", 2)
+
+        split = daily.choice_split(self.question)
+
+        self.assertEqual(split["a"], 75)
+        self.assertEqual(split["b"], 25)
+
+    def test_blank_answers_are_not_counted(self):
+        self.answers("a", 6)
+        DailyAnswer.objects.create(
+            member=a_member("blank@example.com", "628571999999"),
+            question=self.question,
+            answer_date=self.today,
+            chosen="",
+            is_correct=False,
+        )
+
+        self.assertEqual(daily.choice_split(self.question)["a"], 100)
+
+
+class DailyPageTest(TestCase):
+    def setUp(self):
+        self.member = a_member()
+        self.today = timezone.localdate()
+        self.question = daily.question_for(self.today)
+
+    def login(self):
+        session = self.client.session
+        session["member_email"] = self.member.email
+        session.save()
+
+    def test_a_guest_can_read_todays_question(self):
+        response = self.client.get(reverse("nutrition:daily"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, escape(self.question.question))
+        self.assertFalse(response.context["daily"]["answered"])
+
+    def test_the_page_does_not_give_the_answer_away_before_answering(self):
+        response = self.client.get(reverse("nutrition:daily"))
+        body = response.content.decode()
+
+        # No choice is marked, and unlike the chapter quiz the correct key is not
+        # in the markup at all: there is a leaderboard point on this one.
+        self.assertNotIn("gizi-choice is-correct", body)
+        self.assertNotIn('data-answer="', body)
+        self.assertNotContains(response, escape(self.question.explanation))
+
+    def test_after_answering_the_explanation_is_there(self):
+        self.login()
+        daily.record(self.member, self.today, self.question, self.question.answer)
+
+        response = self.client.get(reverse("nutrition:daily"))
+
+        self.assertTrue(response.context["daily"]["answered"])
+        self.assertContains(response, escape(self.question.explanation))
+
+    def test_the_teaser_appears_on_the_account_page(self):
+        self.login()
+
+        response = self.client.get(reverse("member_details"))
+
+        self.assertContains(response, "Kuis Harian")
+        self.assertEqual(response.context["daily"]["question"], self.question)
+
+    def test_the_teaser_appears_on_the_belajar_gizi_index(self):
+        response = self.client.get(reverse("nutrition:index"))
+
+        self.assertContains(response, "Kuis Harian")
+
+
+class DailyQuestionSeedTest(TestCase):
+    def test_the_migration_seeded_every_question(self):
+        from .daily_questions import QUESTIONS
+
+        self.assertEqual(DailyQuestion.objects.count(), len(QUESTIONS))
+
+    def test_codes_are_unique_and_positions_run_in_order(self):
+        codes = list(DailyQuestion.objects.values_list("code", flat=True))
+        positions = sorted(DailyQuestion.objects.values_list("position", flat=True))
+
+        self.assertEqual(len(codes), len(set(codes)))
+        self.assertEqual(positions, list(range(1, len(positions) + 1)))
+
+    def test_every_seeded_answer_names_a_real_choice(self):
+        for question in DailyQuestion.objects.all():
+            keys = [choice["key"] for choice in question.choices]
+            self.assertIn(question.answer, keys, question.code)
+
+    def test_syncing_again_adds_nothing(self):
+        from .daily_questions import QUESTIONS
+
+        added = daily.sync_questions(DailyQuestion, QUESTIONS)
+
+        self.assertEqual(added, 0)
+
+    def test_a_new_question_gets_the_next_position(self):
+        question = DailyQuestion.objects.create(
+            code="dq-999",
+            question="Soal baru",
+            choices=[{"key": "a", "text": "ya"}, {"key": "b", "text": "nggak"}],
+            answer="a",
+            explanation="Karena begitu.",
+        )
+
+        self.assertEqual(question.position, 101)

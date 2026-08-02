@@ -27,7 +27,7 @@ Django app running mulaigym.id, the site and admin system for Mulai Gym in Bandu
 | `equipment` | `Equipment` | Panduan Alat guides + view analytics |
 | `announcements` | `Announcement` | Site-wide banner |
 | `homepage` | `ReviewSummary`, `Testimonial` | Curated Google reviews shown on the homepage |
-| `nutrition` | `ChapterProgress`, `QuizAnswer` | Belajar Gizi: chapters + quiz at `/gizi/`, content in `content.py` not the DB |
+| `nutrition` | `ChapterProgress`, `QuizAnswer`, `DailyQuestion`, `DailyAnswer` | Belajar Gizi chapters at `/gizi/` (content in `content.py`, not the DB) + Kuis Harian at `/gizi/harian/` (seeded into the DB) |
 | `grand_opening` | `GrandOpeningRegistration` | One-off launch event |
 
 ## Commands
@@ -67,6 +67,7 @@ User-facing copy is **Indonesian**, informal and warm ("Kamu", "Yuk", "biar ngga
 - **Bump the CSS cache-buster** in `base.html` (`style.css?v=NN`) whenever you touch `static/css/style.css`, or members keep the old file for a year (`WHITENOISE_MAX_AGE`).
 - **A wrong `{% static %}` path is a 500, not a broken image.** Production uses `CompressedManifestStaticFilesStorage`, which raises on a file that is not in the manifest. Anywhere a static path comes from data or config rather than being written inline, check it resolves with `staticfiles.finders.find()` and skip it if it does not, and add a test that walks the configured paths.
 - **`btn-primary` is invisible outside a white card**, since it is the same purple as the page background. On the purple, use `btn-secondary` (lime). Same trap for text: `body` sets white type, so anything inside a white card must name its own colour or it disappears.
+- **Hand-written multiple choice drifts to the middle answer.** Authored by hand, 77 of 100 daily questions had the answer at B and none at C. Any new question set goes through `place_answer()` in `nutrition/shuffle.py`, and a test asserts no letter takes more than half.
 - **No emoji in body copy.** They read as machine-written, and that is the wrong impression for anything a member has to trust. Emoji are fine as icons in a list or a tile, where they replace an image; not inside sentences, headings, or explanations.
 - **A template reading a field that does not exist fails silently.** Django resolves a missing attribute to the empty string, so the page renders with a hole in it and nothing in the logs. The payment rows on `/akun` printed a blank line for months from `payment.duration_choice`, a field `Payment` has never had. If a row looks empty, check the field is real before styling around it, and pin the value with a test.
 - **There is nothing serving `/media/`.** `MEDIA_URL` and `MEDIA_ROOT` are set, but `urls.py` only serves static and WhiteNoise does not cover media, so no model has ever used an `ImageField`. Anything upload-shaped needs an Nginx location block on the droplet first. Until then, images ship in `static/` with the deploy.

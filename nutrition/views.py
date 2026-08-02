@@ -8,13 +8,14 @@ to sign in at the end.
 import json
 
 from django.http import Http404, JsonResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from accounts.models import Member
 
-from . import content, progress
+from . import content, daily as daily_quiz, progress
 from .models import ChapterProgress, QuizAnswer
 
 BLOCK_TEMPLATES = {
@@ -58,6 +59,7 @@ def index(request):
             "chapters": chapters,
             "summary": summary,
             "levels": content.level_chips(),
+            "daily": daily_quiz.state_for(member),
             # Reading time for the whole thing, so the lead line cannot drift
             # from the chapter list under it.
             "total_minutes": sum(c["minutes"] for c in content.CHAPTERS),
@@ -207,3 +209,78 @@ def finish(request, slug):
             "all_done": summary["all_done"],
         }
     )
+
+
+def _guest_answer(request, day):
+    """A guest's answer for today, kept in the session only.
+
+    Guests are graded but nothing is stored about them. Parking it in the session
+    means the explanation survives the redirect on the no-JS path, and they get
+    the same one-shot-a-day feel as a member.
+    """
+    stored = request.session.get("daily_answer")
+    if not stored or stored.get("date") != day.isoformat():
+        return None
+    return stored
+
+
+def daily(request):
+    """Kuis Harian: today's question, or the answer if it is already in."""
+    member = _member(request)
+    day = timezone.localdate()
+    state = daily_quiz.state_for(
+        member, day, guest=None if member else _guest_answer(request, day)
+    )
+    return render(
+        request, "nutrition/daily.html", {"member": member, "daily": state}
+    )
+
+
+@require_POST
+def daily_answer(request):
+    """Record the one answer for today. Graded here, never in the browser.
+
+    Returns JSON to the page's own fetch, and redirects for a plain form post so
+    the whole thing still works with JavaScript switched off.
+    """
+    member = _member(request)
+    day = timezone.localdate()
+    question = daily_quiz.question_for(day)
+    if not question:
+        raise Http404("Belum ada soal harian")
+
+    chosen = (request.POST.get("choice") or "").strip()[:8]
+    already = daily_quiz.answer_for(member, day) or _guest_answer(request, day)
+
+    if already:
+        # Second tap, or a reload of the POST. Keep the first answer.
+        correct = (
+            already.is_correct
+            if hasattr(already, "is_correct")
+            else already["is_correct"]
+        )
+        chosen = already.chosen if hasattr(already, "chosen") else already["chosen"]
+    elif member:
+        answer, _ = daily_quiz.record(member, day, question, chosen)
+        correct = answer.is_correct
+    else:
+        correct = daily_quiz.grade(question, chosen)
+        request.session["daily_answer"] = {
+            "date": day.isoformat(),
+            "chosen": chosen,
+            "is_correct": correct,
+        }
+
+    if request.headers.get("X-Gizi-Fetch") == "1":
+        return JsonResponse(
+            {
+                "saved": bool(member),
+                "chosen": chosen,
+                "correct": correct,
+                "answer": question.answer,
+                "explanation": question.explanation,
+                "split": daily_quiz.choice_split(question),
+                "streak": daily_quiz.streak(member, day) if member else 0,
+            }
+        )
+    return redirect("nutrition:daily")

@@ -1,0 +1,34 @@
+{% comment %}
+Kuis Harian teaser. Expects `daily` (nutrition.daily.state_for), and renders
+nothing without it, which is the case when no questions are active.
+
+Shown on /akun and on the Belajar Gizi index. The whole job is to say whether
+today's question is still waiting.
+{% endcomment %}
+{% if daily %}
+<a href="{% url 'nutrition:daily' %}" class="daily-teaser{% if daily.answered %} is-done{% endif %}">
+    <div class="daily-teaser-icon">
+        <i class="fas {% if daily.answered %}fa-circle-check{% else %}fa-circle-question{% endif %}"></i>
+    </div>
+    <div class="flex-grow-1">
+        <div class="daily-teaser-kicker">Kuis Harian</div>
+        <div class="daily-teaser-title">
+            {% if daily.answered %}
+                {% if daily.is_correct %}Bener hari ini{% else %}Udah dijawab hari ini{% endif %}
+            {% else %}
+                Soal hari ini udah nunggu
+            {% endif %}
+        </div>
+        <div class="daily-teaser-note">
+            {% if daily.streak > 1 %}
+                {{ daily.streak }} hari berturut-turut
+            {% elif daily.answered %}
+                Besok ada lagi
+            {% else %}
+                Satu soal, satu menit
+            {% endif %}
+        </div>
+    </div>
+    <div class="gizi-chapter-go"><i class="fas fa-chevron-right"></i></div>
+</a>
+{% endif %}

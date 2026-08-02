@@ -1670,6 +1670,115 @@ section {
   font-weight: 700;
 }
 
+/* --- Kuis Harian --- */
+.daily-teaser {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 14px;
+  margin-bottom: 12px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #6a6af2 0%, #4B4BEC 100%);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #fff;
+  text-decoration: none;
+}
+
+.daily-teaser:hover {
+  color: #fff;
+  text-decoration: none;
+}
+
+/* Answered: steps back so an unanswered question is the thing that stands out */
+.daily-teaser.is-done {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.daily-teaser-icon {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  font-size: 1.05rem;
+}
+
+.daily-teaser-kicker {
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.85;
+  font-weight: 700;
+}
+
+.daily-teaser-title {
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.daily-teaser-note {
+  font-size: 0.75rem;
+  opacity: 0.9;
+}
+
+.daily-teaser .gizi-chapter-go {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+/* What everyone else picked, on the choice they picked it for */
+.daily-split {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--gray);
+}
+
+.gizi-choice.is-correct .daily-split {
+  color: #1f8f4e;
+}
+
+.gizi-choice.is-wrong .daily-split {
+  color: #c1483d;
+}
+
+.daily-split-note {
+  margin-top: 8px;
+  font-size: 0.7rem;
+  color: var(--gray);
+  font-style: italic;
+}
+
+.daily-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+}
+
+.daily-footer[hidden] {
+  display: none;
+}
+
+.daily-footer-line {
+  flex: 1 1 60%;
+  min-width: 160px;
+  font-size: 0.82rem;
+}
+
+.daily-footer-line a {
+  color: #fff;
+  font-weight: 700;
+}
+
 /* Confetti, only for a perfect chapter. Plain divs falling; no library, and the
    script skips it entirely under prefers-reduced-motion. */
 .gizi-confetti {

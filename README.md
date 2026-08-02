@@ -1042,6 +1042,25 @@ Chapters 6 and 7 are about training rather than food. They earn their place: the
 - `POST /gizi/<slug>/selesai/` grades, records one `QuizAnswer` per question, upserts `ChapterProgress` (keeping `best_correct` so a bad retake cannot take a badge away), and returns the new level for the result screen. A guest gets `saved: false` and an invite to sign in.
 - The `Lanjut` buttons are `btn-secondary` (lime) on purpose: `btn-primary` is the same purple as the page background, so it renders invisible outside a white card. Same trap for text, since `body` sets white type: anything inside a white card must name its own colour.
 
+### Kuis Harian (`nutrition/daily.py`)
+
+One question a day at `/gizi/harian/`, for members who have finished all nine chapters and would otherwise never open the app again. A minute, something new, and a point on the leaderboard.
+
+- **Rotation, not a calendar**: `(day - ROTATION_EPOCH) % how many are active`. Everyone gets the same question on the same day, it never runs out, and it loops after the hundredth. Adding questions shifts which day each lands on, which does not matter.
+- **One shot a day**, enforced by a unique constraint on (member, `answer_date`). A second tap returns the first answer rather than an error. `answer_date` is stored rather than derived from `created_at`, so the day is unambiguous in Asia/Jakarta and the streak query is a plain date range.
+- **Nothing reaches the page before it is answered**: no `data-answer`, no explanation text. Unlike the chapter quiz, which has to ship the answer to reveal it instantly, this one round trips anyway, and there is a leaderboard point riding on it. `DailyPageTest` pins that.
+- **Guests can answer**, are graded, and are stored nowhere: their answer lives in the session so the explanation survives the redirect on the no-JS path.
+- **Streak** counts days answered in a row, right or wrong, since showing up is the habit. Today being unanswered does not break it yet, otherwise every member would see a zero every morning.
+- **The split** ("62% picked the same") is all-time per question rather than today only, because the question comes round every hundred days and a bigger sample is worth more. Hidden below `MIN_SPLIT_SAMPLE` (5) answers, so nobody sees "100%" off one answer.
+- **Progressive enhancement**: the choices are real submit buttons in a real form. With JS the page intercepts, posts, and slides the answer sheet up; without it, the form posts, redirects, and the answered state renders server-side.
+- **Content** is `nutrition/daily_questions.py`, seeded by a migration that matches on `code` and never overwrites, so wording fixed in `/admin` survives a later migration. Adding a batch means appending to that list plus a migration calling `sync_questions`.
+
+### Answer placement (`nutrition/shuffle.py`)
+
+Written by hand, **77 of the 100 daily questions had the answer at B and not one at C**; the chapter quiz was 31 of 36 at B. "Always pick the middle one" scored 77% and 86% without reading a word.
+
+So the correct answer is moved to a slot derived from an md5 of the question's `code`. Deterministic, so a question's arrangement never changes and the answers recorded against it stay meaningful; independent per question, so appending new ones leaves the rest alone; and not a learnable pattern, which cycling a/b/c would have been. Applied once at import in both `content.py` and `daily_questions.py`, so pages, grading and the admin analytics can never disagree. The spread is now 34/32/34 and 14/10/12. Consequence: numeric options come out unsorted (130 / 50 / 400), which is the price of the plausible value not sitting in the middle every time.
+
 ### Admin (`admin/analytics/belajar-gizi/`)
 
 - Tiles for members started, members who finished everything, and answers recorded.
