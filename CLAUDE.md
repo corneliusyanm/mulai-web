@@ -12,7 +12,7 @@ Django app running mulaigym.id, the site and admin system for Mulai Gym in Bandu
 - **Frontend**: Bootstrap 5.3 + Font Awesome 6.4 from CDN, one hand-written `static/css/style.css`, vanilla JS inline in templates. Chart.js from CDN where a chart is needed.
 - **Static files**: WhiteNoise
 - **Hosting**: Docker on a DigitalOcean droplet, Nginx in front, Cloudflare for DNS/SSL, deploy via `.github/workflows/deploy.yml`
-- **Cron on the droplet**: `generate_daily_class_instances.sh`, `generate_daily_reminders.sh`
+- **Cron on the droplet**: `generate_daily_class_instances.sh`, `generate_daily_reminders.sh` (both ~07:03 WIB), `generate_daily_penalties.sh` (21:00 WIB, after closing)
 
 ## Apps
 
@@ -75,6 +75,7 @@ User-facing copy is **Indonesian**, informal and warm ("Kamu", "Yuk", "biar ngga
 
 - **Precompute per-row state in the view, not in the template.** A template calling `instance.booked_members.count()` or `member in instance.booked_members.all` runs a query per card. Attach plain attributes to each object in `get_context_data` instead (see `ClassListView`), and pin the result with `assertNumQueries` so it cannot regress. The class list stays at 6 queries whether it renders 6 cards or 12.
 - **One rule, one function.** A rule that both a template and a POST handler need lives in one place, so a member never sees a button the server then refuses. `booking_block_reason()` in `classes/models.py` is the pattern: it returns `None` or a dict with `code` / `short` / `label` / `message`, and the class list, the class detail page and `book_class` all call it.
+- **One exception to constants-in-code**: the no-show penalty numbers live in a `PenaltySettings` row editable at `/admin`, because they are being tuned against real behaviour and a deploy per experiment is the wrong friction. Everything else stays a constant.
 - **Business limits are module constants**, not magic numbers: `MAX_CLASSES_PER_DAY` (`classes/models.py`), `RECENT_VISITS_LIMIT` / `PAST_CLASSES_LIMIT` / `NUDGE_DAYS_BEFORE` (`accounts/views.py`). User-facing copy interpolates the constant so the number never drifts from the rule.
 - **Member-facing rules go in the view, not the model**, so staff can still override from `/admin` (e.g. an admin can add a member to a 3rd class in a day).
 - Only accept a fixed set of values for redirect targets (`next=list`), never an arbitrary URL.

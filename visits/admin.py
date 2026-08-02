@@ -28,6 +28,7 @@ from accounts.models import Member, Tamu
 from payments.models import Payment, Package
 from purchases.models import Sale, Product, SaleItem
 from equipment.models import Equipment
+from classes.attendance import no_show_scan
 from classes.models import ClassInstance
 from nutrition.analytics import nutrition_analytics_view
 
@@ -1227,9 +1228,11 @@ def member_whatsapp_url(member):
 
 
 def compute_class_no_show_data(start_date, end_date, today=None):
-    """
-    Bookings are ClassInstance.booked_members; cancelled instances excluded.
-    No-show: booked member, instance date <= today, no visit on that local calendar date.
+    """Admin report rows for bookings nobody turned up to.
+
+    What counts as a no-show lives in classes/attendance.py, shared with the
+    nightly booking penalty, so this report and the rule that locks a member's
+    booking can never disagree about the same class.
     """
     if today is None:
         today = timezone.localdate()
@@ -1237,48 +1240,21 @@ def compute_class_no_show_data(start_date, end_date, today=None):
     if start_date > end_date:
         start_date, end_date = end_date, start_date
 
-    instances = (
-        ClassInstance.objects.filter(date__gte=start_date, date__lte=end_date)
-        .exclude(status="CANCELLED")
-        .select_related("class_schedule__class_obj")
-        .prefetch_related("booked_members")
-        .order_by("-date", "-start_time")
-    )
+    scan = no_show_scan(start_date, end_date, today=today)
+    confirmed_bookings_past = scan["past_bookings"]
 
-    visit_dates_by_member = {}
-    visit_qs = Visit.objects.filter(
-        check_in_time__date__gte=start_date,
-        check_in_time__date__lte=end_date,
-    ).only("member_id", "check_in_time")
-    for visit in visit_qs.iterator():
-        local_date = timezone.localtime(visit.check_in_time).date()
-        visit_dates_by_member.setdefault(visit.member_id, set()).add(local_date)
-
-    confirmed_bookings_past = 0
-    rows = []
-    for instance in instances:
-        class_name = instance.class_schedule.class_obj.name
-        if instance.date <= today:
-            confirmed_bookings_past += instance.booked_members.count()
-
-        if instance.date > today:
-            continue
-
-        for member in instance.booked_members.all():
-            visited_dates = visit_dates_by_member.get(member.id)
-            if visited_dates and instance.date in visited_dates:
-                continue
-            rows.append(
-                {
-                    "class_name": class_name,
-                    "class_date": instance.date,
-                    "start_time": instance.start_time,
-                    "member": member,
-                    "member_name": member.name,
-                    "phone": member.phone_number or "",
-                    "whatsapp_url": member_whatsapp_url(member),
-                }
-            )
+    rows = [
+        {
+            "class_name": instance.class_schedule.class_obj.name,
+            "class_date": instance.date,
+            "start_time": instance.start_time,
+            "member": member,
+            "member_name": member.name,
+            "phone": member.phone_number or "",
+            "whatsapp_url": member_whatsapp_url(member),
+        }
+        for member, instance in scan["missed"]
+    ]
 
     member_no_show_counts = {}
     for row in rows:

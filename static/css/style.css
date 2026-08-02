@@ -830,6 +830,74 @@ section {
   border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
+/* No-show record on the account page. Three levels: a locked booking, a warning
+   on the last free strike, and a quiet history line. Sits on the purple page
+   background, so each level brings its own surface. */
+.class-penalty {
+  padding: 14px 16px;
+  border-radius: 14px;
+  color: #fff;
+  box-shadow: 0 8px 22px rgba(20, 20, 80, 0.18);
+}
+
+.class-penalty-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.class-penalty-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+  font-size: 0.95rem;
+}
+
+.class-penalty-banned {
+  background: linear-gradient(135deg, #f2683c 0%, #de4b2a 100%);
+}
+
+.class-penalty-warning {
+  background: linear-gradient(135deg, #f0a500 0%, #e08600 100%);
+}
+
+/* The history state is not bad news, so it stays quiet against the purple */
+.class-penalty-history {
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  box-shadow: none;
+}
+
+.class-penalty-list {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.28);
+  font-size: 0.78rem;
+}
+
+.class-penalty-miss {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 2px 0;
+}
+
+.class-penalty-date {
+  opacity: 0.85;
+  white-space: nowrap;
+}
+
+.class-penalty-more {
+  opacity: 0.8;
+  font-style: italic;
+  padding-top: 2px;
+}
+
 /* Visit habit tiles on the account page */
 .habit-stat + .habit-stat {
   border-left: 1px solid #eee;

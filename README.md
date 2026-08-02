@@ -773,6 +773,33 @@ Members used to book 3-4 classes on the same day just to be sure they never hit 
 - **Shown before they tap**: a member who already has 2 classes on that date sees a disabled "Maks 2 Kelas per Hari" button plus a note listing the classes they already hold that day, instead of an error after tapping.
 - **To change the limit**: edit `MAX_CLASSES_PER_DAY` in `classes/models.py`. All user-facing messages read the number from that constant.
 
+### No-Show Penalty (Penalti Kelas)
+
+The 2-per-day cap stopped members hoarding slots. This is for the other half of the problem: booking a class and not turning up, which holds a spot nobody else can take.
+
+**The rule**: miss more than `misses_allowed` (2) **days** inside a rolling `window_days` (15), and class booking locks for `ban_days` (3). Every further miss locks it again.
+
+- **What counts as missing**: `classes/attendance.py`, shared with the admin no-show report so the two can never disagree. A member missed a class when they held a booking, the date has passed, and they did not check in **at all** that local day. Coming at 19:00 after skipping the 07:00 class counts as attending, deliberately: the strict version punishes everyone who forgot to tap the QR or whom an admin checked in late, and those are indistinguishable from a real no-show. Cancelled classes and waitlist places never count.
+- **Strikes are per day, not per class.** Two classes missed on one date is one strike. Against a year of real bookings, per-class counting produced 148 penalties across 17 members and per-day produced 137 across 15; the difference is one lie-in with two classes booked.
+- **Nothing before `effective_from` counts.** The settings row is created by a migration with that field set to the deploy date, so nobody is punished for behaviour from before the rule existed and the first possible penalty is three missed days after launch.
+- **Configurable in `/admin`**, not in code: `PenaltySettings` is a single row with `enabled`, `window_days`, `misses_allowed`, `ban_days` and `effective_from`. This is a deliberate exception to the "business limits are module constants" convention, because these numbers are being tuned by watching real members and a deploy per experiment is the wrong friction. `enabled` off stops everything without touching data.
+- **`blocked_until` is exclusive** everywhere (`Member.booking_blocked_until`, `BookingPenalty.blocked_until`): a 3-day penalty starting on the 15th sets it to the 18th, and the 18th is the first day they can book again. The UI always shows that date, since it is the one a member cares about.
+
+**What the nightly command does** (`apply_class_penalties`, 21:00 WIB, after the gym closes so every class is settled):
+
+1. Records a `ClassMiss` per unattended booking that day. Unique per (member, class), which makes the whole thing safe to run twice.
+2. Re-counts each affected member's miss days in the window. Over the allowance, it creates a `BookingPenalty`, sets `Member.booking_blocked_until`, and files a staff reminder (`PENALTI_KELAS`) so somebody can explain, since members have no notification channel.
+3. Cancels their bookings **after** today inside the locked days, promoting the waitlist so the slot goes to someone who will use it, and drops their waitlist places in that range. Today's bookings are left alone on purpose: their misses were just recorded and removing them would erase the evidence from the no-show report.
+4. An already-locked member who triggers again has the lock **extended, never shortened**.
+
+`--dry-run` reports and rolls back; `--date YYYY-MM-DD` catches up an evening the cron missed. Cron script: `generate_daily_penalties.sh`.
+
+**Enforcement** is one new `PENALTY` code in `booking_block_reason()`, the function the class list, the class detail page and `book_class` all already call, so the button reads "Kena Penalti" and the POST refuses. It reads a field already loaded on the member, so the list page costs nothing extra. Admin booking is a separate path and can still override.
+
+**What the member sees on `/akun`**: nothing at all if they have never missed a booked class. Then a quiet history line, a warning on their last free strike ("sekali lagi nggak dateng kena penalti"), or the lock with the date they get booking back. The copy is careful to say the gym itself is still open to them; only class booking is locked.
+
+**For staff**: `booking_blocked_until` is on the member page (clear it to lift a lock immediately) plus a "Penalti Kelas" column and filter on the member list. `Kelas Bolos` and `Penalti Kelas` are browsable but not addable by hand, since they are derived from real bookings and check-ins.
+
 ### Technical Implementation
 - **Time-Based Filtering (`classes/views.py`)**:
   - Uses timezone-aware datetime comparison to filter past classes

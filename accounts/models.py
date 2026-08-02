@@ -99,9 +99,27 @@ class Member(models.Model):
         default=False,
         help_text="Flag: jangan buat reminder otomatis untuk member ini",
     )
+    # Set by the nightly no-show penalty (classes/penalties.py). Exclusive: the
+    # date itself is the first day they can book again. Clearing it lifts the
+    # penalty immediately, which is how staff make an exception.
+    booking_blocked_until = models.DateField(
+        null=True,
+        blank=True,
+        help_text=(
+            "Booking kelas dikunci sampai tanggal ini (tanggal ini sudah boleh "
+            "booking lagi). Kosongkan untuk membuka kunci sekarang."
+        ),
+    )
 
     def __str__(self):
         return f"{self.name} ({self.email})"
+
+    def booking_locked(self, today=None):
+        """Whether the no-show penalty currently blocks this member's booking."""
+        if not self.booking_blocked_until:
+            return False
+        today = today or timezone.localdate()
+        return today < self.booking_blocked_until
 
     @property
     def is_active_member(self):

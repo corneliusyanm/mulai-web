@@ -9,6 +9,7 @@ class Reminder(models.Model):
         ("PAYMENT_DUE", "Bayar Cicilan"),
         ("NO_VISIT", "Lama Tidak Visit"),
         ("MEMBERSHIP_EXPIRING", "Membership Berakhir"),
+        ("PENALTI_KELAS", "Penalti Kelas"),
         ("LOKER", "Loker"),
         ("LAINNYA", "Lainnya"),
     ]

@@ -12,8 +12,20 @@ from visits.admin import VisitAdmin, admin_site
 from visits.models import Visit
 from reminders.models import Reminder
 from reminders.admin import ReminderAdmin
-from classes.models import Class, ClassInstance
-from classes.admin import ClassAdmin, ClassInstanceAdmin
+from classes.models import (
+    BookingPenalty,
+    Class,
+    ClassInstance,
+    ClassMiss,
+    PenaltySettings,
+)
+from classes.admin import (
+    BookingPenaltyAdmin,
+    ClassAdmin,
+    ClassInstanceAdmin,
+    ClassMissAdmin,
+    PenaltySettingsAdmin,
+)
 from payments.admin import PaymentAdminForm
 
 # Import the new models and admin configurations from the purchases app
@@ -400,3 +412,13 @@ if not admin_site._registry.get(Class):
 
 if not admin_site._registry.get(ClassInstance):
     admin_site.register(ClassInstance, ClassInstanceAdmin)
+
+# No-show penalty: the rules, the misses, and the penalties handed out
+if not admin_site._registry.get(PenaltySettings):
+    admin_site.register(PenaltySettings, PenaltySettingsAdmin)
+
+if not admin_site._registry.get(ClassMiss):
+    admin_site.register(ClassMiss, ClassMissAdmin)
+
+if not admin_site._registry.get(BookingPenalty):
+    admin_site.register(BookingPenalty, BookingPenaltyAdmin)

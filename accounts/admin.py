@@ -183,6 +183,23 @@ class SaleInline(admin.TabularInline):
         return False  # Prevent adding sales from member detail page
 
 
+class BookingLockFilter(admin.SimpleListFilter):
+    """Who cannot book classes right now, from the no-show penalty."""
+
+    title = "penalti kelas"
+    parameter_name = "booking_lock"
+
+    def lookups(self, request, model_admin):
+        return (("locked", "Sedang dikunci"), ("ever", "Pernah kena penalti"))
+
+    def queryset(self, request, queryset):
+        if self.value() == "locked":
+            return queryset.filter(booking_blocked_until__gt=timezone.localdate())
+        if self.value() == "ever":
+            return queryset.filter(booking_penalties__isnull=False).distinct()
+        return queryset
+
+
 class MemberAdmin(WhatsAppLinkMixin, admin.ModelAdmin):
     inlines = [PaymentInline, SaleInline]
     list_display = (
@@ -198,12 +215,14 @@ class MemberAdmin(WhatsAppLinkMixin, admin.ModelAdmin):
         "asked_google_review",
         "missed_installment",
         "skip_auto_reminder",
+        "booking_lock",
         "membership_status",
         "created_at",
     )
     list_filter = (
         "gender",
         "is_pemula",
+        BookingLockFilter,
         "asked_referral",
         "asked_google_review",
         "missed_installment",
@@ -261,6 +280,17 @@ class MemberAdmin(WhatsAppLinkMixin, admin.ModelAdmin):
             },
         ),
         (
+            "Penalti Kelas",
+            {
+                "fields": ("booking_blocked_until",),
+                "description": (
+                    "Diisi otomatis tiap malam oleh apply_class_penalties. "
+                    "Kosongkan untuk membuka kunci booking sekarang. Riwayat "
+                    "lengkapnya ada di Kelas Bolos dan Penalti Kelas."
+                ),
+            },
+        ),
+        (
             "Transaction Summary",
             {
                 "fields": (
@@ -312,6 +342,22 @@ class MemberAdmin(WhatsAppLinkMixin, admin.ModelAdmin):
         return "-"
 
     formatted_semi_private_active_until.short_description = "Semi Private Active Until"
+
+    def booking_lock(self, obj):
+        if not obj.booking_blocked_until:
+            return "-"
+        if obj.booking_locked():
+            return format_html(
+                '<span style="color: #c62828; font-weight: 600;">sampai {}</span>',
+                obj.booking_blocked_until.strftime("%d %b"),
+            )
+        return format_html(
+            '<span style="color: #888;">selesai {}</span>',
+            obj.booking_blocked_until.strftime("%d %b"),
+        )
+
+    booking_lock.short_description = "Penalti Kelas"
+    booking_lock.admin_order_field = "booking_blocked_until"
 
     def membership_status(self, obj):
         if obj.is_active_member:

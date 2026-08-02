@@ -1,0 +1,74 @@
+{% comment %}
+No-show record on /akun. Expects `class_penalty` (classes.penalties.member_state).
+
+Renders nothing at all for a member who has never missed a booked class, which is
+most of them: there is no reason for someone who always turns up to learn that
+this rule exists.
+
+Three levels: `banned` while booking is locked, `warning` on the last free
+strike, `history` for a miss or two with nothing hanging over them.
+{% endcomment %}
+{% if class_penalty %}
+<div class="row justify-content-center mb-4">
+    <div class="col-lg-8">
+        <div class="class-penalty class-penalty-{{ class_penalty.level }}">
+            <div class="class-penalty-head">
+                <div class="class-penalty-icon">
+                    <i class="fas {% if class_penalty.level == 'banned' %}fa-lock{% elif class_penalty.level == 'warning' %}fa-triangle-exclamation{% else %}fa-calendar-xmark{% endif %}"></i>
+                </div>
+                <div class="flex-grow-1">
+                    {% if class_penalty.level == 'banned' %}
+                        <div class="fw-bold">Booking kelas dikunci sampai {{ class_penalty.blocked_until|date:"d M Y" }}</div>
+                        <div class="small">
+                            Kamu nggak dateng {{ class_penalty.misses_in_window }} kali dalam
+                            {{ class_penalty.window_days }} hari terakhir padahal udah booking.
+                            {% if class_penalty.penalty.bookings_cancelled %}
+                                {{ class_penalty.penalty.bookings_cancelled }} booking kamu di hari-hari itu
+                                otomatis dibatalkan biar member lain kebagian.
+                            {% endif %}
+                        </div>
+                        <div class="small mt-1">
+                            Tanggal {{ class_penalty.blocked_until|date:"d M" }} kamu udah bisa booking lagi.
+                            Latihan sendiri di gym tetep bisa kapan aja, yang dikunci cuma booking kelas.
+                        </div>
+                    {% elif class_penalty.level == 'warning' %}
+                        <div class="fw-bold">
+                            Hati-hati, sekali lagi nggak dateng kena penalti
+                        </div>
+                        <div class="small">
+                            Dalam {{ class_penalty.window_days }} hari terakhir kamu
+                            {{ class_penalty.misses_in_window }} kali booking tapi nggak dateng. Kalau
+                            kejadian sekali lagi, booking kelas dikunci {{ class_penalty.ban_days }} hari.
+                        </div>
+                        <div class="small mt-1">
+                            Nggak bisa dateng? Batalkan bookingnya aja, itu nggak dihitung.
+                        </div>
+                    {% else %}
+                        <div class="fw-bold">Catatan kelas yang nggak kamu hadiri</div>
+                        <div class="small">
+                            Maksimal {{ class_penalty.misses_allowed }} kali dalam
+                            {{ class_penalty.window_days }} hari. Lebih dari itu, booking kelas dikunci
+                            {{ class_penalty.ban_days }} hari. Kalau nggak bisa dateng, batalkan aja
+                            bookingnya, itu nggak dihitung.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="class-penalty-list">
+                {% for miss in class_penalty.recent_misses %}
+                    <div class="class-penalty-miss">
+                        <span>{{ miss.class_name }}</span>
+                        <span class="class-penalty-date">{{ miss.class_date|date:"d M Y" }}</span>
+                    </div>
+                {% endfor %}
+                {% if class_penalty.total_misses > class_penalty.recent_misses|length %}
+                    <div class="class-penalty-more">
+                        dan {{ class_penalty.total_misses|add:"-5" }} lagi sebelumnya
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
