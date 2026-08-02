@@ -1083,6 +1083,19 @@ The member pages were static: correct, but they read like documents rather than 
 - **Reveal uses IntersectionObserver**, so a long page animates as you reach each card rather than spending the whole budget above the fold. No observer, or reduced motion, and everything is shown at once.
 - **`prefers-reduced-motion` turns all of it off**, including the press-scale on buttons and the pulse on the unanswered Kuis Harian teaser.
 - One `mgRise` keyframe serves the whole site, and `SharedMotionAssetTest` fails if the file goes missing, since a `{% static %}` path that is not in the manifest is a 500 in production rather than a missing animation.
+- **`window.mgGrow(el, to)`** is the one public function, for pages that decide their own timing. The Belajar Gizi chapter bars live inside hidden steps and must animate when their step appears, so they carry `data-width` (which the auto-init ignores) and call it directly.
+
+**The trap in animating a width from zero.** Setting `el.style.width = 0` does not jump to zero when `width` has a transition: it *animates towards* zero, and setting the target immediately after overrides that from wherever it had got to, so nothing moves. A nested `requestAnimationFrame` does not fix it and neither does forcing a reflow on its own. The start value has to be written with the transition switched off:
+
+```js
+el.style.transition = "none";
+el.style.width = "0";
+void el.offsetWidth;        // flush the zero
+el.style.transition = "";
+el.style.width = to;
+```
+
+This shipped broken in the chapter bars first (measured frame by frame: 153, then a dip to 88, then back to 153, instead of growing from 0). Sample the frames before believing a bar animates.
 
 ## Papan Peringkat (`leaderboard/`)
 

@@ -156,15 +156,19 @@ hidden and the explanation shows inline inside the card instead.
         if (steps[index].classList.contains('gizi-result-step')) submit();
     }
 
-    // Bars start at zero width and grow when their step appears. Without this
-    // they are already drawn before anyone looks at them.
+    // Bars grow when their step appears, rather than being fully drawn before
+    // anyone looks at them. mgGrow does the actual work: setting the width to
+    // zero here would only animate *towards* zero, since width has a transition,
+    // and the target would then override it from wherever it had got to.
     function growBars(step) {
         step.querySelectorAll('.gizi-bar').forEach(function (barEl) {
             var target = barEl.dataset.width;
             if (!target) return;
-            barEl.style.width = calm ? target : '0%';
-            if (calm) return;
-            window.setTimeout(function () { barEl.style.width = target; }, 60);
+            if (calm || !window.mgGrow) {
+                barEl.style.width = target;
+                return;
+            }
+            window.mgGrow(barEl, target);
         });
     }
 

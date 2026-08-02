@@ -72,9 +72,14 @@
     });
   }
 
-  /* Grow a bar to data-grow (any CSS width, e.g. "62%"). */
-  function grow(el) {
-    var to = el.dataset.grow;
+  /* Grow a bar to `to`, defaulting to data-grow (any CSS width, e.g. "62%").
+   *
+   * Exposed as window.mgGrow for pages that decide their own timing: the Belajar
+   * Gizi chapter bars live inside hidden steps and must animate when their step
+   * appears, not on page load, so they carry data-width rather than data-grow and
+   * call this directly. */
+  function grow(el, to) {
+    to = to || el.dataset.grow;
     if (!to) return;
     if (calm) {
       el.style.width = to;
@@ -152,6 +157,8 @@
       });
     });
   }
+
+  window.mgGrow = grow;
 
   function start() {
     reveal();
