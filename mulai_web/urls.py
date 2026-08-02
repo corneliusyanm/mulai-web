@@ -47,6 +47,7 @@ urlpatterns = [
     path("alat/", include("equipment.urls", namespace="equipment")),
     path("kelas/", include("classes.urls", namespace="classes")),
     path("gizi/", include("nutrition.urls", namespace="nutrition")),
+    path("papan/", include("leaderboard.urls", namespace="leaderboard")),
     path("pengumuman/", include("announcements.urls", namespace="announcements")),
     # Redirect /kuesioner to Google Form
     path(

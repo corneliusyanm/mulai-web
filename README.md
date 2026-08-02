@@ -1067,6 +1067,35 @@ So the correct answer is moved to a slot derived from an md5 of the question's `
 - **"Yang paling sering salah" counts each member's first answer per question** (`analytics.first_answers`, Postgres `DISTINCT ON`). A retake after reading the explanation would otherwise make everyone look like they understood it all along. It also names the wrong answer most people picked, which is the actual misunderstanding to explain on the floor.
 - Per-chapter table uses each member's best score, matching the badge they keep.
 
+## Papan Peringkat (`leaderboard/`)
+
+A members-only leaderboard at `/papan/`, with a tab for this month and one for all time, plus a picker for past months once there is more than one. Top 30 shown, and the member's own points always, but **not their own rank**: a beginner discovering they are 78th is not encouraged by it, and the monthly board resets so newcomers have something winnable.
+
+**No table and no snapshot.** Everything is derived from data that already exists, as one raw statement cached for five minutes (`CACHE_SECONDS`). Two reasons: nothing to keep in sync, so deleting a bogus visit fixes the board on the next refresh including last month's; and no storage, which matters on a 500 MB free tier. Measured on the production copy: 37 ms for all time across 465 members, 10 ms for a month.
+
+**The points** (`POINTS` in `leaderboard/board.py`):
+
+| Source | Points |
+| --- | --- |
+| A gym visit | +8 |
+| A class booked and attended that day | +2 |
+| A Belajar Gizi question right the first time | +2 |
+| A Kuis Harian question right | +1 |
+| A day with a booked class and no show | -10 |
+
+Visits dominate on purpose: turning up is the behaviour worth rewarding and everything else is a bonus. All of Belajar Gizi is 72 points, once.
+
+Details that matter:
+
+- **Belajar Gizi counts first answers only**, taken before the date filter, so retaking a chapter can never pay twice and a question always scores in the month it was first answered. Same `DISTINCT ON` rule as the admin miss-rate report.
+- **No-shows come from `ClassMiss`**, which only exists from the penalty's `effective_from`, so nobody is docked for behaviour from before that rule existed. It also means the all-time board counts visits from 2025 but misses only from August 2026. Deliberate, and consistent with the penalty starting clean.
+- **A missed day costs 10, not a missed class**, matching the penalty: two classes skipped on one date is one day.
+- **Ties share a rank** and the next member skips a number, so two members on 306 are both 10th and the next is 12th.
+- **Names are shortened**: `display_name()` keeps the first name whole and initials the rest, "Cornelius Yan Mintareja" to "Cornelius Y. M.". Members recognise each other without the board publishing a full name beside somebody's attendance record.
+- **The period comes from `?periode=`** (`2026-08` or `lifetime`) so a month is bookmarkable. Anything unrecognised, out of range, or before `EARLIEST_MONTH` falls back to the current month rather than erroring, since the value comes from a query string.
+- **Nothing is editable in the admin**, by choice: the board is a view of member data, so the fix for anyone gaming it is to correct their visits.
+- The all-time board includes members whose membership has lapsed. They cannot add points (check-in needs an active membership) but they keep their place in the history.
+
 ## Products & Sales
 
 ### Models (`payments/models.py`)

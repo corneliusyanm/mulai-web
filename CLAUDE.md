@@ -28,6 +28,7 @@ Django app running mulaigym.id, the site and admin system for Mulai Gym in Bandu
 | `announcements` | `Announcement` | Site-wide banner |
 | `homepage` | `ReviewSummary`, `Testimonial` | Curated Google reviews shown on the homepage |
 | `nutrition` | `ChapterProgress`, `QuizAnswer`, `DailyQuestion`, `DailyAnswer` | Belajar Gizi chapters at `/gizi/` (content in `content.py`, not the DB) + Kuis Harian at `/gizi/harian/` (seeded into the DB) |
+| `leaderboard` | none | Papan Peringkat at `/papan/`: points computed live from visits, classes and quizzes, cached, no tables |
 | `grand_opening` | `GrandOpeningRegistration` | One-off launch event |
 
 ## Commands

@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     "announcements",
     "homepage",
     "nutrition",
+    "leaderboard",
 ]
 
 RAMADAN_MODE = os.environ.get("RAMADAN_MODE", "false").lower() == "true"
