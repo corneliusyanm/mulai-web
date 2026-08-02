@@ -17,6 +17,8 @@ Two rules when adding to this file:
 
 from urllib.parse import quote
 
+from .shuffle import place_answer
+
 # Prices behind the "protein per Rp 10.000" chart. The one thing here that
 # goes stale, so it sits in one place with a date on it.
 PRICE_NOTE = "Perkiraan harga pasar Bandung, awal 2026. Angkanya bisa geser, urutannya nggak."
@@ -1249,6 +1251,26 @@ CHAPTERS = [
         ],
     },
 ]
+
+
+def _rebalance_answers():
+    """Spread the correct answers across the choices, once, at import.
+
+    Authored by hand, 31 of these 36 questions had the answer at B and none at C.
+    Mutating CHAPTERS in place rather than transforming on read means every reader
+    (the chapter page, grading, the admin miss-rate report) sees one arrangement
+    and the letters can never disagree. See nutrition/shuffle.py.
+    """
+    for chapter in CHAPTERS:
+        for block in chapter["blocks"]:
+            if block["type"] != "quiz":
+                continue
+            block["choices"], block["answer"] = place_answer(
+                block["key"], block["choices"], block["answer"]
+            )
+
+
+_rebalance_answers()
 
 
 def chapters():
