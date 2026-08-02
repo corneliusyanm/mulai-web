@@ -1093,8 +1093,18 @@ Details that matter:
 - **Ties share a rank** and the next member skips a number, so two members on 306 are both 10th and the next is 12th.
 - **Names are shortened**: `display_name()` keeps the first name whole and initials the rest, "Cornelius Yan Mintareja" to "Cornelius Y. M.". Members recognise each other without the board publishing a full name beside somebody's attendance record.
 - **The period comes from `?periode=`** (`2026-08` or `lifetime`) so a month is bookmarkable. Anything unrecognised, out of range, or before `EARLIEST_MONTH` falls back to the current month rather than erroring, since the value comes from a query string.
+- **Past months stay readable forever.** `months_available()` lists every month from `EARLIEST_MONTH` to now, newest first, and the picker appears as soon as there is more than one. In October 2026 that is Oktober, September, Agustus, each recomputed from the same data on demand.
+- **The left tab is "a month", not "this month"**, and carries which one it is showing, so viewing August in October still lights up a tab instead of leaving both dark.
+- **Every row shows all five sources** (visits, classes, Belajar Gizi, Kuis Harian, missed days), including the podium and including zeros, so a column can be read straight down instead of shifting about depending on who did what. One partial, `_counts.html`, renders them everywhere.
 - **Nothing is editable in the admin**, by choice: the board is a view of member data, so the fix for anyone gaming it is to correct their visits.
 - The all-time board includes members whose membership has lapsed. They cannot add points (check-in needs an active membership) but they keep their place in the history.
+
+**The visual treatment** is heavier than the rest of the site on purpose, because a leaderboard people look at for fun should not read like a table:
+
+- The podium is gold, silver and bronze gradient cards, winner raised in the middle via flex `order` (source order stays 1, 2, 3 for screen readers), a crown for first, and a slow CSS sheen across the winner's card.
+- A bar behind each row shows `share`, how far along the leader's total that member is, growing from zero once when the list lands. Clamped at 0, since a member deep in penalties is negative and a bar cannot be.
+- The member's own points count up from zero, their row is lime, and the cards and rows rise in with a stagger.
+- All of it is off under `prefers-reduced-motion`, where the bars render at their final width instead.
 
 ## Products & Sales
 

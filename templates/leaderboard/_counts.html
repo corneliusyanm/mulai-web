@@ -1,0 +1,22 @@
+{% comment %}
+The five things points come from, one line. Expects `counts` (visits, classes,
+gizi, daily, misses) and optionally `big` for the member's own card.
+
+All five always show, including a zero, so a row can be read straight down the
+column instead of shifting about depending on who did what.
+{% endcomment %}
+<span class="board-count{% if big %} is-big{% endif %}" title="Kunjungan gym">
+    <i class="fas fa-dumbbell"></i>{{ counts.visits }}
+</span>
+<span class="board-count{% if big %} is-big{% endif %}" title="Kelas dihadiri">
+    <i class="fas fa-users"></i>{{ counts.classes }}
+</span>
+<span class="board-count{% if big %} is-big{% endif %}" title="Soal Belajar Gizi bener">
+    <i class="fas fa-book-open"></i>{{ counts.gizi }}
+</span>
+<span class="board-count{% if big %} is-big{% endif %}" title="Kuis Harian bener">
+    <i class="fas fa-bolt"></i>{{ counts.daily }}
+</span>
+<span class="board-count{% if big %} is-big{% endif %}{% if counts.misses %} is-miss{% endif %}" title="Hari bolos kelas">
+    <i class="fas fa-calendar-xmark"></i>{{ counts.misses }}
+</span>

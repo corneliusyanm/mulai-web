@@ -2725,12 +2725,17 @@ section {
   font-size: 0.85rem;
   font-weight: 700;
   text-decoration: none;
+  transition: transform 0.15s ease, background 0.2s ease;
 }
 
 .board-tab:hover {
   color: #fff;
   text-decoration: none;
   background: rgba(255, 255, 255, 0.25);
+}
+
+.board-tab:active {
+  transform: scale(0.98);
 }
 
 .board-tab.is-active {
@@ -2762,17 +2767,35 @@ section {
   color: var(--dark);
 }
 
-/* The member's own points, first thing on the page. No rank on purpose:
-   discovering you are 78th is not encouraging. */
+/* --- the member's own points, first thing on the page --- */
 .board-mine {
+  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 14px;
   margin-bottom: 16px;
-  border-radius: 16px;
-  background: #fff;
-  box-shadow: 0 6px 20px rgba(20, 20, 80, 0.16);
+  border-radius: 18px;
+  background: linear-gradient(135deg, #ffffff 0%, #f3f3ff 100%);
+  box-shadow: 0 10px 26px rgba(20, 20, 80, 0.2);
+  animation: boardRise 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* A soft brand-coloured glow behind the avatar, so the card is not flat white */
+.board-mine-glow {
+  position: absolute;
+  top: -40px;
+  left: -30px;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(75, 75, 236, 0.18), transparent 70%);
+  pointer-events: none;
+}
+
+.board-mine > *:not(.board-mine-glow) {
+  position: relative;
 }
 
 .board-mine-label {
@@ -2783,17 +2806,18 @@ section {
 }
 
 .board-mine-total {
-  font-size: 1.75rem;
+  font-size: 1.9rem;
   font-weight: 700;
   line-height: 1;
   color: var(--dark);
+  font-variant-numeric: tabular-nums;
 }
 
-.board-mine-breakdown {
-  font-size: 0.74rem;
-  color: var(--gray);
-  line-height: 1.4;
-  margin-top: 2px;
+.board-mine-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-top: 5px;
 }
 
 .board-avatar {
@@ -2811,96 +2835,155 @@ section {
 }
 
 .board-avatar-mine {
-  background: var(--primary);
+  background: linear-gradient(135deg, #6a6af2, #4B4BEC);
   color: #fff;
+  box-shadow: 0 4px 12px rgba(75, 75, 236, 0.4);
 }
 
 .board-avatar-sm {
-  width: 34px;
-  height: 34px;
-  font-size: 0.85rem;
+  width: 32px;
+  height: 32px;
+  font-size: 0.8rem;
 }
 
-/* --- podium: second, first, third, with the winner raised --- */
+/* --- podium: second, first, third, winner raised --- */
 .board-podium {
   display: flex;
   align-items: flex-end;
-  gap: 8px;
+  gap: 7px;
   margin-bottom: 14px;
 }
 
 .board-step {
   flex: 1 1 0;
   min-width: 0;
-  padding: 12px 6px 10px;
+  padding: 12px 5px 10px;
   border-radius: 16px;
-  background: #fff;
   text-align: center;
-  box-shadow: 0 6px 20px rgba(20, 20, 80, 0.16);
+  background: #fff;
+  box-shadow: 0 8px 22px rgba(20, 20, 80, 0.2);
+  animation: boardRise 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i) * 90ms);
 }
 
 .board-step .board-avatar {
   margin: 0 auto 6px;
+  width: 38px;
+  height: 38px;
+  font-size: 0.95rem;
 }
 
 /* Source order is 1, 2, 3; flex order puts the winner in the middle. */
 .board-step-1 {
   order: 2;
-  padding-top: 18px;
-  padding-bottom: 16px;
+  padding-top: 16px;
+  padding-bottom: 14px;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(160deg, #fff9e6 0%, #ffe9ab 100%);
+  border: 1px solid #f5cf6a;
+}
+
+/* A slow sheen across the winner's card. Cheap, and it draws the eye once. */
+.board-step-1::after {
+  content: "";
+  position: absolute;
+  top: -60%;
+  left: -60%;
+  width: 40%;
+  height: 220%;
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.75) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  transform: rotate(18deg);
+  animation: boardSheen 4.5s ease-in-out 1.2s infinite;
+  pointer-events: none;
 }
 
 .board-step-2 {
   order: 1;
+  background: linear-gradient(160deg, #ffffff 0%, #e9ebf4 100%);
+  border: 1px solid #d7dae6;
 }
 
 .board-step-3 {
   order: 3;
+  background: linear-gradient(160deg, #fff6ee 0%, #f3ddc6 100%);
+  border: 1px solid #e0c09a;
 }
 
 .board-step.is-me {
-  outline: 2px solid var(--secondary);
+  outline: 3px solid var(--secondary);
+  outline-offset: -1px;
 }
 
-.board-medal {
-  font-size: 1.1rem;
+.board-crown {
+  font-size: 1.05rem;
   line-height: 1;
-  margin-bottom: 4px;
+  margin-bottom: 5px;
+  position: relative;
+  z-index: 1;
 }
 
-.board-step-1 .board-medal {
-  color: #f0a500;
-  font-size: 1.5rem;
+.board-step-1 .board-crown {
+  color: #e9a100;
+  font-size: 1.4rem;
 }
 
-.board-step-2 .board-medal {
-  color: #a9a9ba;
+.board-step-2 .board-crown {
+  color: #9a9ab0;
 }
 
-.board-step-3 .board-medal {
-  color: #c98a4b;
+.board-step-3 .board-crown {
+  color: #bd7f43;
 }
 
 .board-step-name {
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   font-weight: 700;
   color: var(--dark);
   line-height: 1.2;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  position: relative;
+  z-index: 1;
 }
 
 .board-step-total {
-  font-size: 1.05rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: var(--primary);
   line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  position: relative;
+  z-index: 1;
 }
 
 .board-step-rank {
-  font-size: 0.66rem;
+  font-size: 0.64rem;
   color: var(--gray);
+  position: relative;
+  z-index: 1;
+}
+
+/* The five sources, two per line, inside a podium card */
+.board-step-counts {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1px 3px;
+  margin-top: 7px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  position: relative;
+  z-index: 1;
+}
+
+.board-step-counts .board-count:last-child {
+  grid-column: span 2;
 }
 
 /* --- the rest of the top 30 --- */
@@ -2908,37 +2991,61 @@ section {
   background: #fff;
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 6px 20px rgba(20, 20, 80, 0.16);
+  box-shadow: 0 8px 22px rgba(20, 20, 80, 0.18);
   margin-bottom: 16px;
 }
 
 .board-row {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 9px 12px;
+  gap: 9px;
+  padding: 8px 12px;
+  animation: boardRise 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(280ms + var(--i) * 35ms);
 }
 
 .board-row + .board-row {
-  border-top: 1px solid #f0f0f6;
+  border-top: 1px solid #f1f1f7;
+}
+
+/* How far along the leader's total this member is, as a bar behind the row.
+   Grows from zero once, so the list has some life when it lands. */
+.board-row-bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
+  background: linear-gradient(90deg, rgba(75, 75, 236, 0.13), rgba(75, 75, 236, 0.03));
+  animation: boardGrow 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(380ms + var(--i) * 35ms);
+  pointer-events: none;
+}
+
+.board-row > *:not(.board-row-bar) {
+  position: relative;
 }
 
 .board-row.is-me {
-  background: rgba(190, 240, 6, 0.18);
+  background: rgba(190, 240, 6, 0.2);
+}
+
+.board-row.is-me .board-row-bar {
+  background: linear-gradient(90deg, rgba(120, 160, 0, 0.2), rgba(190, 240, 6, 0.05));
 }
 
 .board-rank {
   flex-shrink: 0;
-  width: 22px;
+  width: 20px;
   text-align: right;
   font-size: 0.8rem;
   font-weight: 700;
   color: var(--gray);
+  font-variant-numeric: tabular-nums;
 }
 
 .board-name {
   font-weight: 600;
-  font-size: 0.88rem;
+  font-size: 0.86rem;
   color: var(--dark);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2947,13 +3054,28 @@ section {
 
 .board-counts {
   display: flex;
-  gap: 9px;
-  font-size: 0.68rem;
-  color: var(--gray);
+  gap: 7px;
 }
 
-.board-counts i {
-  margin-right: 3px;
+.board-count {
+  font-size: 0.66rem;
+  color: var(--gray);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.board-count i {
+  margin-right: 2px;
+  opacity: 0.75;
+}
+
+.board-count.is-big {
+  font-size: 0.76rem;
+}
+
+.board-count.is-miss {
+  color: #c1483d;
+  font-weight: 700;
 }
 
 .board-total {
@@ -2961,6 +3083,7 @@ section {
   font-weight: 700;
   font-size: 0.95rem;
   color: var(--primary);
+  font-variant-numeric: tabular-nums;
 }
 
 .board-miss {
@@ -2989,7 +3112,12 @@ section {
   justify-content: space-between;
   gap: 10px;
   font-size: 0.8rem;
-  padding: 2px 0;
+  padding: 3px 0;
+}
+
+.board-legend-row i {
+  width: 18px;
+  opacity: 0.8;
 }
 
 .board-legend .board-miss {
@@ -3001,4 +3129,37 @@ section {
   font-size: 0.7rem;
   opacity: 0.8;
   line-height: 1.4;
+}
+
+@keyframes boardRise {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes boardGrow {
+  from { width: 0; }
+  to { width: var(--share); }
+}
+
+@keyframes boardSheen {
+  0% { left: -60%; }
+  35%, 100% { left: 130%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .board-mine,
+  .board-step,
+  .board-row {
+    animation: none;
+  }
+
+  .board-step-1::after {
+    animation: none;
+    display: none;
+  }
+
+  .board-row-bar {
+    animation: none;
+    width: var(--share);
+  }
 }

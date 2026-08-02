@@ -7,17 +7,24 @@
 <div class="container py-4 board-page">
     <h1 class="section-title text-center mb-2">Papan Peringkat</h1>
     <p class="board-lead text-center">
-        Poin dari yang kamu udah lakuin: dateng ke gym, masuk kelas, dan belajar gizi.
+        Poin dari yang kamu udah lakuin: dateng ke gym, masuk kelas, belajar gizi.
         Buat rame-rame aja, bukan buat serius-seriusan.
     </p>
 
     <div class="row justify-content-center">
         <div class="col-lg-8">
+            {% comment %}
+            The left tab is always "a month" and carries which one, so viewing a
+            past month still lights up a tab instead of leaving both dark.
+            {% endcomment %}
             <div class="board-tabs">
-                <a href="?periode={{ months.0.key }}"
-                   class="board-tab {% if period.key == months.0.key %}is-active{% endif %}">
-                    Bulan Ini
-                </a>
+                {% if period.is_lifetime %}
+                    <a href="?periode={{ months.0.key }}" class="board-tab">Bulanan</a>
+                {% else %}
+                    <a href="?periode={{ period.key }}" class="board-tab is-active">
+                        {% if period.key == months.0.key %}Bulan Ini{% else %}{{ period.short }}{% endif %}
+                    </a>
+                {% endif %}
                 <a href="?periode={{ lifetime.key }}"
                    class="board-tab {% if period.is_lifetime %}is-active{% endif %}">
                     Sepanjang Waktu
@@ -26,7 +33,7 @@
 
             {% if months|length > 1 %}
                 <form method="get" class="board-months">
-                    <label for="periode">Bulan lain</label>
+                    <label for="periode"><i class="far fa-calendar me-1"></i>Pilih bulan</label>
                     <select name="periode" id="periode" onchange="this.form.submit()">
                         {% for month in months %}
                             <option value="{{ month.key }}" {% if month.key == period.key %}selected{% endif %}>
@@ -43,18 +50,14 @@
 
             {% if board.mine %}
                 <div class="board-mine">
+                    <div class="board-mine-glow" aria-hidden="true"></div>
                     <div class="board-avatar board-avatar-mine">{{ board.mine.initial }}</div>
                     <div class="flex-grow-1">
                         <div class="board-mine-label">Poin kamu &middot; {{ period.label }}</div>
-                        <div class="board-mine-total">{{ board.mine.total|intcomma }}</div>
-                        <div class="board-mine-breakdown">
-                            {{ board.mine.counts.visits }} kunjungan &middot;
-                            {{ board.mine.counts.classes }} kelas &middot;
-                            {{ board.mine.counts.gizi }} soal gizi
-                            {% if board.mine.counts.daily %}&middot; {{ board.mine.counts.daily }} kuis harian{% endif %}
-                            {% if board.mine.counts.misses %}
-                                &middot; <span class="board-miss">{{ board.mine.counts.misses }} hari bolos kelas</span>
-                            {% endif %}
+                        <div class="board-mine-total" id="board-mine-total"
+                             data-total="{{ board.mine.total }}">{{ board.mine.total|intcomma }}</div>
+                        <div class="board-mine-chips">
+                            {% include "leaderboard/_counts.html" with counts=board.mine.counts big=True %}
                         </div>
                     </div>
                 </div>
@@ -63,12 +66,22 @@
             {% if board.podium %}
                 <div class="board-podium">
                     {% for row in board.podium %}
-                        <div class="board-step board-step-{{ row.rank }}{% if row.member_id == board.mine.member_id %} is-me{% endif %}">
-                            <div class="board-medal"><i class="fas fa-medal"></i></div>
+                        <div class="board-step board-step-{{ row.rank }}{% if row.member_id == board.mine.member_id %} is-me{% endif %}"
+                             style="--i: {{ forloop.counter0 }}">
+                            <div class="board-crown">
+                                {% if row.rank == 1 %}
+                                    <i class="fas fa-crown"></i>
+                                {% else %}
+                                    <i class="fas fa-medal"></i>
+                                {% endif %}
+                            </div>
                             <div class="board-avatar">{{ row.initial }}</div>
                             <div class="board-step-name">{{ row.name }}</div>
                             <div class="board-step-total">{{ row.total|intcomma }}</div>
                             <div class="board-step-rank">#{{ row.rank }}</div>
+                            <div class="board-step-counts">
+                                {% include "leaderboard/_counts.html" with counts=row.counts %}
+                            </div>
                         </div>
                     {% endfor %}
                 </div>
@@ -77,18 +90,15 @@
             {% if board.rest %}
                 <div class="board-list">
                     {% for row in board.rest %}
-                        <div class="board-row{% if row.member_id == board.mine.member_id %} is-me{% endif %}">
+                        <div class="board-row{% if row.member_id == board.mine.member_id %} is-me{% endif %}"
+                             style="--i: {{ forloop.counter0 }}; --share: {{ row.share }}%">
+                            <div class="board-row-bar" aria-hidden="true"></div>
                             <div class="board-rank">{{ row.rank }}</div>
                             <div class="board-avatar board-avatar-sm">{{ row.initial }}</div>
                             <div class="flex-grow-1 min-width-0">
                                 <div class="board-name">{{ row.name }}</div>
                                 <div class="board-counts">
-                                    <span title="Kunjungan"><i class="fas fa-dumbbell"></i>{{ row.counts.visits }}</span>
-                                    <span title="Kelas dihadiri"><i class="fas fa-users"></i>{{ row.counts.classes }}</span>
-                                    <span title="Soal gizi benar"><i class="fas fa-book-open"></i>{{ row.counts.gizi|add:row.counts.daily }}</span>
-                                    {% if row.counts.misses %}
-                                        <span class="board-miss" title="Hari bolos kelas"><i class="fas fa-calendar-xmark"></i>{{ row.counts.misses }}</span>
-                                    {% endif %}
+                                    {% include "leaderboard/_counts.html" with counts=row.counts %}
                                 </div>
                             </div>
                             <div class="board-total">{{ row.total|intcomma }}</div>
@@ -110,11 +120,22 @@
 
             <div class="board-legend">
                 <div class="board-legend-title">Cara dapet poin</div>
-                <div class="board-legend-row"><span>1 kunjungan ke gym</span><strong>+{{ points.visits }}</strong></div>
-                <div class="board-legend-row"><span>Masuk kelas dan dateng</span><strong>+{{ points.classes }}</strong></div>
-                <div class="board-legend-row"><span>1 soal Belajar Gizi bener</span><strong>+{{ points.gizi }}</strong></div>
-                <div class="board-legend-row"><span>1 soal Kuis Harian bener</span><strong>+{{ points.daily }}</strong></div>
-                <div class="board-legend-row"><span>1 hari booking kelas tapi nggak dateng</span><strong class="board-miss">{{ points.misses }}</strong></div>
+                <div class="board-legend-row">
+                    <span><i class="fas fa-dumbbell"></i>1 kunjungan ke gym</span><strong>+{{ points.visits }}</strong>
+                </div>
+                <div class="board-legend-row">
+                    <span><i class="fas fa-users"></i>Masuk kelas dan dateng</span><strong>+{{ points.classes }}</strong>
+                </div>
+                <div class="board-legend-row">
+                    <span><i class="fas fa-book-open"></i>1 soal Belajar Gizi bener</span><strong>+{{ points.gizi }}</strong>
+                </div>
+                <div class="board-legend-row">
+                    <span><i class="fas fa-bolt"></i>1 soal Kuis Harian bener</span><strong>+{{ points.daily }}</strong>
+                </div>
+                <div class="board-legend-row">
+                    <span><i class="fas fa-calendar-xmark"></i>1 hari booking kelas tapi nggak dateng</span>
+                    <strong class="board-miss">{{ points.misses }}</strong>
+                </div>
                 <p class="board-legend-note mb-0">
                     Soal Belajar Gizi cuma dihitung dari jawaban pertama, jadi ngulang bab nggak nambah poin.
                     Angkanya diperbarui tiap beberapa menit.
@@ -123,4 +144,30 @@
         </div>
     </div>
 </div>
+
+<script>
+(function () {
+    var calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var total = document.getElementById('board-mine-total');
+    if (!total || calm) return;
+
+    // Count the member's own points up from zero. Small thing, but it is the
+    // number they came to look at.
+    var target = parseInt(total.dataset.total, 10);
+    if (!target || target < 0) return;
+
+    var started = null;
+    var duration = 700;
+    function step(now) {
+        if (started === null) started = now;
+        var progress = Math.min(1, (now - started) / duration);
+        // ease-out, so it slows into the real number
+        var eased = 1 - Math.pow(1 - progress, 3);
+        total.textContent = Math.round(target * eased).toLocaleString('id-ID');
+        if (progress < 1) window.requestAnimationFrame(step);
+    }
+    total.textContent = '0';
+    window.requestAnimationFrame(step);
+})();
+</script>
 {% endblock %}

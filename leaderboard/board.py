@@ -242,6 +242,11 @@ def compute(period):
 
     rows.sort(key=lambda row: (-row["total"], row["name"]))
 
+    # `share` drives the bar behind each row: how far along the leader's total
+    # this member is. Clamped, since a member deep in penalty points is negative
+    # and a bar cannot be.
+    leader = max((row["total"] for row in rows), default=0)
+
     rank = 0
     previous = None
     for index, row in enumerate(rows, start=1):
@@ -249,6 +254,9 @@ def compute(period):
             rank = index
             previous = row["total"]
         row["rank"] = rank
+        row["share"] = (
+            max(0, min(100, round(row["total"] * 100 / leader))) if leader > 0 else 0
+        )
     return rows
 
 

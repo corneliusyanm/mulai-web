@@ -499,3 +499,53 @@ class BoardViewTest(BoardTestCase):
         response = self.client.get(reverse("leaderboard:board"))
 
         self.assertContains(response, "Belum ada poin")
+
+
+class ShareTest(BoardTestCase):
+    """The bar behind each row: how far along the leader's total they are."""
+
+    def test_the_leader_is_full_width(self):
+        self.visit_on(self.today)
+
+        self.assertEqual(B.compute(self.this_month)[0]["share"], 100)
+
+    def test_others_are_proportional(self):
+        other = self.a_member("half@example.com", "628590000001", "Half Member")
+        for _ in range(4):
+            self.visit_on(self.today, member=other)
+        self.visit_on(self.today)
+
+        rows = B.compute(self.this_month)
+
+        self.assertEqual(rows[0]["share"], 100)
+        self.assertEqual(rows[1]["share"], 25)
+
+    def test_a_negative_total_cannot_draw_a_bar(self):
+        other = self.a_member("neg@example.com", "628590000002", "Negative Member")
+        self.visit_on(self.today)
+        instance = self.class_on(self.today - timedelta(days=1))
+        ClassMiss.objects.create(
+            member=other,
+            class_instance=instance,
+            class_date=instance.date,
+            class_name="Kelas Pemula",
+        )
+
+        rows = B.compute(self.this_month)
+        negative = next(row for row in rows if row["member_id"] == other.id)
+
+        self.assertLess(negative["total"], 0)
+        self.assertEqual(negative["share"], 0)
+
+    def test_a_board_where_everyone_is_negative_does_not_divide_by_zero(self):
+        instance = self.class_on(self.today - timedelta(days=1))
+        ClassMiss.objects.create(
+            member=self.member,
+            class_instance=instance,
+            class_date=instance.date,
+            class_name="Kelas Pemula",
+        )
+
+        rows = B.compute(self.this_month)
+
+        self.assertEqual(rows[0]["share"], 0)
