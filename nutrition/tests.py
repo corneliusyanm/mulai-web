@@ -429,8 +429,11 @@ class AnswerPlacementTest(TestCase):
     def test_no_letter_dominates_the_daily_set(self):
         from .daily_questions import QUESTIONS
 
-        # Grouped by how many choices a question has: the newer questions have
-        # four, and mixing them into one tally would hide a lopsided group.
+        # Grouped by how many choices a question has, because the two groups are
+        # arranged over a different number of slots and mixing them would hide a
+        # lopsided one. Almost everything is four-choice now; the three-choice
+        # group is only dq-001 to dq-006, left alone because they have been
+        # answered.
         groups = {}
         for question in QUESTIONS:
             size = len(question["choices"])
@@ -441,6 +444,13 @@ class AnswerPlacementTest(TestCase):
             self.assertEqual(
                 sum(counts.values()), len(answers), f"{size}-choice: unknown letter"
             )
+            # A spread is only a spread over a decent number of questions. Six
+            # questions across three slots lands 4/1/1 by chance, and calling that
+            # "B dominates" would be reading noise. The guard is here to stop a
+            # letter being worth guessing across the rotation, which needs a group
+            # big enough for that to be true.
+            if len(answers) < size * 4:
+                continue
             for letter, count in counts.items():
                 # Every slot gets used, and none takes half, or a member can beat
                 # the quiz by always picking the same letter.
@@ -829,6 +839,23 @@ class DailyQuestionSeedTest(TestCase):
 
         self.assertEqual(added, 0)
 
+    def test_the_seeded_wording_matches_the_module(self):
+        """The rewrite migration ran, and every row still says what the file says.
+
+        `sync_questions` never overwrites, so before `0005` an edit here left the
+        database on the old wording with nothing failing anywhere. This is the
+        check that would have caught that.
+        """
+        from .daily_questions import QUESTIONS
+
+        rows = {q.code: q for q in DailyQuestion.objects.all()}
+        for expected in QUESTIONS:
+            row = rows[expected["code"]]
+            self.assertEqual(row.question, expected["question"], expected["code"])
+            self.assertEqual(row.choices, expected["choices"], expected["code"])
+            self.assertEqual(row.answer, expected["answer"], expected["code"])
+            self.assertEqual(row.explanation, expected["explanation"], expected["code"])
+
     def test_a_new_question_gets_the_next_position(self):
         # Derived, not hard-coded: this used to say 101 and broke the first time
         # a batch was appended.
@@ -846,7 +873,7 @@ class DailyQuestionSeedTest(TestCase):
 
 
 class DailyRewriteTest(TestCase):
-    """Rewriting a question that is already seeded, and what must not be rewritten.
+    """Rewriting a seeded question, and the one thing that must never be rewritten.
 
     A recorded answer is only a letter. Change the choices under it and that letter
     points at different text, which quietly turns one member's history and the
@@ -909,24 +936,74 @@ class DailyRewriteTest(TestCase):
         self.assertEqual(changed, 1)
         self.assertFalse(DailyQuestion.objects.filter(code="dq-999").exists())
 
+    def test_the_migration_leaves_an_already_answered_question_alone(self):
+        """The guard in 0005, run against a question that has been answered.
+
+        The rotation had only reached dq-006 when the migration was written, so in
+        practice it rewrote everything. This is what happens if a deploy slips and
+        dq-007 has gone past by then: that one keeps its wording, the rest do not.
+        """
+        import importlib
+
+        from django.apps import apps as registry
+
+        migration = importlib.import_module(
+            "nutrition.migrations.0005_harder_daily_questions"
+        )
+        answered = DailyQuestion.objects.get(code="dq-007")
+        DailyQuestion.objects.filter(code="dq-007").update(question="Soal lama")
+        DailyAnswer.objects.create(
+            member=a_member(),
+            question=answered,
+            answer_date=timezone.localdate(),
+            chosen="a",
+            is_correct=True,
+        )
+        DailyQuestion.objects.filter(code="dq-008").update(question="Soal lama juga")
+
+        migration.rewrite(registry, None)
+
+        from .daily_questions import QUESTIONS
+
+        expected = {q["code"]: q["question"] for q in QUESTIONS}
+        self.assertEqual(
+            DailyQuestion.objects.get(code="dq-007").question, "Soal lama"
+        )
+        self.assertEqual(
+            DailyQuestion.objects.get(code="dq-008").question, expected["dq-008"]
+        )
+
 
 class DailyDifficultyTest(TestCase):
-    """From dq-101 on, the questions are meant to make somebody think.
+    """From dq-007 on, the questions are meant to make somebody think.
 
-    The first hundred were answerable in five seconds, which is fine but does not
-    teach much. These pin the shape of the newer ones so the bar does not quietly
-    slip back.
+    dq-001 to dq-006 are the original five-second questions and stay that way,
+    because members have already answered them and the letter recorded against one
+    has to keep pointing at the same text. Everything after that was rewritten to
+    the harder bar. These pin the shape so it does not quietly slip back.
     """
+
+    # dq-001 to dq-006. Everything past here is held to the harder shape.
+    EASY_UNTIL = 6
 
     def newer_questions(self):
         from .daily_questions import QUESTIONS
 
-        return [q for q in QUESTIONS if q["position"] > 100]
+        return [q for q in QUESTIONS if q["position"] > self.EASY_UNTIL]
 
     def test_the_newer_questions_have_four_choices(self):
         # Four choices drops a blind guess from 33% to 25%.
         for question in self.newer_questions():
             self.assertEqual(len(question["choices"]), 4, question["code"])
+
+    def test_only_the_first_six_are_still_three_choice(self):
+        # The exemption is those six and nothing else, so "it was already there"
+        # cannot become a reason to add an easy one.
+        from .daily_questions import QUESTIONS
+
+        three = [q["code"] for q in QUESTIONS if len(q["choices"]) == 3]
+
+        self.assertEqual(three, [f"dq-{n:03d}" for n in range(1, self.EASY_UNTIL + 1)])
 
     def test_every_choice_has_text_and_a_unique_key(self):
         from .daily_questions import QUESTIONS
@@ -936,6 +1013,34 @@ class DailyDifficultyTest(TestCase):
             self.assertEqual(len(keys), len(set(keys)), question["code"])
             for choice in question["choices"]:
                 self.assertTrue(choice["text"].strip(), question["code"])
+
+    def test_the_answer_is_not_simply_the_longest_option(self):
+        """"Pick the longest" must not beat the quiz either.
+
+        The same class of tell as the answer always sitting at B, and the one a
+        rewrite walks straight into: a correct statement wants a qualifying clause
+        and a wrong one does not, so the answer comes out visibly longer. The first
+        pass at these landed 71%, which is a quiz you can pass without reading the
+        question. Chance is 25%; some excess is unavoidable, half is not.
+
+        What is left sits mostly in dq-101 to dq-115, which are held where they are
+        because they read fine and nobody has answered them either way. Cheapest fix
+        when this fails: give the wrong options the same shape as the right one,
+        rather than trimming the right one until it stops making sense.
+        """
+        four = [q for q in self.newer_questions() if len(q["choices"]) == 4]
+        longest = 0
+        for question in four:
+            lengths = {c["key"]: len(c["text"]) for c in question["choices"]}
+            answer = lengths.pop(question["answer"])
+            if answer > max(lengths.values()):
+                longest += 1
+
+        self.assertLess(
+            longest / len(four),
+            0.5,
+            f"the answer is the longest option in {longest} of {len(four)}",
+        )
 
     def test_the_newer_explanations_actually_explain(self):
         # A one-liner that restates the answer teaches nothing, so hold these to
