@@ -18,6 +18,13 @@ Rules for editing:
 - **Adding questions**: append to the end and add a migration that calls the same
   sync helper. Appending changes which day a question lands on, which is
   harmless: the point is that there is one waiting every morning.
+- **Make new ones harder than the first hundred.** Those were written to be
+  answerable in five seconds, which is fine but does not make anybody think. From
+  `dq-101` on: four choices rather than three (guessing drops from 33% to 25%),
+  and answers that need working out (do the arithmetic), judging (all four are
+  true, which matters most?), or unlearning something (the intuitive answer is the
+  wrong one). Hard is not the same as obscure: no trivia, no trick wording, and
+  never two defensible answers.
 - **Editing wording after launch**: change it in `/admin`. Editing here alone does
   nothing to a database that has already been seeded.
 - Every number is an estimate and says so. Portions vary by warung.
@@ -807,6 +814,181 @@ RAW = [
         ],
         0,
         "Satu gelas kira-kira 250 kalori, dan satu jam latihan 200 sampai 400. Satu minuman bisa ngehabisin hasil satu sesi.",
+    ),
+    # --- umur panjang vs sehat (bab 10) -----------------------------------
+    #
+    # From here on the questions are harder on purpose: four choices instead of
+    # three, and answers that need working out or judging rather than recalling.
+    # See the note at the top of this file.
+    (
+        "dq-101",
+        "Umur harapan hidup di Indonesia sekitar 70 tahun, tapi \"tahun sehatnya\" sekitar 62. Artinya?",
+        [
+            "Rata-rata ada sekitar 8 tahun terakhir yang dijalani dengan badan yang udah susah dipakai",
+            "Rata-rata orang Indonesia meninggal di umur 62",
+            "Rata-rata orang sakit-sakitan sepanjang hidupnya",
+            "Angka itu nggak ada hubungannya sama kebiasaan sehari-hari",
+        ],
+        0,
+        "Itu selisih antara umur panjang dan umur yang masih kepake. Kebiasaan latihan, makan dan tidur paling ngaruh ke selisih ini, bukan ke angka 70-nya.",
+    ),
+    (
+        "dq-102",
+        "Massa otot turun kira-kira 5% per dekade setelah umur 30 kalau nggak dilatih. Umur 70, sisa berapa persen dari puncaknya?",
+        ["Sekitar 95%", "Sekitar 80%", "Sekitar 50%", "Sekitar 20%"],
+        1,
+        "Empat dekade dikali kira-kira 5% itu sekitar 20% yang hilang, jadi sisanya sekitar 80%. Kelihatan kecil per dekade, gede kalau ditumpuk.",
+    ),
+    (
+        "dq-103",
+        "Semua ini bagus buat jangka panjang. Mana yang paling susah dikejar kalau kamu tunda 20 tahun?",
+        [
+            "Bangun massa otot dan kepadatan tulang",
+            "Berhenti merokok",
+            "Ngurangin gula",
+            "Tidur lebih cukup",
+        ],
+        0,
+        "Tiga lainnya bisa kamu perbaiki kapan aja dan hasilnya langsung kerasa. Puncak otot dan tulang punya jendela waktu yang nutup sekitar umur 30, dan itu nggak bisa diulang.",
+    ),
+    (
+        "dq-104",
+        "Kenapa patah tulang panggul di umur 70 sering jadi awal kemunduran besar, bukan cuma cedera biasa?",
+        [
+            "Berbulan-bulan nggak bisa gerak bikin otot dan kebugaran hilang cepat",
+            "Tulang panggul nggak bisa nyambung lagi",
+            "Operasinya selalu gagal di umur segitu",
+            "Karena bikin tulang lain ikut patah",
+        ],
+        0,
+        "Tulangnya biasanya bisa diperbaiki. Yang susah dibalikin itu otot dan kebugaran yang hilang selama berbaring, dan dari situ banyak orang nggak balik mandiri lagi.",
+    ),
+    (
+        "dq-105",
+        "Umur 60 kamu butuh waktu lebih lama buat inget nama orang dibanding umur 25. Itu?",
+        [
+            "Normal: kecepatan prosesnya turun, tapi kosakata dan pengalaman sering nambah",
+            "Tanda awal pikun",
+            "Tanda kurang tidur, bukan umur",
+            "Bisa dicegah total kalau minum suplemen otak",
+        ],
+        0,
+        "Otak yang menua jadi lebih pelan, bukan otomatis lebih jelek. Pikun itu penyakit, bukan jadwal yang pasti datang.",
+    ),
+    (
+        "dq-106",
+        "Dua orang umur 60. A masih bisa naik 3 lantai sambil ngobrol, B udah ngos-ngosan di lantai satu. Bedanya paling besar datang dari?",
+        [
+            "Puluhan tahun kebiasaan gerak",
+            "Genetik jantung mereka",
+            "Selisih umur beberapa bulan",
+            "Berat badan doang",
+        ],
+        0,
+        "Genetik dan berat badan ikut ngaruh, tapi yang bikin bedanya sebesar itu biasanya puluhan tahun kebiasaan. Ini juga kabar baiknya: bagian itu yang kamu pegang.",
+    ),
+    (
+        "dq-107",
+        "Kebutuhan protein per kilo berat badan buat orang tua dibanding orang muda?",
+        [
+            "Cenderung lebih banyak, karena badannya kurang responsif ke protein",
+            "Lebih sedikit, karena ototnya lebih kecil",
+            "Sama aja",
+            "Nggak perlu protein lagi",
+        ],
+        0,
+        "Ini yang sering kebalik. Badan yang menua butuh dorongan lebih besar buat bikin otot dari protein yang sama, jadi anjurannya biasanya lebih tinggi, bukan lebih rendah.",
+    ),
+    (
+        "dq-108",
+        "Berat 60 kg, target 1,6 gram protein per kilo. Sarapan 2 telur (13 g), makan siang sepotong ayam (25 g). Kira-kira masih kurang berapa?",
+        ["Sekitar 60 gram", "Sekitar 20 gram", "Sekitar 40 gram", "Udah cukup"],
+        0,
+        "Targetnya sekitar 96 gram, yang masuk baru sekitar 38. Sisanya sekitar 58 gram, jadi makan malam dan cemilan masih harus kerja keras.",
+    ),
+    (
+        "dq-109",
+        "Setelah menopause, kepadatan tulang perempuan turun lebih cepat. Mana yang paling ngebantu?",
+        [
+            "Latihan beban, protein cukup, plus kalsium dan vitamin D",
+            "Istirahat lebih banyak biar tulangnya nggak kena beban",
+            "Kardio ringan aja, hindari angkat berat",
+            "Suplemen kolagen tiap hari",
+        ],
+        0,
+        "Tulang jadi lebih kuat justru karena dibebani. Menghindari beban itu kebalikan dari yang dibutuhin, dan ini termasuk kesalahan yang paling mahal.",
+    ),
+    (
+        "dq-110",
+        "A mulai latihan beban umur 25 dan konsisten. B baru mulai umur 55. Umur 70, siapa yang lebih kuat?",
+        [
+            "A, dan bedanya biasanya lumayan besar",
+            "B, karena latihannya lebih baru",
+            "Sama, di umur 70 semua orang sama",
+            "B, karena A pasti udah cedera-cederaan",
+        ],
+        0,
+        "A mulai dari puncak yang lebih tinggi dan penurunannya lebih datar. Tapi jangan salah baca: B yang mulai umur 55 tetep jauh lebih kuat daripada B yang nggak pernah mulai.",
+    ),
+    (
+        "dq-111",
+        "Kenapa gula darah yang sering tinggi bertahun-tahun jadi masalah besar di umur tua?",
+        [
+            "Merusak pembuluh darah kecil, termasuk di mata, ginjal dan saraf",
+            "Cuma bikin gigi rusak",
+            "Cuma bikin ngantuk",
+            "Nggak masalah selama berat badan normal",
+        ],
+        0,
+        "Kerusakannya pelan dan nggak kerasa sampai udah lanjut. Latihan beban ngebantu di sini juga, karena otot itu tempat gula darah dipakai.",
+    ),
+    (
+        "dq-112",
+        "Tidur 4 jam Senin sampai Jumat, terus 12 jam di hari Sabtu. Itu?",
+        [
+            "Sebagian bisa kekejar, tapi performa dan nafsu makan udah keganggu seminggu penuh",
+            "Impas, totalnya sama aja",
+            "Lebih bagus daripada 7 jam tiap hari",
+            "Nggak ada bedanya sama sekali",
+        ],
+        0,
+        "Tidur panjang di akhir minggu ngebantu, tapi nggak ngebalikin lima hari angkatan yang jelek dan nafsu makan yang naik. Yang rutin tiap malam menang.",
+    ),
+    (
+        "dq-113",
+        "Kalau cuma bisa milih SATU kebiasaan buat dijalanin 30 tahun ke depan, mana yang paling ngejaga kemandirian di umur tua?",
+        [
+            "Latihan beban 2x seminggu",
+            "Minum suplemen lengkap tiap hari",
+            "Diet ketat tanpa karbo",
+            "Cek darah lengkap tiap bulan",
+        ],
+        0,
+        "Satu kebiasaan ini sekaligus jagain otot, tulang dan gula darah, tiga hal yang paling nentuin kamu masih bisa ngurus diri sendiri atau nggak.",
+    ),
+    (
+        "dq-114",
+        "Di umur 70, mana yang biasanya lebih cepat bikin nggak mandiri?",
+        [
+            "Kekurangan 5 kg otot",
+            "Kelebihan 5 kg lemak",
+            "Dua-duanya sama saja",
+            "Nggak ada yang berpengaruh di umur segitu",
+        ],
+        0,
+        "Bukan berarti lemak berlebih nggak masalah. Tapi di umur segitu, kehilangan otot itu yang paling cepat bikin susah bangun dari kursi dan gampang jatuh.",
+    ),
+    (
+        "dq-115",
+        "Ukuran paling jujur buat \"masih sehat\" di umur 65?",
+        [
+            "Masih bisa naik tangga, bangun dari kursi tanpa tangan, dan bawa barang sendiri",
+            "Angka di timbangan",
+            "Belum pernah masuk rumah sakit",
+            "Orang tuanya umur panjang",
+        ],
+        0,
+        "Yang nentuin kualitas hidup itu apa yang masih bisa kamu lakuin, bukan angka. Tiga gerakan itu juga yang paling gampang dilatih dari sekarang.",
     ),
 ]
 

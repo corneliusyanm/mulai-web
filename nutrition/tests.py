@@ -427,15 +427,29 @@ class AnswerPlacementTest(TestCase):
         ]
 
     def test_no_letter_dominates_the_daily_set(self):
-        answers = self.daily_answers()
-        counts = {letter: answers.count(letter) for letter in "abc"}
+        from .daily_questions import QUESTIONS
 
-        self.assertEqual(sum(counts.values()), len(answers))
-        for letter, count in counts.items():
-            # Guessing blind on three choices is 33 out of 100. Anything over 50
-            # would mean a member can beat the quiz without reading it.
-            self.assertGreater(count, 15, f"{letter} is starved: {counts}")
-            self.assertLess(count, 50, f"{letter} dominates: {counts}")
+        # Grouped by how many choices a question has: the newer questions have
+        # four, and mixing them into one tally would hide a lopsided group.
+        groups = {}
+        for question in QUESTIONS:
+            size = len(question["choices"])
+            groups.setdefault(size, []).append(question["answer"])
+
+        for size, answers in groups.items():
+            counts = {letter: answers.count(letter) for letter in "abcdefgh"[:size]}
+            self.assertEqual(
+                sum(counts.values()), len(answers), f"{size}-choice: unknown letter"
+            )
+            for letter, count in counts.items():
+                # Every slot gets used, and none takes half, or a member can beat
+                # the quiz by always picking the same letter.
+                self.assertGreater(count, 0, f"{size}-choice: {letter} unused {counts}")
+                self.assertLess(
+                    count,
+                    len(answers) / 2,
+                    f"{size}-choice: {letter} dominates {counts}",
+                )
 
     def test_no_letter_dominates_the_chapter_set(self):
         answers = self.chapter_answers()
@@ -778,6 +792,10 @@ class DailyQuestionSeedTest(TestCase):
         self.assertEqual(added, 0)
 
     def test_a_new_question_gets_the_next_position(self):
+        # Derived, not hard-coded: this used to say 101 and broke the first time
+        # a batch was appended.
+        seeded = DailyQuestion.objects.count()
+
         question = DailyQuestion.objects.create(
             code="dq-999",
             question="Soal baru",
@@ -786,4 +804,48 @@ class DailyQuestionSeedTest(TestCase):
             explanation="Karena begitu.",
         )
 
-        self.assertEqual(question.position, 101)
+        self.assertEqual(question.position, seeded + 1)
+
+
+class DailyDifficultyTest(TestCase):
+    """From dq-101 on, the questions are meant to make somebody think.
+
+    The first hundred were answerable in five seconds, which is fine but does not
+    teach much. These pin the shape of the newer ones so the bar does not quietly
+    slip back.
+    """
+
+    def newer_questions(self):
+        from .daily_questions import QUESTIONS
+
+        return [q for q in QUESTIONS if q["position"] > 100]
+
+    def test_the_newer_questions_have_four_choices(self):
+        # Four choices drops a blind guess from 33% to 25%.
+        for question in self.newer_questions():
+            self.assertEqual(len(question["choices"]), 4, question["code"])
+
+    def test_every_choice_has_text_and_a_unique_key(self):
+        from .daily_questions import QUESTIONS
+
+        for question in QUESTIONS:
+            keys = [choice["key"] for choice in question["choices"]]
+            self.assertEqual(len(keys), len(set(keys)), question["code"])
+            for choice in question["choices"]:
+                self.assertTrue(choice["text"].strip(), question["code"])
+
+    def test_the_newer_explanations_actually_explain(self):
+        # A one-liner that restates the answer teaches nothing, so hold these to
+        # a length that forces a reason.
+        for question in self.newer_questions():
+            self.assertGreater(
+                len(question["explanation"]), 80, question["code"]
+            )
+
+    def test_there_are_ageing_questions_now(self):
+        from .daily_questions import QUESTIONS
+
+        haystack = " ".join(q["question"] + q["explanation"] for q in QUESTIONS).lower()
+
+        for word in ("umur 70", "otot", "tulang", "mandiri"):
+            self.assertIn(word, haystack)

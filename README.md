@@ -1049,14 +1049,16 @@ Chapters 6, 7 and 10 are about training and ageing rather than food.
 
 One question a day at `/gizi/harian/`, for members who have finished every chapter and would otherwise never open the app again. A minute, something new, and a point on the leaderboard.
 
-- **Rotation, not a calendar**: `(day - ROTATION_EPOCH) % how many are active`. Everyone gets the same question on the same day, it never runs out, and it loops after the hundredth. Adding questions shifts which day each lands on, which does not matter.
+- **Rotation, not a calendar**: `(day - ROTATION_EPOCH) % how many are active`. Everyone gets the same question on the same day, it never runs out, and it loops once it reaches the end (115 questions today, so a 115-day cycle). Adding questions shifts which day each lands on, which does not matter.
 - **One shot a day**, enforced by a unique constraint on (member, `answer_date`). A second tap returns the first answer rather than an error. `answer_date` is stored rather than derived from `created_at`, so the day is unambiguous in Asia/Jakarta and the streak query is a plain date range.
 - **Nothing reaches the page before it is answered**: no `data-answer`, no explanation text. Unlike the chapter quiz, which has to ship the answer to reveal it instantly, this one round trips anyway, and there is a leaderboard point riding on it. `DailyPageTest` pins that.
 - **Guests can answer**, are graded, and are stored nowhere: their answer lives in the session so the explanation survives the redirect on the no-JS path.
 - **Streak** counts days answered in a row, right or wrong, since showing up is the habit. Today being unanswered does not break it yet, otherwise every member would see a zero every morning.
-- **The split** ("62% picked the same") is all-time per question rather than today only, because the question comes round every hundred days and a bigger sample is worth more. Hidden below `MIN_SPLIT_SAMPLE` (5) answers, so nobody sees "100%" off one answer.
+- **The split** ("62% picked the same") is all-time per question rather than today only, because a question only comes round every few months and a bigger sample is worth more. Hidden below `MIN_SPLIT_SAMPLE` (5) answers, so nobody sees "100%" off one answer.
 - **Progressive enhancement**: the choices are real submit buttons in a real form. With JS the page intercepts, posts, and slides the answer sheet up; without it, the form posts, redirects, and the answered state renders server-side.
-- **Content** is `nutrition/daily_questions.py`, seeded by a migration that matches on `code` and never overwrites, so wording fixed in `/admin` survives a later migration. Adding a batch means appending to that list plus a migration calling `sync_questions`.
+- **Content** is `nutrition/daily_questions.py`, seeded by a migration that matches on `code` and never overwrites, so wording fixed in `/admin` survives a later migration. Adding a batch means appending to that list plus a migration calling `sync_questions` (see `0004_seed_daily_questions_ageing`).
+- **Difficulty steps up from `dq-101`.** The first hundred were answerable in about five seconds, which is fine but does not make anybody think. Everything added from that point has **four choices** rather than three (a blind guess drops from 33% to 25%) and an answer that needs working out (do the arithmetic), judging (all four are true, which matters most?), or unlearning something (the intuitive answer is the wrong one). Hard is not the same as obscure: no trivia, no trick wording, never two defensible answers. `DailyDifficultyTest` holds the newer batch to four choices and to explanations long enough to carry a reason.
+- The answer-placement guardrail is grouped by choice count, since mixing three- and four-choice questions into one tally would hide a lopsided group.
 
 ### Answer placement (`nutrition/shuffle.py`)
 
