@@ -40,7 +40,7 @@ LEVELS = [
     {"min": 1, "name": "Mulai Paham"},
     {"min": 3, "name": "Lumayan Jago"},
     {"min": 6, "name": "Jago Gizi"},
-    {"min": 9, "name": "Melek Gizi"},
+    {"min": 10, "name": "Melek Gizi"},
 ]
 
 # A perfect run gets emas, a decent one perak, finishing at all gets perunggu.
@@ -1247,6 +1247,204 @@ CHAPTERS = [
                     "perlu kamu bedain: mana yang ngasih protein dan serat, mana yang cuma "
                     "ngasih gula, minyak, dan rasa."
                 ),
+            },
+        ],
+    },
+    {
+        "slug": "umur",
+        "number": 10,
+        "title": "Umur Panjang vs Sehat",
+        "subtitle": "Yang kamu bangun sekarang, dipakai umur 60",
+        "icon": "fas fa-hourglass-half",
+        "emoji": "\u23f3",
+        "minutes": 6,
+        "blocks": [
+            {
+                "type": "card",
+                "title": "Ada dua angka, bukan satu",
+                "body": [
+                    "Di Indonesia, rata-rata orang hidup sampai kira-kira 70 tahun. Tapi "
+                    "rata-rata \"tahun sehatnya\" cuma sampai sekitar 62. Selisih 8 tahun itu "
+                    "bukan angka kosong: itu tahun-tahun waktu badan masih hidup tapi udah "
+                    "susah dipakai.",
+                    "Jadi pertanyaannya bukan mau umur 70 atau 80. Pertanyaannya: umur 65 "
+                    "nanti kamu masih bisa jalan ke pasar sendiri, atau udah susah bangun "
+                    "dari kursi.",
+                ],
+                "highlight": "Umur panjang itu satu hal. Sehat sampai tua itu hal lain, dan yang kedua lebih bisa kamu atur.",
+            },
+            {
+                "type": "card",
+                "title": "Puncaknya sekarang, bukan nanti",
+                "body": [
+                    "Massa otot dan kepadatan tulang kamu naik sampai sekitar umur 30, terus "
+                    "berhenti. Yang kamu punya di umur 30 itu modal yang dipakai buat 50 "
+                    "tahun berikutnya.",
+                    "Habis itu, kalau nggak dilatih, ototnya turun sendiri. Bukan karena "
+                    "kamu salah apa-apa, itu memang jalannya. Yang bisa nahan cuma satu: "
+                    "ototnya tetep dipakai.",
+                ],
+                "highlight": "Kalau kamu sekarang 25, puncak modalmu tinggal beberapa tahun lagi. Nabungnya sekarang.",
+            },
+            {
+                "type": "bars",
+                # Charted as what is lost, not what is left: 100 down to 72 makes
+                # five bars that all look the same, and the point of this one is
+                # that the loss piles up.
+                "title": "Otot yang hilang kalau nggak pernah dilatih",
+                "unit": "% otot yang hilang dari puncak umur 30",
+                "note": "Perkiraan, kira-kira 3 sampai 8 persen per dekade dan makin cepat setelah 60.",
+                "rows": [
+                    {"label": "Umur 40", "value": 4},
+                    {"label": "Umur 50", "value": 10},
+                    {"label": "Umur 60", "value": 18},
+                    {"label": "Umur 70", "value": 28},
+                ],
+                "caption": (
+                    "Yang turun paling dulu itu serat otot cepat, yang kamu pakai buat "
+                    "nahan badan waktu kepleset. Latihan beban rutin bikin angka-angka ini "
+                    "jauh lebih kecil, dan orang umur 70-80 pun masih bisa nambah otot."
+                ),
+            },
+            {
+                "type": "quiz",
+                "key": "umur-1",
+                "question": "Massa otot mulai turun sendiri dari umur berapa, kalau nggak dilatih?",
+                "choices": [
+                    {"key": "a", "text": "Sekitar 30-an"},
+                    {"key": "b", "text": "Sekitar 50-an"},
+                    {"key": "c", "text": "Baru setelah 70"},
+                ],
+                "answer": "a",
+                "explanation": (
+                    "Dari 30-an, kira-kira 3 sampai 8 persen per dekade. Kedengeran kecil, "
+                    "tapi 40 tahun dikali segitu itu bedanya antara masih bisa gendong cucu "
+                    "atau nggak."
+                ),
+            },
+            {
+                "type": "card",
+                "title": "Yang bikin orang tua jadi nggak mandiri",
+                "body": [
+                    "Kamu mungkin pernah lihat sendiri: ada orang tua yang tadinya masih "
+                    "kemana-mana sendiri, terus sekali jatuh, dan habis itu nggak pernah "
+                    "balik lagi kayak dulu.",
+                    "Biasanya bukan satu penyakit besar, tapi kombinasi: tulangnya udah "
+                    "menipis (buat perempuan lebih cepat setelah menopause), dan ototnya "
+                    "udah nggak cukup buat nahan badan waktu kehilangan keseimbangan.",
+                ],
+                "highlight": "Pertahanan buat jatuh di umur 70 itu dibangun puluhan tahun sebelumnya: otot, tulang, dan protein yang cukup.",
+            },
+            {
+                "type": "quiz",
+                "key": "umur-2",
+                "question": "Kenapa jatuh jadi jauh lebih bahaya buat orang tua?",
+                "choices": [
+                    {"key": "a", "text": "Mereka jarang keluar rumah"},
+                    {"key": "b", "text": "Tulangnya udah menipis dan ototnya nggak cukup buat nahan badan"},
+                    {"key": "c", "text": "Kulitnya lebih tipis"},
+                ],
+                "answer": "b",
+                "explanation": (
+                    "Jatuh yang di umur 25 cuma bikin lecet bisa jadi tulang panggul patah "
+                    "di umur 70. Dan patah panggul di umur segitu sering jadi akhir dari "
+                    "hidup mandiri, bukan cuma cedera."
+                ),
+            },
+            {
+                "type": "card",
+                "title": "Tes tangga",
+                "body": [
+                    "Pembuluh darah ikut mengeras seiring umur, dan kemampuan jantung-paru "
+                    "buat nganterin oksigen turun pelan-pelan. Ukuran gampangnya: naik "
+                    "tangga dua lantai, kamu ngos-ngosan atau masih bisa ngobrol.",
+                    "Cadangan itu yang nentuin umur 65 nanti kamu masih bisa jalan-jalan, "
+                    "naik gunung kecil, atau main lari-larian sama cucu. Dan cadangan itu "
+                    "paling murah dibangun sekarang: jalan cepat 30 menit, beberapa hari "
+                    "seminggu.",
+                ],
+            },
+            {
+                "type": "quiz",
+                "key": "umur-3",
+                "question": "Umur 60 nanti masih kuat atau nggak, paling ditentuin oleh?",
+                "choices": [
+                    {"key": "a", "text": "Genetik, udah dari lahir"},
+                    {"key": "b", "text": "Suplemen yang diminum pas udah tua"},
+                    {"key": "c", "text": "Kebiasaan latihan, makan dan tidur selama puluhan tahun"},
+                ],
+                "answer": "c",
+                "explanation": (
+                    "Genetik ngasih titik awal, kebiasaan yang nentuin arahnya. Dan yang "
+                    "paling nggak bisa dikejar itu waktu: mulai umur 25 beda jauh sama "
+                    "mulai umur 55."
+                ),
+            },
+            {
+                "type": "verdicts",
+                "title": "Sering kedengeran",
+                "rows": [
+                    {
+                        "claim": "Masih muda, nanti aja mikirin beginian",
+                        "is_true": False,
+                        "note": "Justru sekarang. Modal otot dan tulang dibangunnya sebelum 30, dan cuma sekali.",
+                    },
+                    {
+                        "claim": "Udah tua mending jangan angkat beban",
+                        "is_true": False,
+                        "note": "Kebalik. Yang paling butuh justru mereka, dan umur 70-80 pun masih bisa nambah otot.",
+                    },
+                    {
+                        "claim": "Pikun itu pasti kalau udah tua",
+                        "is_true": False,
+                        "note": "Makin pelan itu normal. Pikun itu penyakit, bukan jadwal yang pasti datang.",
+                    },
+                    {
+                        "claim": "Olahraga bikin lutut rusak pas tua",
+                        "is_true": False,
+                        "note": "Yang bikin lutut jelek itu jarang gerak dan berat badan berlebih. Otot kuat malah ngelindungin sendi.",
+                    },
+                    {
+                        "claim": "Kurang tidur sekarang bisa dibayar nanti",
+                        "is_true": False,
+                        "note": "Tidur itu tempat badan mulih. Nggak ada utang tidur yang beneran kebayar.",
+                    },
+                    {
+                        "claim": "Jalan kaki tiap hari udah ngebantu",
+                        "is_true": True,
+                        "note": "Iya, dan ini yang paling gampang dijalanin puluhan tahun. Yang rutin menang.",
+                    },
+                ],
+            },
+            {
+                "type": "quiz",
+                "key": "umur-4",
+                "question": "Kamu 25 tahun, sehat, belum kerasa apa-apa. Langkah paling ngefek buat badan umur 60?",
+                "choices": [
+                    {"key": "a", "text": "Mulai latihan beban rutin sekarang, walau ringan"},
+                    {"key": "b", "text": "Nunggu sampai kerasa butuh, sekitar umur 40-50"},
+                    {"key": "c", "text": "Fokus kardio aja, beban nanti kalau udah kuat"},
+                ],
+                "answer": "a",
+                "explanation": (
+                    "Yang nggak bisa dikejar itu waktu. Latihan beban dari sekarang bikin "
+                    "puncak modalmu lebih tinggi, dan garis penurunannya lebih datar. Kardio "
+                    "penting, tapi dia nggak jagain otot dan tulang."
+                ),
+            },
+            {
+                "type": "card",
+                "title": "Semua bab sebelumnya sebenernya buat ini",
+                "body": [
+                    "Protein yang cukup, biar ototnya ada bahannya. Latihan beban, biar "
+                    "ototnya ada alasannya. Kardio, buat cadangan jantung dan napas. Tidur, "
+                    "tempat semuanya dirakit. Gula cair dan gorengan yang diatur, biar gula "
+                    "darah dan pembuluh darah nggak kerja rodi tiap hari.",
+                    "Nggak ada satu pun dari itu yang harus sempurna. Yang penting jalan "
+                    "terus, tahunan. Itu bedanya antara umur panjang dan umur panjang yang "
+                    "masih kepake.",
+                ],
+                "highlight": "Nggak usah sempurna. Cukup jangan berhenti.",
             },
         ],
     },

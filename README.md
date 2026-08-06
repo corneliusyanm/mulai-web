@@ -1004,7 +1004,7 @@ To understand which equipment guides are most popular, a view tracking system ha
 
 ## Belajar Gizi (`nutrition/`)
 
-Nutrition and training basics at `/gizi/`, written for people who have never counted a calorie. Nine chapters, each a short stack of cards with quiz questions in between. Anyone can read; progress, badges and the level are for members.
+Nutrition and training basics at `/gizi/`, written for people who have never counted a calorie. Ten chapters, each a short stack of cards with quiz questions in between. Anyone can read; progress, badges and the level are for members.
 
 | # | Chapter | What it covers |
 | --- | --- | --- |
@@ -1017,8 +1017,11 @@ Nutrition and training basics at `/gizi/`, written for people who have never cou
 | 7 | Otot | Progressive overload, sleep, which supplements are real |
 | 8 | Mitos Lokal | Eating late, sweating, sit-ups, detox tea |
 | 9 | Makanan Kemasan | Reading a label in 10 seconds, and what the claims mean |
+| 10 | Umur Panjang vs Sehat | Health span, muscle from your 30s, and what all nine were for |
 
-Chapters 6 and 7 are about training rather than food. They earn their place: the gym is the product, and "why bother lifting" is the question that makes the nutrition worth acting on. If the split ever feels wrong, the menu label is one string in `base.html`.
+Chapters 6, 7 and 10 are about training and ageing rather than food.
+
+**Chapter 10 is deliberately written for a 25-year-old**, not for the members who are already ageing. The member base is median age 25, three quarters are under 31, and only ten active members are over 40, so a chapter about hips and falls would be aimed at ten people. The same facts land harder framed as banking: muscle starts declining in your 30s (five years away, not forty), peak muscle and bone mass close around 30, and everyone has watched a grandparent struggle out of a chair. It opens on the health span gap, which in Indonesia is roughly 70 years of life against 62 of health. They earn their place: the gym is the product, and "why bother lifting" is the question that makes the nutrition worth acting on. If the split ever feels wrong, the menu label is one string in `base.html`.
 
 **Why it exists**: most members here have never been taught what is in the food they buy every day, and local food is heavy on fried oil and liquid sugar while short on protein. The rule for the content is that every claim is about food you can point at in Bandung, and every idea is tested with a question before the reader moves on.
 
@@ -1028,7 +1031,7 @@ Chapters 6 and 7 are about training rather than food. They earn their place: the
 - **Every number is an estimate and says so.** Portions and prices vary by warung, so numbers are rounded hard and written with "kira-kira". `PRICE_NOTE` carries the date and caveat for the price chart, and the prices are the one thing here that goes stale.
 - **A quiz `key` is permanent.** It is stored on every recorded answer, so renaming one orphans that question's history. Reorder freely, rename never. `ContentIntegrityTest` pins uniqueness, that each `answer` names a real choice, and that every block type has a template.
 - **Five block types**: `card` (an idea, 2-3 sentences, optional `highlight`), `quiz`, `bars` (a ranking drawn in plain CSS, e.g. "protein per Rp 10.000"), `swap` (two plates from the same warung, before and after), `verdicts` (true/false rows with one line of why, used for myths, supplements and label claims). The data blocks are the memorable part; a `muted` row in `bars` is a comparison rather than a member of the list.
-- **Levels are bands, not one name per chapter** (`LEVELS`, each with an inclusive `min`): nine chapters would otherwise need nine names nobody can tell apart. `level_name()` reads the list backwards so the first match wins, and the last band covers everything beyond it. `level_chips()` labels the ladder as ranges ("3-5 bab") for the index. Badges are `emas` (all correct), `perak` (60% or more), `perunggu` (finished).
+- **Levels are bands, not one name per chapter** (`LEVELS`, each with an inclusive `min`): ten chapters would otherwise need eleven names nobody can tell apart. The top band's `min` must equal the chapter count, which a test asserts, so adding a chapter means moving it. `level_name()` reads the list backwards so the first match wins, and the last band covers everything beyond it. `level_chips()` labels the ladder as ranges ("3-5 bab") for the index. Badges are `emas` (all correct), `perak` (60% or more), `perunggu` (finished).
 
 ### The chapter page
 
@@ -1044,7 +1047,7 @@ Chapters 6 and 7 are about training rather than food. They earn their place: the
 
 ### Kuis Harian (`nutrition/daily.py`)
 
-One question a day at `/gizi/harian/`, for members who have finished all nine chapters and would otherwise never open the app again. A minute, something new, and a point on the leaderboard.
+One question a day at `/gizi/harian/`, for members who have finished every chapter and would otherwise never open the app again. A minute, something new, and a point on the leaderboard.
 
 - **Rotation, not a calendar**: `(day - ROTATION_EPOCH) % how many are active`. Everyone gets the same question on the same day, it never runs out, and it loops after the hundredth. Adding questions shifts which day each lands on, which does not matter.
 - **One shot a day**, enforced by a unique constraint on (member, `answer_date`). A second tap returns the first answer rather than an error. `answer_date` is stored rather than derived from `created_at`, so the day is unambiguous in Asia/Jakarta and the streak query is a plain date range.
