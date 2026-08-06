@@ -845,6 +845,71 @@ class DailyQuestionSeedTest(TestCase):
         self.assertEqual(question.position, seeded + 1)
 
 
+class DailyRewriteTest(TestCase):
+    """Rewriting a question that is already seeded, and what must not be rewritten.
+
+    A recorded answer is only a letter. Change the choices under it and that letter
+    points at different text, which quietly turns one member's history and the
+    all-time split into a mix of two different questions.
+    """
+
+    def setUp(self):
+        self.question = DailyQuestion.objects.get(code="dq-050")
+        self.other = DailyQuestion.objects.get(code="dq-051")
+        self.rows = [
+            {
+                "code": "dq-050",
+                "question": "Soal baru",
+                "choices": [{"key": "a", "text": "satu"}, {"key": "b", "text": "dua"}],
+                "answer": "b",
+                "explanation": "Karena begini.",
+            },
+            {
+                "code": "dq-051",
+                "question": "Soal baru juga",
+                "choices": [{"key": "a", "text": "satu"}, {"key": "b", "text": "dua"}],
+                "answer": "a",
+                "explanation": "Karena begitu.",
+            },
+        ]
+
+    def test_it_overwrites_only_the_codes_it_is_given(self):
+        before = self.other.question
+
+        changed = daily.rewrite_questions(DailyQuestion, self.rows, ["dq-050"])
+
+        self.question.refresh_from_db()
+        self.other.refresh_from_db()
+        self.assertEqual(changed, 1)
+        self.assertEqual(self.question.question, "Soal baru")
+        self.assertEqual(self.question.answer, "b")
+        self.assertEqual(self.other.question, before)
+
+    def test_it_leaves_position_alone_so_the_rotation_does_not_move(self):
+        position = self.question.position
+
+        daily.rewrite_questions(DailyQuestion, self.rows, ["dq-050"])
+
+        self.question.refresh_from_db()
+        self.assertEqual(self.question.position, position)
+
+    def test_a_code_that_does_not_exist_yet_is_skipped(self):
+        rows = self.rows + [
+            {
+                "code": "dq-999",
+                "question": "Belum ada di database",
+                "choices": [{"key": "a", "text": "satu"}],
+                "answer": "a",
+                "explanation": "Karena begini.",
+            }
+        ]
+
+        changed = daily.rewrite_questions(DailyQuestion, rows, ["dq-050", "dq-999"])
+
+        self.assertEqual(changed, 1)
+        self.assertFalse(DailyQuestion.objects.filter(code="dq-999").exists())
+
+
 class DailyDifficultyTest(TestCase):
     """From dq-101 on, the questions are meant to make somebody think.
 

@@ -186,3 +186,34 @@ def sync_questions(question_model, rows):
         question_model.objects.create(**row)
         created += 1
     return created
+
+
+def rewrite_questions(question_model, rows, codes):
+    """Overwrite the wording, choices, answer and explanation of existing rows.
+
+    `sync_questions` deliberately never overwrites, so editing a question in
+    `daily_questions.py` after it has been seeded does nothing on its own. This is
+    the other half: a migration passes the codes it means to rewrite.
+
+    Codes rather than "everything in rows" on purpose. A recorded answer is only a
+    letter, so rewriting the choices under a question that somebody has already
+    answered would leave that letter pointing at different text, and the all-time
+    split would mix two different questions. The caller decides, and is expected
+    to leave out anything already answered.
+
+    `position` is not touched, so which question lands on which day does not move.
+    Codes that do not exist yet are skipped: inserting is `sync_questions`' job.
+    """
+    by_code = {row["code"]: row for row in rows}
+    changed = 0
+    for question in question_model.objects.filter(code__in=codes):
+        row = by_code.get(question.code)
+        if not row:
+            continue
+        question.question = row["question"]
+        question.choices = row["choices"]
+        question.answer = row["answer"]
+        question.explanation = row["explanation"]
+        question.save()
+        changed += 1
+    return changed
