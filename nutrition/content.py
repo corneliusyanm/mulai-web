@@ -13,6 +13,14 @@ Two rules when adding to this file:
 2. **A quiz `key` is permanent.** It is stored on every recorded answer, so
    renaming one orphans the history behind that question. Reorder freely,
    rename never.
+3. **New questions get four choices and need thinking about.** The early chapters
+   ask things you can answer in five seconds, which is fine but teaches little.
+   From chapter 10 on: four choices rather than three (a blind guess drops from
+   33% to 25%), and an answer that needs judging between options that are all
+   plausible, or unlearning something where the intuitive answer is wrong. Hard is
+   not obscure: no trivia, no trick wording, never two defensible answers. Note
+   that changing a question's number of choices moves where its answer lands (see
+   `shuffle.py`), so any answers already recorded against it stop lining up.
 """
 
 from urllib.parse import quote
@@ -1309,17 +1317,22 @@ CHAPTERS = [
             {
                 "type": "quiz",
                 "key": "umur-1",
-                "question": "Massa otot mulai turun sendiri dari umur berapa, kalau nggak dilatih?",
+                "question": (
+                    "Dua orang sama-sama nggak pernah latihan beban: A umur 35, B umur 65. "
+                    "Siapa yang kehilangan otot lebih cepat per tahun?"
+                ),
                 "choices": [
-                    {"key": "a", "text": "Sekitar 30-an"},
-                    {"key": "b", "text": "Sekitar 50-an"},
-                    {"key": "c", "text": "Baru setelah 70"},
+                    {"key": "a", "text": "A, karena metabolismenya masih tinggi"},
+                    {"key": "b", "text": "B, karena penurunannya makin cepat setelah 60"},
+                    {"key": "c", "text": "Sama, penurunannya rata tiap tahun"},
+                    {"key": "d", "text": "Nggak ada yang kehilangan, selama berat badannya stabil"},
                 ],
-                "answer": "a",
+                "answer": "b",
                 "explanation": (
-                    "Dari 30-an, kira-kira 3 sampai 8 persen per dekade. Kedengeran kecil, "
-                    "tapi 40 tahun dikali segitu itu bedanya antara masih bisa gendong cucu "
-                    "atau nggak."
+                    "Penurunannya bukan garis lurus: makin tua makin cepat. Dan hati-hati "
+                    "sama pilihan terakhir, itu yang paling sering bikin orang tenang "
+                    "padahal nggak. Berat badan bisa stabil sementara ototnya turun dan "
+                    "lemaknya naik, jadi timbangan nggak kelihatan berubah."
                 ),
             },
             {
@@ -1338,17 +1351,19 @@ CHAPTERS = [
             {
                 "type": "quiz",
                 "key": "umur-2",
-                "question": "Kenapa jatuh jadi jauh lebih bahaya buat orang tua?",
+                "question": "Buat ngurangin risiko jatuh di umur tua, mana yang paling ngebantu?",
                 "choices": [
-                    {"key": "a", "text": "Mereka jarang keluar rumah"},
-                    {"key": "b", "text": "Tulangnya udah menipis dan ototnya nggak cukup buat nahan badan"},
-                    {"key": "c", "text": "Kulitnya lebih tipis"},
+                    {"key": "a", "text": "Latihan beban buat kaki dan pinggul, plus latihan keseimbangan"},
+                    {"key": "b", "text": "Gerak lebih pelan dan hindari kegiatan yang berisiko"},
+                    {"key": "c", "text": "Minum suplemen kalsium tiap hari"},
+                    {"key": "d", "text": "Pakai alas kaki yang lebih tebal dan empuk"},
                 ],
-                "answer": "b",
+                "answer": "a",
                 "explanation": (
-                    "Jatuh yang di umur 25 cuma bikin lecet bisa jadi tulang panggul patah "
-                    "di umur 70. Dan patah panggul di umur segitu sering jadi akhir dari "
-                    "hidup mandiri, bukan cuma cedera."
+                    "Pilihan kedua itu yang paling sering dipilih orang, dan justru "
+                    "kebalikannya: makin dihindari, ototnya makin hilang, dan risiko "
+                    "jatuhnya makin besar. Kalsium ngebantu tulang tapi nggak nahan badan "
+                    "kamu waktu kepleset. Yang nahan itu otot kaki dan pinggul."
                 ),
             },
             {
@@ -1367,17 +1382,22 @@ CHAPTERS = [
             {
                 "type": "quiz",
                 "key": "umur-3",
-                "question": "Umur 60 nanti masih kuat atau nggak, paling ditentuin oleh?",
+                "question": (
+                    "Anggap umur 30 massa ototmu sebesar \"X\". Kekuatanmu di umur 70 paling "
+                    "ditentuin oleh?"
+                ),
                 "choices": [
-                    {"key": "a", "text": "Genetik, udah dari lahir"},
-                    {"key": "b", "text": "Suplemen yang diminum pas udah tua"},
-                    {"key": "c", "text": "Kebiasaan latihan, makan dan tidur selama puluhan tahun"},
+                    {"key": "a", "text": "Seberapa besar X, dan seberapa datar penurunannya setelah itu"},
+                    {"key": "b", "text": "Cuma seberapa besar X"},
+                    {"key": "c", "text": "Cuma seberapa datar penurunannya"},
+                    {"key": "d", "text": "Genetik; X dan penurunannya nggak ngaruh"},
                 ],
-                "answer": "c",
+                "answer": "a",
                 "explanation": (
-                    "Genetik ngasih titik awal, kebiasaan yang nentuin arahnya. Dan yang "
-                    "paling nggak bisa dikejar itu waktu: mulai umur 25 beda jauh sama "
-                    "mulai umur 55."
+                    "Dua-duanya, dan itu kabar baik dari dua sisi. Kalau kamu masih muda, "
+                    "puncaknya masih bisa dinaikin. Kalau puncakmu udah lewat, garis "
+                    "penurunannya masih bisa dibikin jauh lebih datar. Nggak ada umur yang "
+                    "bikin usaha jadi sia-sia."
                 ),
             },
             {
@@ -1419,17 +1439,23 @@ CHAPTERS = [
             {
                 "type": "quiz",
                 "key": "umur-4",
-                "question": "Kamu 25 tahun, sehat, belum kerasa apa-apa. Langkah paling ngefek buat badan umur 60?",
+                "question": (
+                    "Bapak kamu umur 55, jarang gerak, dan bilang \"udah telat, umur segini "
+                    "mah udah lewat\". Saran yang paling masuk akal?"
+                ),
                 "choices": [
-                    {"key": "a", "text": "Mulai latihan beban rutin sekarang, walau ringan"},
-                    {"key": "b", "text": "Nunggu sampai kerasa butuh, sekitar umur 40-50"},
-                    {"key": "c", "text": "Fokus kardio aja, beban nanti kalau udah kuat"},
+                    {"key": "a", "text": "Bener, di umur segitu yang penting jaga makan aja"},
+                    {"key": "b", "text": "Turunin berat badan dulu, latihan nanti kalau udah ringan"},
+                    {"key": "c", "text": "Jalan kaki aja, angkat beban bahaya di umur 55"},
+                    {"key": "d", "text": "Mulai latihan beban ringan 2x seminggu plus jalan cepat, sekarang"},
                 ],
-                "answer": "a",
+                "answer": "d",
                 "explanation": (
-                    "Yang nggak bisa dikejar itu waktu. Latihan beban dari sekarang bikin "
-                    "puncak modalmu lebih tinggi, dan garis penurunannya lebih datar. Kardio "
-                    "penting, tapi dia nggak jagain otot dan tulang."
+                    "Justru yang mulai belakangan untungnya paling besar, karena otot dan "
+                    "tulang udah mulai turun dan latihan yang nahan itu. \"Nanti kalau udah "
+                    "ringan\" biasanya nggak pernah datang, dan turun berat tanpa latihan "
+                    "beban bikin ototnya ikut hilang. Yang penting bebannya ringan dulu dan "
+                    "tekniknya bener."
                 ),
             },
             {

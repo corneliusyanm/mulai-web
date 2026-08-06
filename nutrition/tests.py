@@ -452,12 +452,50 @@ class AnswerPlacementTest(TestCase):
                 )
 
     def test_no_letter_dominates_the_chapter_set(self):
-        answers = self.chapter_answers()
-        counts = {letter: answers.count(letter) for letter in "abc"}
+        # Grouped by choice count, like the daily set: a lopsided four-choice
+        # group would otherwise hide inside the three-choice tally.
+        groups = {}
+        for chapter in content.CHAPTERS:
+            for block in chapter["blocks"]:
+                if block["type"] == "quiz":
+                    groups.setdefault(len(block["choices"]), []).append(block["answer"])
 
-        for letter, count in counts.items():
-            self.assertGreater(count, 4, f"{letter} is starved: {counts}")
-            self.assertLess(count, len(answers) / 2, f"{letter} dominates: {counts}")
+        for size, answers in groups.items():
+            counts = {letter: answers.count(letter) for letter in "abcdefgh"[:size]}
+            self.assertEqual(
+                sum(counts.values()), len(answers), f"{size}-choice: unknown letter"
+            )
+            for letter, count in counts.items():
+                self.assertLess(
+                    count,
+                    len(answers) / 2,
+                    f"{size}-choice: {letter} dominates {counts}",
+                )
+            # Only meaningful once the group is big enough for every slot to have
+            # had a fair chance of being picked.
+            if len(answers) >= size * 2:
+                for letter, count in counts.items():
+                    self.assertGreater(
+                        count, 0, f"{size}-choice: {letter} unused {counts}"
+                    )
+
+    def test_the_newest_chapter_asks_harder_questions(self):
+        """New chapters get four choices, so the bar does not slip back.
+
+        The early chapters ask things you can answer in five seconds. From chapter
+        10 on the questions are meant to make somebody think, and four choices is
+        the floor of that: a blind guess drops from 33% to 25%.
+        """
+        newest = max(content.CHAPTERS, key=lambda chapter: chapter["number"])
+
+        quizzes = [b for b in newest["blocks"] if b["type"] == "quiz"]
+        self.assertTrue(quizzes, newest["slug"])
+        for block in quizzes:
+            self.assertGreaterEqual(
+                len(block["choices"]), 4, f"{block['key']} in {newest['slug']}"
+            )
+            # An explanation that only restates the answer teaches nothing.
+            self.assertGreater(len(block["explanation"]), 120, block["key"])
 
     def test_placement_is_stable_for_the_same_code(self):
         choices = [{"key": "a", "text": "satu"}, {"key": "b", "text": "dua"}]
