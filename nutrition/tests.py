@@ -11,6 +11,7 @@ from accounts.models import Member
 
 from . import content, daily
 from .analytics import question_stats
+from .interleave import interleave_topics
 from .models import ChapterProgress, DailyAnswer, DailyQuestion, QuizAnswer
 from .shuffle import place_answer
 
@@ -972,6 +973,95 @@ class DailyRewriteTest(TestCase):
         self.assertEqual(
             DailyQuestion.objects.get(code="dq-008").question, expected["dq-008"]
         )
+
+
+class TopicSpreadTest(TestCase):
+    """One question a day means a topic in file order becomes a run of days.
+
+    The rotation walked the file, so members got twelve straight days of calories,
+    then twelve of protein. These hold the two properties that fix it: nothing
+    repeats its own topic the next day, and no topic takes over a fortnight.
+    """
+
+    # Any run this long has to touch at least this many topics. The old file order
+    # scored 1. The order shipping today scores 6, so this has room for a content
+    # change without going quiet on a regression to clumping.
+    WINDOW = 7
+    MIN_TOPICS = 5
+
+    # Days 1 to 30 had already been shown when the rotation was reordered, so they
+    # stay where they are and only what comes after them is dealt out. Matches
+    # FROZEN_THROUGH in 0006_spread_daily_topics.
+    SHOWN = 30
+
+    def tail(self):
+        """The part of the rotation that actually gets reordered."""
+        from .daily_questions import RAW, TOPIC_OF
+
+        codes = [row[0] for row in RAW]
+        return interleave_topics(
+            codes[self.SHOWN :], TOPIC_OF, after=TOPIC_OF[codes[self.SHOWN - 1]]
+        )
+
+    def test_every_question_has_a_topic(self):
+        from .daily_questions import RAW, TOPIC_OF
+
+        self.assertEqual(len(TOPIC_OF), len(RAW))
+        for code, topic, *_ in RAW:
+            self.assertTrue(topic.strip(), code)
+            # A typo makes a topic of one, which then spreads itself perfectly and
+            # tells nobody. Every topic needs company.
+            self.assertGreater(
+                sum(1 for t in TOPIC_OF.values() if t == topic), 1, f"{code}: {topic}"
+            )
+
+    def test_no_two_days_in_a_row_share_a_topic(self):
+        from .daily_questions import TOPIC_OF
+
+        order = self.tail()
+        clashes = [
+            (a, b) for a, b in zip(order, order[1:]) if TOPIC_OF[a] == TOPIC_OF[b]
+        ]
+
+        self.assertEqual(clashes, [])
+
+    def test_the_join_with_the_days_already_shown_changes_topic_too(self):
+        from .daily_questions import RAW, TOPIC_OF
+
+        codes = [row[0] for row in RAW]
+
+        self.assertNotEqual(TOPIC_OF[self.tail()[0]], TOPIC_OF[codes[self.SHOWN - 1]])
+
+    def test_no_topic_takes_over_a_fortnight(self):
+        from .daily_questions import TOPIC_OF
+
+        topics = [TOPIC_OF[code] for code in self.tail()]
+
+        for start in range(len(topics) - self.WINDOW + 1):
+            window = topics[start : start + self.WINDOW]
+            self.assertGreaterEqual(
+                len(set(window)), self.MIN_TOPICS, f"day {start}: {window}"
+            )
+
+    def test_it_keeps_every_question_exactly_once(self):
+        from .daily_questions import RAW, TOPIC_OF
+
+        codes = [row[0] for row in RAW]
+
+        self.assertEqual(sorted(self.tail()), sorted(codes[self.SHOWN :]))
+
+    def test_the_order_is_the_same_every_time_it_is_computed(self):
+        # Deploys and dev machines have to agree, so this is hashed rather than
+        # randomised. A seeded RNG would only be stable within one Python version.
+        self.assertEqual(self.tail(), self.tail())
+
+    def test_a_topic_that_is_the_only_one_left_is_allowed_to_repeat(self):
+        # Rather than raising, which would turn a content edit into a failed deploy.
+        topic_of = {"a": "x", "b": "x", "c": "y"}
+
+        order = interleave_topics(["a", "b", "c"], topic_of)
+
+        self.assertEqual(sorted(order), ["a", "b", "c"])
 
 
 class DailyDifficultyTest(TestCase):
