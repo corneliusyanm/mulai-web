@@ -3400,8 +3400,13 @@ section {
 }
 
 /* The deadline drawn rather than described: green up to the cut-off, red after
-   it. Members who skip the paragraph still get the shape of the rule. */
+   it. Members who skip the paragraph still get the shape of the rule.
+
+   The line between the two colours is the whole point, so the tick and its
+   label sit on that line, not at the end of the bar. Both the bar and the tick
+   are positioned from --cut, so moving the split moves the label with it. */
 .rule-timeline {
+  --cut: 60%;
   margin: 4px 0 16px;
 }
 
@@ -3416,23 +3421,73 @@ section {
 }
 
 .rule-timeline-safe {
-  flex: 3;
+  flex: 0 0 var(--cut);
   background: #2e9e63;
   padding: 10px 6px;
 }
 
 .rule-timeline-late {
-  flex: 2;
+  flex: 1 1 auto;
   background: #d9534f;
   padding: 10px 6px;
 }
 
-.rule-timeline-marks {
+.rule-timeline-axis {
+  position: relative;
+  height: 36px;
+}
+
+.rule-timeline-point {
+  position: absolute;
+  top: 0;
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: center;
   font-size: 0.72rem;
+  line-height: 1.3;
   color: #6c6c8a;
-  margin-top: 6px;
+  text-align: center;
+}
+
+/* The tick itself, a short line carrying the eye down from the split. Same
+   height on both, or the two labels sit on different baselines and the row
+   reads as crooked. */
+.rule-timeline-point::before {
+  content: "";
+  width: 2px;
+  height: 12px;
+  margin-bottom: 4px;
+  border-radius: 1px;
+  background: currentColor;
+}
+
+.rule-timeline-point-cut {
+  left: var(--cut);
+  transform: translateX(-50%);
+  font-weight: 800;
+  color: #2f2f45;
+}
+
+.rule-timeline-point-cut::before {
+  width: 3px;
+}
+
+.rule-timeline-point-end {
+  right: 0;
+  align-items: flex-end;
+  text-align: right;
+}
+
+/* On a small phone the two labels run into each other. The deadline is the one
+   that matters, so the other one wraps and gives way. */
+@media (max-width: 380px) {
+  .rule-timeline-axis {
+    height: 50px;
+  }
+
+  .rule-timeline-point-end {
+    max-width: 4.5em;
+  }
 }
 
 .rule-summary {

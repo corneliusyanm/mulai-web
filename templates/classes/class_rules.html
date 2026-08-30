@@ -74,14 +74,20 @@ because most members will never reach it and should not be greeted by it.
                     lebih awal, biar temen yang lagi ngantri sempet siap-siap.
                 </p>
 
+                {% comment %}
+                The deadline drawn. The whole point of the picture is the line
+                where green becomes red, so both the tick and its label sit on
+                that line rather than at the ends of the bar. The bar and the
+                tick read the same --cut, so they cannot drift apart.
+                {% endcomment %}
                 <div class="rule-timeline" aria-hidden="true">
                     <div class="rule-timeline-bar">
                         <div class="rule-timeline-safe">Batalin di sini aman</div>
                         <div class="rule-timeline-late">Dihitung nggak dateng</div>
                     </div>
-                    <div class="rule-timeline-marks">
-                        <span>{{ cancel_wait }} sebelum kelas</span>
-                        <span>Kelas mulai</span>
+                    <div class="rule-timeline-axis">
+                        <span class="rule-timeline-point rule-timeline-point-cut">{{ cancel_wait }} sebelum</span>
+                        <span class="rule-timeline-point rule-timeline-point-end">Kelas mulai</span>
                     </div>
                 </div>
 

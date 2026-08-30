@@ -2370,6 +2370,20 @@ class ClassRulesPageTest(TestCase):
         self.assertEqual(response.context["strikes_before_ban"], 3)
         self.assertContains(response, "3 kali buang tempat")
 
+    def test_the_deadline_mark_sits_on_the_split_and_reads_the_settings(self):
+        """The tick is the point of the picture, so it carries the number."""
+        self.rules.late_cancel_hours = 6
+        self.rules.save()
+
+        response = self.client.get(reverse("classes:class_rules"))
+
+        self.assertContains(response, "rule-timeline-point-cut")
+        self.assertContains(response, "6 jam sebelum")
+        # The bar and the tick are both placed from --cut, so they cannot drift
+        css = open("static/css/style.css").read()
+        self.assertIn("flex: 0 0 var(--cut)", css)
+        self.assertIn("left: var(--cut)", css)
+
     def test_the_example_deadline_matches_the_example_class(self):
         response = self.client.get(reverse("classes:class_rules"))
 
