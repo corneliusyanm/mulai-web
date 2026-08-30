@@ -5,6 +5,7 @@ from django.db.models import Q
 from django.utils import timezone
 from django.core.validators import MaxValueValidator, MinValueValidator
 
+from accounts.dates import day_month, day_month_year
 from accounts.models import Member
 
 
@@ -317,7 +318,7 @@ def booking_block_reason(
             "label": "Booking Kelas Dikunci",
             "message": (
                 "Booking kelas kamu dikunci sampai "
-                f"{member.booking_blocked_until:%d %b %Y} karena beberapa kali "
+                f"{day_month_year(member.booking_blocked_until)} karena beberapa kali "
                 "nggak dateng padahal udah booking. Cek halaman Akun Saya buat "
                 "detailnya."
             ),
@@ -369,7 +370,7 @@ def booking_block_reason(
                 "message": (
                     f"Sehari booking {settings.advance_classes_per_day} kelas "
                     f"dulu, biar member lain kebagian tempat. Kelas tambahan di "
-                    f"tanggal {instance.date.strftime('%d %b %Y')} bisa dibooking "
+                    f"tanggal {day_month_year(instance.date)} bisa dibooking "
                     f"mulai jam {clock}, yaitu "
                     f"{spell_minutes(settings.extra_booking_minutes)} sebelum "
                     f"kelasnya mulai."
@@ -426,8 +427,11 @@ class GymClosure(models.Model):
     def __str__(self):
         what = self.class_obj.name if self.class_obj else "Semua kelas"
         if self.start_date == self.end_date:
-            return f"{what} libur {self.start_date:%d %b %Y}"
-        return f"{what} libur {self.start_date:%d %b} - {self.end_date:%d %b %Y}"
+            return f"{what} libur {day_month_year(self.start_date)}"
+        return (
+            f"{what} libur {day_month(self.start_date)} - "
+            f"{day_month_year(self.end_date)}"
+        )
 
     def clean(self):
         from django.core.exceptions import ValidationError
@@ -493,7 +497,7 @@ class GymClosure(models.Model):
                         "reason": (
                             f"{member.name} udah booking "
                             f"{instance.class_schedule.class_obj.name} "
-                            f"{instance.date:%d %b} jam "
+                            f"{day_month(instance.date)} jam "
                             f"{instance.start_time:%H:%M}, tapi kelasnya "
                             f"ditiadakan ({note}). Kabarin ya."
                         )

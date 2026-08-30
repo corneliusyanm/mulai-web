@@ -22,6 +22,12 @@ from classes.models import (
 from reminders.models import Reminder
 from classes.admin import ClassInstanceAdmin
 from classes.sharing import whatsapp_invite_url
+from accounts.templatetags.id_dates import (
+    indonesian_date,
+    indonesian_day,
+    indonesian_day_month,
+    indonesian_full_date,
+)
 
 
 class ClassModelTest(TestCase):
@@ -2514,3 +2520,91 @@ class GymClosureAdminTest(TestCase):
         self.assertContains(response, "late_cancel_hours")
         self.assertContains(response, "advance_classes_per_day")
         self.assertContains(response, "extra_booking_minutes")
+
+
+class IndonesianDateTest(TestCase):
+    """Dates a member reads are in their language, all the way through.
+
+    Four month abbreviations differ between the two languages (Mei, Agu, Okt,
+    Des) and every weekday does, which is how "Sun, 30 Aug" ended up on the
+    class list next to a heading that already said "Minggu".
+    """
+
+    def test_the_long_form_is_indonesian_end_to_end(self):
+        self.assertEqual(
+            indonesian_day(date(2026, 8, 30)), "Minggu, 30 Agustus 2026"
+        )
+
+    def test_every_month_that_differs_is_translated(self):
+        differs = {5: "Mei", 8: "Agu", 10: "Okt", 12: "Des"}
+        for month, expected in differs.items():
+            with self.subTest(month=month):
+                self.assertEqual(
+                    indonesian_day_month(date(2026, month, 1)), f"1 {expected}"
+                )
+
+    def test_every_weekday_is_translated(self):
+        # 24 to 30 August 2026 is a Monday to Sunday run
+        names = [
+            indonesian_date(date(2026, 8, day)).split(",")[0] for day in range(24, 31)
+        ]
+        self.assertEqual(
+            names,
+            ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"],
+        )
+
+    def test_the_forms_differ_only_in_how_much_they_say(self):
+        day = date(2026, 12, 25)
+        self.assertEqual(indonesian_day(day), "Jumat, 25 Desember 2026")
+        self.assertEqual(indonesian_date(day), "Jumat, 25 Des")
+        self.assertEqual(indonesian_day_month(day), "25 Des")
+        self.assertEqual(indonesian_full_date(day), "25 Des 2026")
+
+    def test_the_whatsapp_invite_carries_an_indonesian_date(self):
+        """This one leaves the site and lands in a stranger's chat."""
+        class_obj = Class.objects.create(
+            name="Kelas Pemula", description="Beginner", max_members=6
+        )
+        day = date(2026, 8, 30)
+        schedule = ClassSchedule.objects.create(
+            class_obj=class_obj,
+            day_of_week=day.weekday(),
+            start_time=time(17, 15),
+            end_time=time(18, 15),
+        )
+        instance = ClassInstance.objects.create(
+            class_schedule=schedule,
+            date=day,
+            start_time=time(17, 15),
+            end_time=time(18, 15),
+        )
+
+        url = whatsapp_invite_url(instance, "https://mulaigym.id/kelas/1/")
+
+        self.assertIn(quote("Minggu, 30 Agustus 2026"), url)
+        self.assertNotIn("August", url)
+
+    def test_the_closure_note_on_the_class_list_is_indonesian(self):
+        member = Member.objects.create(
+            name="Tanggal Member",
+            email="tanggal@example.com",
+            phone_number="628559000111",
+            age=25,
+            height=170.0,
+            weight=70.0,
+            gender="M",
+            goals="Stay fit",
+            years_of_working_out="1-2 years",
+            active_until=timezone.now() + timedelta(days=30),
+        )
+        holiday = timezone.localdate() + timedelta(days=3)
+        GymClosure.objects.create(
+            start_date=holiday, end_date=holiday, reason="Libur Idul Adha"
+        )
+        session = self.client.session
+        session["member_email"] = member.email
+        session.save()
+
+        response = self.client.get(reverse("classes:class_list"))
+
+        self.assertContains(response, indonesian_date(holiday))

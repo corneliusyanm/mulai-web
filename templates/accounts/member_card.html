@@ -1,3 +1,4 @@
+{% load id_dates %}
 <div class="card border-0 shadow-lg rounded-4 overflow-hidden mb-4" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
     <div class="bg-primary text-white p-4 text-center position-relative" style="background: linear-gradient(135deg, #0d6efd 0%, #0056b3 100%);">
         <div class="position-absolute top-0 end-0 p-2">
@@ -31,7 +32,7 @@
                             <div class="d-inline-block rounded-circle me-2 tier-dot" style="width: 8px; height: 8px;"></div>Gym Reguler
                         </span>
                         <span class="badge bg-success rounded-pill px-2 py-1 shadow-sm small">
-                            {{ member.active_until|date:"d M Y" }}
+                            {{ member.active_until|indonesian_full_date }}
                         </span>
                     </div>
                 </div>
@@ -43,7 +44,7 @@
                         </span>
                         {% if member.is_pemula_active_member %}
                             <span class="badge bg-success rounded-pill px-2 py-1 shadow-sm small">
-                                {{ member.pemula_active_until|date:"d M Y" }}
+                                {{ member.pemula_active_until|indonesian_full_date }}
                             </span>
                         {% else %}
                             <span class="text-muted small fst-italic">tidak aktif</span>
@@ -58,7 +59,7 @@
                         </span>
                         {% if member.is_semi_private_active_member %}
                             <span class="badge bg-success rounded-pill px-2 py-1 shadow-sm small">
-                                {{ member.semi_private_active_until|date:"d M Y" }}
+                                {{ member.semi_private_active_until|indonesian_full_date }}
                             </span>
                         {% else %}
                             <span class="text-muted small fst-italic">tidak aktif</span>

@@ -34,6 +34,7 @@ from datetime import timedelta
 from django.db import transaction
 from django.utils import timezone
 
+from accounts.dates import day_month_year
 from accounts.models import Member
 from reminders.models import Reminder
 
@@ -184,7 +185,7 @@ def _staff_reminder(member, penalty):
                 f"{member.name} buang tempat kelas {penalty.miss_days} kali dalam "
                 f"{PenaltySettings.get_solo().window_days} hari terakhir (nggak "
                 f"dateng atau batalin mepet). Booking "
-                f"kelas dikunci sampai {penalty.blocked_until:%d %b %Y}"
+                f"kelas dikunci sampai {day_month_year(penalty.blocked_until)}"
                 + (
                     f", {penalty.bookings_cancelled} booking dibatalkan"
                     if penalty.bookings_cancelled

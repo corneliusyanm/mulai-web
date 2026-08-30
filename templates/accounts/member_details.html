@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load id_dates %}
 {% load visit_extras humanize %}
 
 {% block title %}Akun Saya - Mulai Gym{% endblock %}
@@ -43,7 +44,7 @@
                             <div class="fw-bold">{{ membership_nudge.headline }}</div>
                             <div class="small">
                                 {{ membership_nudge.note }}
-                                <span class="text-nowrap">({{ membership_nudge.expires_on|date:"d M Y" }})</span>
+                                <span class="text-nowrap">({{ membership_nudge.expires_on|indonesian_full_date }})</span>
                             </div>
                         </div>
                     </div>
@@ -210,7 +211,7 @@
                                     <div class="d-flex justify-content-between align-items-center">
                                         <div>
                                             <i class="fas fa-calendar-check text-primary me-2"></i>
-                                            <span>{{ visit.check_in_time|date:"d M Y" }}</span>
+                                            <span>{{ visit.check_in_time|indonesian_full_date }}</span>
                                         </div>
                                         <div>
                                             <span class="badge bg-primary px-3 py-2">
@@ -257,7 +258,7 @@
                                           <div>
                                               <div class="fw-bold text-success">Rp {{ payment.amount|floatformat:0|intcomma }}</div>
                                               <small class="text-muted">
-                                                  {{ payment.payment_date|date:"d M Y" }}
+                                                  {{ payment.payment_date|indonesian_full_date }}
                                                   {% if payment.package %} &middot; {{ payment.package.description }}{% endif %}
                                               </small>
                                           </div>
@@ -309,7 +310,7 @@
                                           <div>
                                               <h6 class="mb-0 fw-bold">{{ booking.class_schedule.class_obj.name }}</h6>
                                               <small class="text-muted">
-                                                  <i class="fas fa-calendar-alt me-1"></i>{{ booking.date|date:"d M Y" }}
+                                                  <i class="fas fa-calendar-alt me-1"></i>{{ booking.date|indonesian_full_date }}
                                                   <i class="fas fa-clock ms-2 me-1"></i>{{ booking.start_time|time:"H:i" }}
                                               </small>
                                           </div>
@@ -328,7 +329,7 @@
                                           <div>
                                               <h6 class="mb-0 fw-bold">{{ booking.class_schedule.class_obj.name }}</h6>
                                               <small class="text-muted">
-                                                  <i class="fas fa-calendar-alt me-1"></i>{{ booking.date|date:"d M Y" }}
+                                                  <i class="fas fa-calendar-alt me-1"></i>{{ booking.date|indonesian_full_date }}
                                                   <i class="fas fa-clock ms-2 me-1"></i>{{ booking.start_time|time:"H:i" }}
                                               </small>
                                           </div>

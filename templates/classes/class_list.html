@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load class_extras %}
+{% load id_dates %}
 
 {% block title %}Jadwal Kelas - Mulai Gym{% endblock %}
 
@@ -19,7 +19,7 @@
             </div>
             {% for closure in closures %}
                 <div class="small">
-                    {{ closure.start_date|date:"D, d M" }}{% if closure.end_date != closure.start_date %} sampai {{ closure.end_date|date:"D, d M" }}{% endif %}:
+                    {{ closure.start_date|indonesian_date }}{% if closure.end_date != closure.start_date %} sampai {{ closure.end_date|indonesian_date }}{% endif %}:
                     {% if closure.class_obj %}{{ closure.class_obj.name }}{% else %}semua kelas{% endif %} libur{% if closure.reason %}, {{ closure.reason }}{% endif %}.
                 </div>
             {% endfor %}

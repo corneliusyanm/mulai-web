@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load id_dates %}
 
 {% block title %}Kuis Harian - Belajar Gizi - Mulai Gym{% endblock %}
 
@@ -33,7 +34,7 @@
                 {% endcomment %}
                 <div class="gizi-card" id="daily-card"
                      data-answered="{% if daily.answered %}1{% endif %}">
-                    <div class="gizi-quiz-kicker">Soal hari ini &middot; {{ daily.day|date:"d M Y" }}</div>
+                    <div class="gizi-quiz-kicker">Soal hari ini &middot; {{ daily.day|indonesian_full_date }}</div>
                     <h2 class="gizi-card-title">{{ daily.question.question }}</h2>
 
                     <form method="post" action="{% url 'nutrition:daily_answer' %}" class="gizi-choices" id="daily-form">

@@ -5,6 +5,7 @@ Expects `booking` (a ClassInstance carrying when_label / when_soon / share_url,
 and waitlist_place for a waitlisted one) and `waitlist` as a flag. The two lists
 used to be copy-pasted blocks, which meant every card tweak had to be made twice.
 {% endcomment %}
+{% load id_dates %}
 {% with name=booking.class_schedule.class_obj.name %}
 <div class="upcoming-class-row border-0 rounded-2 mb-2 hover-lift {% if "Kelas Pemula" in name %}tier-silver-strong shadow-lg{% elif "Semi Private" in name %}tier-gold-strong shadow-lg{% else %}upcoming-class-plain shadow-sm{% endif %}">
     <a href="{% url 'classes:class_detail' booking.id %}" class="upcoming-class-link">
@@ -16,7 +17,7 @@ used to be copy-pasted blocks, which meant every card tweak had to be made twice
                 <div>
                     <h6 class="mb-0 fw-bold text-dark">{{ name }}</h6>
                     <small class="text-muted">
-                        <i class="fas fa-calendar-alt me-1"></i>{{ booking.date|date:"d M Y" }}
+                        <i class="fas fa-calendar-alt me-1"></i>{{ booking.date|indonesian_full_date }}
                         <i class="fas fa-clock ms-2 me-1"></i>{{ booking.start_time|time:"H:i" }}
                     </small>
                     {% if booking.when_label %}

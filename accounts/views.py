@@ -23,6 +23,7 @@ from payments.models import Payment
 from visits.busy_hours import quiet_hours
 from visits.models import Visit
 
+from .dates import MONTHS_ID, MONTHS_ID_SHORT
 from .forms import (
     MemberEditForm,
     MemberLoginForm,
@@ -50,22 +51,6 @@ HISTORY_TABS = [
     {"key": "pembayaran", "label": "Pembayaran", "icon": "fas fa-credit-card"},
     {"key": "kelas", "label": "Kelas", "icon": "fas fa-dumbbell"},
 ]
-
-MONTHS_ID = {
-    1: "Januari",
-    2: "Februari",
-    3: "Maret",
-    4: "April",
-    5: "Mei",
-    6: "Juni",
-    7: "Juli",
-    8: "Agustus",
-    9: "September",
-    10: "Oktober",
-    11: "November",
-    12: "Desember",
-}
-
 
 # Visit milestones on /akun. Spaced to match how members actually accumulate
 # visits: the median member has about 6, nine in ten are under 60, and the
@@ -169,21 +154,6 @@ def _membership_nudge(member, today):
         "whatsapp_url": f"https://wa.me/{GYM_WHATSAPP_NUMBER}?text={quote(message)}",
     }
 
-
-MONTHS_ID_SHORT = {
-    1: "Jan",
-    2: "Feb",
-    3: "Mar",
-    4: "Apr",
-    5: "Mei",
-    6: "Jun",
-    7: "Jul",
-    8: "Agu",
-    9: "Sep",
-    10: "Okt",
-    11: "Nov",
-    12: "Des",
-}
 
 VISIT_CHART_MONTHS = 12
 

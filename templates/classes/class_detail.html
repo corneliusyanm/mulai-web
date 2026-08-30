@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load class_extras %}
+{% load id_dates %}
 
 {% block title %}{{ instance.class_schedule.class_obj.name }} - Mulai Gym{% endblock %}
 
@@ -92,7 +92,7 @@
                             {% else %}
                                 <div class="class-rule-note mb-3">
                                     <i class="fas fa-circle-info me-1"></i>
-                                    Kalau nggak bisa dateng, batalin sebelum jam {{ instance.cancel_deadline_at|time:"H:i" }} ({{ instance.cancel_deadline_at|date:"d M" }}). Lewat jam itu, dihitung sama kayak nggak dateng.
+                                    Kalau nggak bisa dateng, batalin sebelum jam {{ instance.cancel_deadline_at|time:"H:i" }} ({{ instance.cancel_deadline_at|indonesian_day_month }}). Lewat jam itu, dihitung sama kayak nggak dateng.
                                     <a href="{% url 'classes:class_rules' %}">Aturannya di sini.</a>
                                 </div>
                             {% endif %}
@@ -105,7 +105,7 @@
                         {% else %}
                             <div class="class-rule-note mb-3">
                                 <i class="fas fa-circle-info me-1"></i>
-                                Kalau udah booking terus nggak bisa dateng, batalin sebelum jam {{ instance.cancel_deadline_at|time:"H:i" }} ({{ instance.cancel_deadline_at|date:"d M" }}), biar nggak kena catatan.
+                                Kalau udah booking terus nggak bisa dateng, batalin sebelum jam {{ instance.cancel_deadline_at|time:"H:i" }} ({{ instance.cancel_deadline_at|indonesian_day_month }}), biar nggak kena catatan.
                                 <a href="{% url 'classes:class_rules' %}">Aturannya di sini.</a>
                             </div>
                         {% endif %}
@@ -164,7 +164,7 @@
                                 <div class="alert alert-warning border-0 shadow-sm text-start mt-3 mb-0 mx-auto" style="border-radius: 15px; max-width: 460px;">
                                     {% if day_limit_reached %}
                                         <div class="fw-bold mb-2">
-                                            <i class="fas fa-circle-info me-2"></i>Kamu udah punya {{ member_classes_on_date|length }} kelas di tanggal {{ instance.date|date:"d M Y" }}
+                                            <i class="fas fa-circle-info me-2"></i>Kamu udah punya {{ member_classes_on_date|length }} kelas di tanggal {{ instance.date|indonesian_full_date }}
                                         </div>
                                         <ul class="list-unstyled mb-2 small">
                                             {% for booked in member_classes_on_date %}

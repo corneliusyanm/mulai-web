@@ -21,6 +21,8 @@ from django.core.cache import cache
 from django.db import connection
 from django.utils import timezone
 
+from accounts.dates import MONTHS_ID
+
 # What each thing is worth. Visits dominate on purpose: turning up is the
 # behaviour worth rewarding, and everything else is a bonus on top.
 POINTS = {
@@ -38,11 +40,6 @@ EARLIEST_MONTH = date(2026, 8, 1)
 # Long enough that a page refresh is not a fresh query, short enough that a
 # member who just checked in sees it move while they are still in the gym.
 CACHE_SECONDS = 5 * 60
-
-MONTHS_ID = [
-    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-    "Juli", "Agustus", "September", "Oktober", "November", "Desember",
-]
 
 LIFETIME_KEY = "lifetime"
 
@@ -143,7 +140,7 @@ def display_name(name):
 
 
 def month_label(year, month):
-    return f"{MONTHS_ID[month - 1]} {year}"
+    return f"{MONTHS_ID[month]} {year}"
 
 
 def month_period(year, month):
@@ -152,7 +149,7 @@ def month_period(year, month):
     return {
         "key": f"{year:04d}-{month:02d}",
         "label": month_label(year, month),
-        "short": MONTHS_ID[month - 1],
+        "short": MONTHS_ID[month],
         "start": start,
         "end": end,
         "is_lifetime": False,

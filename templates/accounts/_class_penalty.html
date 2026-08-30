@@ -9,6 +9,7 @@ Four levels: `banned` while booking is locked, `pending` when tonight's run will
 lock them, `warning` on the last free strike, `history` for a miss or two with
 nothing hanging over them.
 {% endcomment %}
+{% load id_dates %}
 {% if class_penalty %}
 <div class="row justify-content-center mb-4">
     <div class="col-lg-8">
@@ -19,7 +20,7 @@ nothing hanging over them.
                 </div>
                 <div class="flex-grow-1">
                     {% if class_penalty.level == 'banned' %}
-                        <div class="fw-bold">Booking kelas dikunci sampai {{ class_penalty.blocked_until|date:"d M Y" }}</div>
+                        <div class="fw-bold">Booking kelas dikunci sampai {{ class_penalty.blocked_until|indonesian_full_date }}</div>
                         <div class="small">
                             Kamu nggak dateng {{ class_penalty.misses_in_window }} kali dalam
                             {{ class_penalty.window_days }} hari terakhir padahal udah booking.
@@ -29,7 +30,7 @@ nothing hanging over them.
                             {% endif %}
                         </div>
                         <div class="small mt-1">
-                            Tanggal {{ class_penalty.blocked_until|date:"d M" }} kamu udah bisa booking lagi.
+                            Tanggal {{ class_penalty.blocked_until|indonesian_day_month }} kamu udah bisa booking lagi.
                             Latihan sendiri di gym tetep bisa kapan aja, yang dikunci cuma booking kelas.
                         </div>
                     {% elif class_penalty.level == 'pending' %}
@@ -83,7 +84,7 @@ nothing hanging over them.
                         <span>{{ miss.class_name }}
                             <span class="class-penalty-kind">{{ miss.get_kind_display|lower }}</span>
                         </span>
-                        <span class="class-penalty-date">{{ miss.class_date|date:"d M Y" }}</span>
+                        <span class="class-penalty-date">{{ miss.class_date|indonesian_full_date }}</span>
                     </div>
                 {% endfor %}
                 {% if class_penalty.total_misses > class_penalty.recent_misses|length %}
