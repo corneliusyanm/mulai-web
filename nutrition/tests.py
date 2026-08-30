@@ -1064,6 +1064,50 @@ class TopicSpreadTest(TestCase):
         self.assertEqual(sorted(order), ["a", "b", "c"])
 
 
+class DailyRotationOrderTest(TestCase):
+    """What 0006 left in the database, which is what members actually get."""
+
+    def positions(self):
+        return list(
+            DailyQuestion.objects.order_by("position").values_list("code", flat=True)
+        )
+
+    def test_positions_are_still_one_per_day_with_no_gaps(self):
+        found = sorted(DailyQuestion.objects.values_list("position", flat=True))
+
+        self.assertEqual(found, list(range(1, DailyQuestion.objects.count() + 1)))
+
+    def test_the_days_already_shown_did_not_move(self):
+        # Moving today's question out from under somebody who has answered it shows
+        # them a new question with their old answer marked on it.
+        self.assertEqual(
+            self.positions()[:30], [f"dq-{n:03d}" for n in range(1, 31)]
+        )
+
+    def test_the_rest_of_the_rotation_changes_topic_every_day(self):
+        from .daily_questions import TOPIC_OF
+
+        order = self.positions()[29:]  # from today, so the join is covered
+        clashes = [
+            (a, b) for a, b in zip(order, order[1:]) if TOPIC_OF[a] == TOPIC_OF[b]
+        ]
+
+        self.assertEqual(clashes, [])
+
+    def test_training_shows_up_in_the_first_fortnight_now(self):
+        """The complaint that started this: weight training was due on day 55.
+
+        Not a property of the algorithm, a property of what members get, so it is
+        worth pinning separately from the spread.
+        """
+        from .daily_questions import TOPIC_OF
+
+        soon = [TOPIC_OF[code] for code in self.positions()[30:44]]
+
+        self.assertIn("otot", soon)
+        self.assertIn("kardio", soon)
+
+
 class DailyDifficultyTest(TestCase):
     """From dq-007 on, the questions are meant to make somebody think.
 
