@@ -756,29 +756,50 @@ The class list, the class detail page and the booking POST all read the same fun
 ### Booking Rules
 - **Login Required**: Only authenticated members can book classes
 - **Waitlist System**: Automatic promotion when spots become available
-- **Max 2 Classes per Day**: See "Daily Booking Limit" below
-- **Free Cancellation**: No time restrictions on cancellations
+- **1 class per day booked in advance**: See "Daily Booking Limit" below
+- **Cancel at least 4 hours before**: later than that counts as a miss, see "No-Show Penalty"
 - **FIFO Waitlist**: First to join waitlist gets first available spot
+- **A class that has started cannot be booked**: `STARTED` in `booking_block_reason()`
 
 ### Daily Booking Limit
 
-Members used to book 3-4 classes on the same day just to be sure they never hit a full class, then skip most of them, which locked other members out of those spots. So one member can now hold at most `MAX_CLASSES_PER_DAY` (2) classes per day.
+The first version of this rule capped a member at 2 classes a day, which stopped
+the worst hoarding. It stopped working as the gym filled up: fill went from 29%
+in March 2026 to 55% in August, and members started booking two evening classes
+the moment instances appeared, then dropping one shortly before it ran.
 
-- **Counts waitlist too** (`member_classes_on_date()` in `classes/models.py`): a waitlist spot becomes a real booking as soon as someone cancels, so it consumes quota. Without this, a member could hold 2 bookings + 2 waitlist spots and still end up with 4 classes that day.
-- **All class types together**: Kelas Pemula + Semi Private combined. 2 per day total, not 2 of each.
+So the limit is no longer a cap, it is a clock. A member may hold
+`advance_classes_per_day` (1) class per day booked ahead. Any further class that
+day can still be booked, but only from `extra_booking_minutes` (60) before it
+starts. Until then that seat stays available to members who have no class that
+day at all.
+
+- **Counts waitlist too** (`member_classes_on_date()` in `classes/models.py`): a waitlist spot becomes a real booking as soon as someone cancels, so it consumes quota. Without this, a member could hold a booking plus a stack of waitlist spots.
+- **All class types together**: Kelas Pemula + Semi Private combined.
+- **Classes earlier the same day still count.** A member who took the 07:15 class cannot book an evening class in advance, only inside the last hour. That is the rule doing its job: a second class a day is a last-minute thing, not something you hold all week.
 - **Cancelled classes don't count**: if the gym cancels a class (`status="CANCELLED"`), it frees the member's quota for that day. A member cancelling their own booking frees it immediately too.
 - **Waitlist promotion is never blocked**: the waitlist spot already counted, so `move_from_waitlist()` only converts it to a booking and the total for that day does not change.
-- **Admins can override**: the limit lives in the member-facing `book_class` view, not in the model, so staff can still add a member to a 3rd class from `/admin` for special cases (paid extra, makeup class).
-- **Race-safe**: the check and the booking run in one transaction with `select_for_update()` on the member row, so double-tapping cannot slip a 3rd booking through.
-- **Shown before they tap**: a member who already has 2 classes on that date sees a disabled "Maks 2 Kelas per Hari" button plus a note listing the classes they already hold that day, instead of an error after tapping.
-- **To change the limit**: edit `MAX_CLASSES_PER_DAY` in `classes/models.py`. All user-facing messages read the number from that constant.
+- **Admins can override**: the limit lives in the member-facing `book_class` view, not in the model, so staff can still add a member to an extra class from `/admin` for special cases (paid extra, makeup class).
+- **Race-safe**: the check and the booking run in one transaction with `select_for_update()` on the member row, so double-tapping cannot slip an extra booking through.
+- **Shown as a time, not a refusal.** The disabled button reads "Bisa jam 16:15", the exact moment booking opens, and the note under the date says the same. A member is never told no, only later. That wording matters more here than anywhere else on the site: most members will not work out "60 minutes before a 17:15 class" on their own.
+- **To change the numbers**: `advance_classes_per_day` and `extra_booking_minutes` on the `PenaltySettings` row at `/admin`. Every message reads them from there.
 
 ### No-Show Penalty (Penalti Kelas)
 
-The 2-per-day cap stopped members hoarding slots. This is for the other half of the problem: booking a class and not turning up, which holds a spot nobody else can take.
+The daily limit stopped members hoarding slots. This is for the other half of the problem: holding a seat and wasting it, which locks out somebody who would have used it.
 
-**The rule**: miss more than `misses_allowed` (2) **days** inside a rolling `window_days` (15), and class booking locks for `ban_days` (3). Every further miss locks it again.
+**The rule**: waste a seat on more than `misses_allowed` (2) **days** inside a rolling `window_days` (15), and class booking locks for `ban_days` (3). Every further miss locks it again.
 
+**Two ways to waste a seat, counted the same because they cost the same:**
+
+- **`NO_SHOW`** - booked, class ran, never checked in. Found by the nightly command.
+- **`LATE_CANCEL`** - cancelled inside `late_cancel_hours` (4) of the start. Written by `record_late_cancel()` in `classes/penalties.py` at the moment the member taps Batalkan. Added because members learned to book two classes a day and drop one a few minutes before it ran, which is a seat the waitlist gets far too late to use. Cancelling earlier than the deadline is free, always, however often.
+
+Both are `ClassMiss` rows with a `kind`, so the window count, the ban, the card on `/akun`, the admin report and Papan Peringkat treat them identically without knowing the difference exists.
+
+- **The deadline is flat 4 hours, and always shown as a clock time.** A 07:15 class therefore has to be cancelled by 03:15, which in practice means the night before. That is deliberate: a cancellation at 06:00 gives the waitlist 75 minutes at dawn, which is no use to anybody. Nobody is asked to do the arithmetic, though: the class card, the class page and the account row all print "batalin sebelum jam 13:15".
+- **Leaving a waitlist is never a strike.** A waitlist place is not a seat, so dropping it costs nobody one.
+- **A seat handed over after the deadline carries no strike.** `WaitlistPromotion` records when a member was promoted; if that happened after the deadline had already passed, cancelling it is free. Members have no notification channel, so a promotion 20 minutes before a class is a seat nobody told them they had, and striking them for it is the single most unfair outcome the system can produce.
 - **What counts as missing**: `classes/attendance.py`, shared with the admin no-show report so the two can never disagree. A member missed a class when they held a booking, the date has passed, and they did not check in **at all** that local day. Coming at 19:00 after skipping the 07:00 class counts as attending, deliberately: the strict version punishes everyone who forgot to tap the QR or whom an admin checked in late, and those are indistinguishable from a real no-show. Cancelled classes and waitlist places never count.
 - **Strikes are per day, not per class.** Two classes missed on one date is one strike. Against a year of real bookings, per-class counting produced 148 penalties across 17 members and per-day produced 137 across 15; the difference is one lie-in with two classes booked.
 - **Nothing before `effective_from` counts.** The settings row is created by a migration with that field set to the deploy date, so nobody is punished for behaviour from before the rule existed and the first possible penalty is three missed days after launch.
@@ -796,9 +817,45 @@ The 2-per-day cap stopped members hoarding slots. This is for the other half of 
 
 **Enforcement** is one new `PENALTY` code in `booking_block_reason()`, the function the class list, the class detail page and `book_class` all already call, so the button reads "Kena Penalti" and the POST refuses. It reads a field already loaded on the member, so the list page costs nothing extra. Admin booking is a separate path and can still override.
 
-**What the member sees on `/akun`**: nothing at all if they have never missed a booked class. Then a quiet history line, a warning on their last free strike ("sekali lagi nggak dateng kena penalti"), or the lock with the date they get booking back. The copy is careful to say the gym itself is still open to them; only class booking is locked.
+**What the member sees on `/akun`**: nothing at all if they have never wasted a booked seat. Then one of four states from `member_state()`:
+
+| Level | When | What it says |
+| --- | --- | --- |
+| `history` | a miss or two, nothing hanging over them | quiet line explaining the rule |
+| `warning` | exactly on the allowance | "sekali lagi kena penalti" |
+| `pending` | over the allowance, tonight's run has not seen it yet | "nanti malam booking kelas kamu dikunci 3 hari" |
+| `banned` | locked right now | the date they get booking back |
+
+`pending` only became reachable when late cancellations started being recorded live: a member can be three strikes deep at 16:00 while the lock does not land until 21:00. Without it they read the calm history line, book two more classes and lose them overnight with no explanation. It is not simply "over the allowance": a member who already served a lock for those same misses is done with them, so the check is whether any `BookingPenalty` exists on or after their most recent miss.
+
+The copy in every state is careful to say the gym itself is still open to them; only class booking is locked.
 
 **For staff**: `booking_blocked_until` is on the member page (clear it to lift a lock immediately) plus a "Penalti Kelas" column and filter on the member list. `Kelas Bolos` and `Penalti Kelas` are browsable but not addable by hand, since they are derived from real bookings and check-ins.
+
+### Aturan Kelas (`/kelas/aturan/`)
+
+One page explaining all three rules, because before it existed every penalty
+turned into an admin explaining the same thing to one member at a time, and a
+fair number of those conversations ended in "ah ribet banget sih".
+
+- **Open without logging in**, so the link can be pasted straight into a WhatsApp reply. A logged-in member also sees their own record at the top (the same `_class_penalty.html` partial `/akun` uses, with `on_rules_page=True` to drop the now-circular link back here).
+- **Every number reads the live `PenaltySettings` row.** Change the window in `/admin` and this page changes with it, so nobody is ever quoting a rule that is no longer true.
+- **Shaped for members who find rules tiring**: one rule per card, a big number, one sentence, then a worked example with real clock times ("kelas jam 17:15, batalin jam 13:15 aman, batalin jam 16:45 dihitung"). The cancellation deadline is also drawn as a green/red bar, since some members will read the picture and not the paragraph. Then a three-line "Gampangnya" summary, and each rule carries a one-line "Kenapa" in terms of a friend who did not get the seat.
+- **Linked from** the class list header, the class detail page (both the footer and the deadline note), the day-limit note, the `/akun` cancel nudge and the penalty card.
+- **The page is the backup, not the plan.** Most members will learn the rule from the deadline printed on the class they are holding and from the "Bisa jam 16:15" button, not from reading this. That is why those notes exist on every surface rather than only here.
+
+### Libur / Kelas Ditiadakan (`GymClosure`)
+
+The generator runs 3 days ahead, so an admin who knew a month ago that the gym
+would be shut on the 5th could do nothing until the 3rd, by which time members
+had booked and each one had to be told personally that the class was off.
+
+- **One record** at `/admin`: `start_date`, `end_date` (defaults to the start), an optional `class_obj` and an optional `reason`.
+- **`class_obj` empty means the whole gym.** Filled in, only that class is off, which is what a trainer on leave looks like.
+- **The generator skips it** (`generate_class_instances`), so those instances are never created and there is nothing to book.
+- **Added late it still helps.** `save()` cancels instances already generated inside the range and files a `KELAS_LIBUR` reminder for every member who had booked or queued for one, so staff have the list rather than having to find it. The admin form also says how many classes it just cancelled.
+- **Bookings are left on the cancelled instance on purpose.** A `CANCELLED` class stops counting against the member's daily limit and drops off the list by itself, and those rows are the only record of who to apologise to.
+- **Members see it on `/kelas/`**: upcoming closures within 14 days show as "Kelas ditiadakan", with the reason, so an empty day reads as planned rather than broken.
 
 ### Technical Implementation
 - **Time-Based Filtering (`classes/views.py`)**:
