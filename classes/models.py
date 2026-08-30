@@ -379,6 +379,142 @@ def booking_block_reason(
     return None
 
 
+class GymClosure(models.Model):
+    """A day, or a run of days, with no classes. Written before they exist.
+
+    The generator runs three days ahead, so by the time an admin opens /admin and
+    sees the instances for a public holiday, members have already booked them and
+    somebody has to tell each of those members personally that the class is off.
+    A closure written any time in advance stops those instances being created at
+    all: there is nothing to book, so there is nothing to apologise for.
+
+    Added late it still helps. Saving one cancels the instances already generated
+    inside its range and files a staff reminder for every member who had booked
+    one, which is the same work as before except nobody has to find them first.
+
+    `class_obj` empty means the whole gym is shut. Filled in, only that class is
+    off, which is what a trainer on leave actually looks like.
+    """
+
+    start_date = models.DateField(help_text="Hari pertama kelas ditiadakan.")
+    end_date = models.DateField(
+        help_text="Hari terakhir kelas ditiadakan. Sama dengan tanggal mulai kalau cuma sehari."
+    )
+    class_obj = models.ForeignKey(
+        Class,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="closures",
+        verbose_name="Kelas",
+        help_text="Kosongkan kalau semua kelas ditiadakan. Isi kalau cuma satu kelas yang libur.",
+    )
+    reason = models.CharField(
+        max_length=120,
+        blank=True,
+        verbose_name="Alasan",
+        help_text="Dilihat member di halaman jadwal kelas, contoh: Libur Idul Adha.",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Libur / Kelas Ditiadakan"
+        verbose_name_plural = "Libur / Kelas Ditiadakan"
+        ordering = ["start_date", "class_obj__name"]
+        indexes = [models.Index(fields=["start_date", "end_date"])]
+
+    def __str__(self):
+        what = self.class_obj.name if self.class_obj else "Semua kelas"
+        if self.start_date == self.end_date:
+            return f"{what} libur {self.start_date:%d %b %Y}"
+        return f"{what} libur {self.start_date:%d %b} - {self.end_date:%d %b %Y}"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+
+        if self.end_date and self.start_date and self.end_date < self.start_date:
+            raise ValidationError(
+                {"end_date": "Tanggal selesai tidak boleh sebelum tanggal mulai."}
+            )
+
+    def save(self, *args, **kwargs):
+        """Save, then clear out anything already generated inside the range.
+
+        Side effects in save() rather than a signal or an admin hook, because
+        /admin is the only place a closure is ever written and a closure that
+        does not actually close the classes is worse than none: the admin would
+        believe it was handled.
+        """
+        if not self.end_date:
+            self.end_date = self.start_date
+        super().save(*args, **kwargs)
+        self.cancel_generated_instances()
+
+    def covers(self, date, class_obj_id=None):
+        """Whether this closure applies to a class on `date`."""
+        if not (self.start_date <= date <= self.end_date):
+            return False
+        return self.class_obj_id is None or self.class_obj_id == class_obj_id
+
+    def matching_instances(self):
+        """Instances already created inside this closure, still live."""
+        instances = ClassInstance.objects.filter(
+            date__gte=self.start_date, date__lte=self.end_date
+        ).exclude(status="CANCELLED")
+        if self.class_obj_id:
+            instances = instances.filter(
+                class_schedule__class_obj_id=self.class_obj_id
+            )
+        return instances.select_related("class_schedule__class_obj")
+
+    def cancel_generated_instances(self):
+        """Cancel what the cron already made, and tell staff who to contact.
+
+        Bookings are left on the cancelled instance on purpose. A CANCELLED class
+        stops counting against the member's daily limit and disappears from the
+        list on its own, and the rows are the only record of who to apologise to.
+        """
+        from reminders.models import Reminder
+
+        cancelled = 0
+        for instance in self.matching_instances():
+            instance.status = "CANCELLED"
+            instance.save(update_fields=["status"])
+            cancelled += 1
+            note = self.reason or "gym libur"
+            for member in list(instance.booked_members.all()) + list(
+                instance.waitlisted_members.all()
+            ):
+                Reminder.objects.get_or_create(
+                    member=member,
+                    reminder_type="KELAS_LIBUR",
+                    due_date=instance.date,
+                    defaults={
+                        "reason": (
+                            f"{member.name} udah booking "
+                            f"{instance.class_schedule.class_obj.name} "
+                            f"{instance.date:%d %b} jam "
+                            f"{instance.start_time:%H:%M}, tapi kelasnya "
+                            f"ditiadakan ({note}). Kabarin ya."
+                        )
+                    },
+                )
+        return cancelled
+
+    @classmethod
+    def upcoming(cls, today=None, days=None):
+        """Closures that have not finished yet, soonest first.
+
+        `days` trims it to the horizon the class list actually shows, so a
+        closure three months out does not sit at the top of the page all quarter.
+        """
+        today = today or timezone.localdate()
+        closures = cls.objects.filter(end_date__gte=today).select_related("class_obj")
+        if days is not None:
+            closures = closures.filter(start_date__lte=today + timedelta(days=days))
+        return closures.order_by("start_date")
+
+
 class PenaltySettings(models.Model):
     """Every tunable number in the class rules, editable at /admin.
 

@@ -12,6 +12,20 @@
         </a>
     </p>
 
+    {% if closures %}
+        <div class="class-closure-note mb-4">
+            <div class="fw-bold mb-1">
+                <i class="fas fa-calendar-xmark me-2"></i>Kelas ditiadakan
+            </div>
+            {% for closure in closures %}
+                <div class="small">
+                    {{ closure.start_date|date:"D, d M" }}{% if closure.end_date != closure.start_date %} sampai {{ closure.end_date|date:"D, d M" }}{% endif %}:
+                    {% if closure.class_obj %}{{ closure.class_obj.name }}{% else %}semua kelas{% endif %} libur{% if closure.reason %}, {{ closure.reason }}{% endif %}.
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
     <!-- Filter chips - 1-tap toggle, click again to clear -->
     <div class="class-filter-bar mb-4">
         <div class="class-filter-row">

@@ -14,10 +14,12 @@ from classes.models import (
     ClassSchedule,
     ClassInstance,
     ClassMiss,
+    GymClosure,
     PenaltySettings,
     WaitlistPromotion,
     booking_block_reason,
 )
+from reminders.models import Reminder
 from classes.admin import ClassInstanceAdmin
 from classes.sharing import whatsapp_invite_url
 
@@ -1727,15 +1729,15 @@ class ListPageBookingTest(TestCase):
         self.login()
 
         # Everything a card needs is precomputed, so the query count must stay
-        # flat no matter how many classes are listed. Seven, not six: the rules
-        # row is one read for the whole page.
-        with self.assertNumQueries(7):
+        # flat no matter how many classes are listed. Eight, not six: the rules
+        # row and the closures strip are one read each for the whole page.
+        with self.assertNumQueries(8):
             self.client.get(reverse("classes:class_list"))
 
         for hour in (7, 9, 11, 13, 15, 17):
             self.make_instance(self.pemula, hour)
 
-        with self.assertNumQueries(7):
+        with self.assertNumQueries(8):
             self.client.get(reverse("classes:class_list"))
 
 
@@ -2124,6 +2126,211 @@ class WhatsAppInviteTest(TestCase):
         )
 
 
+class GymClosureTest(TestCase):
+    """Days marked off before the cron gets to them, and after."""
+
+    def setUp(self):
+        self.pemula = Class.objects.create(
+            name="Kelas Pemula", description="Beginner", max_members=6
+        )
+        self.semi_private = Class.objects.create(
+            name="Semi Private", description="Semi private", max_members=4
+        )
+        self.member = Member.objects.create(
+            name="Booked Member",
+            email="closure@example.com",
+            phone_number="628557000111",
+            age=25,
+            height=170.0,
+            weight=70.0,
+            gender="M",
+            goals="Stay fit",
+            years_of_working_out="1-2 years",
+            active_until=timezone.now() + timedelta(days=30),
+            pemula_active_until=timezone.now() + timedelta(days=30),
+        )
+        self.today = timezone.localdate()
+        self.holiday = self.today + timedelta(days=2)
+
+    def schedule_for(self, class_obj, day, hour):
+        schedule, _ = ClassSchedule.objects.get_or_create(
+            class_obj=class_obj,
+            day_of_week=day.weekday(),
+            start_time=time(hour, 0),
+            defaults={"end_time": time(hour + 1, 0)},
+        )
+        return schedule
+
+    def instance_on(self, class_obj, day, hour):
+        schedule = self.schedule_for(class_obj, day, hour)
+        return ClassInstance.objects.create(
+            class_schedule=schedule,
+            date=day,
+            start_time=schedule.start_time,
+            end_time=schedule.end_time,
+        )
+
+    def test_the_generator_skips_a_closed_day(self):
+        day_after = self.holiday + timedelta(days=1)
+        self.schedule_for(self.pemula, self.holiday, 8)
+        self.schedule_for(self.pemula, day_after, 8)
+        GymClosure.objects.create(
+            start_date=self.holiday, end_date=self.holiday, reason="Libur Idul Adha"
+        )
+
+        call_command("generate_class_instances", 5, stdout=StringIO())
+
+        self.assertFalse(ClassInstance.objects.filter(date=self.holiday).exists())
+        # The day after is untouched, only the closed one is skipped
+        self.assertTrue(ClassInstance.objects.filter(date=day_after).exists())
+
+    def test_a_closure_can_take_out_one_class_and_leave_the_rest(self):
+        """A trainer on leave, not a public holiday."""
+        self.schedule_for(self.pemula, self.holiday, 8)
+        self.schedule_for(self.semi_private, self.holiday, 9)
+        GymClosure.objects.create(
+            start_date=self.holiday,
+            end_date=self.holiday,
+            class_obj=self.semi_private,
+            reason="Trainer cuti",
+        )
+
+        call_command("generate_class_instances", 4, stdout=StringIO())
+
+        made = ClassInstance.objects.filter(date=self.holiday)
+        names = {i.class_schedule.class_obj.name for i in made}
+        self.assertEqual(names, {"Kelas Pemula"})
+
+    def test_a_closure_covering_a_range_skips_every_day_in_it(self):
+        for offset in (1, 2, 3):
+            self.schedule_for(self.pemula, self.today + timedelta(days=offset), 8)
+        GymClosure.objects.create(
+            start_date=self.today + timedelta(days=1),
+            end_date=self.today + timedelta(days=3),
+            reason="Renovasi",
+        )
+
+        call_command("generate_class_instances", 5, stdout=StringIO())
+
+        for offset in (1, 2, 3):
+            self.assertFalse(
+                ClassInstance.objects.filter(
+                    date=self.today + timedelta(days=offset)
+                ).exists()
+            )
+
+    def test_a_closure_added_late_cancels_what_was_already_made(self):
+        instance = self.instance_on(self.pemula, self.holiday, 8)
+        instance.booked_members.add(self.member)
+
+        GymClosure.objects.create(
+            start_date=self.holiday, end_date=self.holiday, reason="Gym tutup"
+        )
+
+        instance.refresh_from_db()
+        self.assertEqual(instance.status, "CANCELLED")
+        # The booking rows stay: they are the list of people to apologise to
+        self.assertIn(self.member, instance.booked_members.all())
+
+    def test_a_late_closure_files_a_reminder_per_affected_member(self):
+        instance = self.instance_on(self.pemula, self.holiday, 8)
+        instance.booked_members.add(self.member)
+        waiting = Member.objects.create(
+            name="Antri Member",
+            email="antri@example.com",
+            phone_number="628557000222",
+            age=25,
+            height=170.0,
+            weight=70.0,
+            gender="M",
+            goals="Stay fit",
+            years_of_working_out="1-2 years",
+        )
+        instance.waitlisted_members.add(waiting)
+
+        GymClosure.objects.create(
+            start_date=self.holiday, end_date=self.holiday, reason="Gym tutup"
+        )
+
+        reminders = Reminder.objects.filter(reminder_type="KELAS_LIBUR")
+        self.assertEqual(reminders.count(), 2)
+        self.assertIn("Gym tutup", reminders.first().reason)
+
+    def test_a_closure_leaves_classes_outside_its_range_alone(self):
+        inside = self.instance_on(self.pemula, self.holiday, 8)
+        outside = self.instance_on(self.pemula, self.holiday + timedelta(days=1), 8)
+
+        GymClosure.objects.create(start_date=self.holiday, end_date=self.holiday)
+
+        inside.refresh_from_db()
+        outside.refresh_from_db()
+        self.assertEqual(inside.status, "CANCELLED")
+        self.assertEqual(outside.status, "OPEN")
+
+    def test_end_date_defaults_to_the_start(self):
+        closure = GymClosure(start_date=self.holiday)
+        closure.save()
+
+        self.assertEqual(closure.end_date, self.holiday)
+
+    def test_a_closed_day_frees_the_members_quota(self):
+        """A class the gym cancelled never happened, so it holds nothing."""
+        cancelled = self.instance_on(self.pemula, self.holiday, 8)
+        cancelled.booked_members.add(self.member)
+        replacement = self.instance_on(self.pemula, self.holiday, 16)
+
+        GymClosure.objects.create(
+            start_date=self.holiday,
+            end_date=self.holiday,
+            class_obj=self.semi_private,
+        )
+        # Only Semi Private was closed, so the 08:00 class still stands
+        cancelled.refresh_from_db()
+        self.assertEqual(cancelled.status, "OPEN")
+
+        cancelled.status = "CANCELLED"
+        cancelled.save()
+        self.assertIsNone(
+            booking_block_reason(self.member, replacement),
+        )
+
+    def test_upcoming_ignores_closures_that_have_finished(self):
+        GymClosure.objects.create(
+            start_date=self.today - timedelta(days=5),
+            end_date=self.today - timedelta(days=4),
+        )
+        live = GymClosure.objects.create(
+            start_date=self.holiday, end_date=self.holiday
+        )
+
+        self.assertEqual(list(GymClosure.upcoming()), [live])
+
+    def test_upcoming_can_be_trimmed_to_the_horizon_shown(self):
+        soon = GymClosure.objects.create(
+            start_date=self.today + timedelta(days=3),
+            end_date=self.today + timedelta(days=3),
+        )
+        GymClosure.objects.create(
+            start_date=self.today + timedelta(days=60),
+            end_date=self.today + timedelta(days=60),
+        )
+
+        self.assertEqual(list(GymClosure.upcoming(days=14)), [soon])
+
+    def test_the_class_list_tells_members_about_a_closure(self):
+        GymClosure.objects.create(
+            start_date=self.holiday, end_date=self.holiday, reason="Libur Idul Adha"
+        )
+        session = self.client.session
+        session["member_email"] = self.member.email
+        session.save()
+
+        response = self.client.get(reverse("classes:class_list"))
+
+        self.assertContains(response, "Libur Idul Adha")
+        self.assertContains(response, "Kelas ditiadakan")
+
+
 class ClassRulesPageTest(TestCase):
     """Aturan Kelas: the page an admin sends instead of explaining it again."""
 
@@ -2235,3 +2442,61 @@ class ClassRulesPageTest(TestCase):
         response = self.client.get(reverse("classes:class_list"))
 
         self.assertContains(response, reverse("classes:class_rules"))
+
+
+class GymClosureAdminTest(TestCase):
+    """The closure is only useful if an admin can actually reach the form."""
+
+    def setUp(self):
+        self.staff = get_user_model().objects.create_superuser(
+            username="closureadmin", email="closure@admin.test", password="pw12345678"
+        )
+        self.client.force_login(self.staff)
+        self.pemula = Class.objects.create(
+            name="Kelas Pemula", description="Beginner", max_members=6
+        )
+
+    def test_the_list_and_the_add_form_both_render(self):
+        for url in ("/admin/classes/gymclosure/", "/admin/classes/gymclosure/add/"):
+            with self.subTest(url=url):
+                self.assertEqual(self.client.get(url).status_code, 200)
+
+    def test_saving_from_the_admin_closes_the_day_and_warns(self):
+        holiday = timezone.localdate() + timedelta(days=2)
+        schedule = ClassSchedule.objects.create(
+            class_obj=self.pemula,
+            day_of_week=holiday.weekday(),
+            start_time=time(8, 0),
+            end_time=time(9, 0),
+        )
+        instance = ClassInstance.objects.create(
+            class_schedule=schedule,
+            date=holiday,
+            start_time=time(8, 0),
+            end_time=time(9, 0),
+        )
+
+        response = self.client.post(
+            "/admin/classes/gymclosure/add/",
+            {
+                "start_date": holiday.strftime("%Y-%m-%d"),
+                "end_date": holiday.strftime("%Y-%m-%d"),
+                "class_obj": "",
+                "reason": "Libur Idul Adha",
+            },
+            follow=True,
+        )
+
+        instance.refresh_from_db()
+        self.assertEqual(instance.status, "CANCELLED")
+        self.assertContains(response, "sudah terlanjur dibuat")
+
+    def test_the_settings_form_offers_the_new_numbers(self):
+        settings = PenaltySettings.get_solo()
+        url = f"/admin/classes/penaltysettings/{settings.pk}/change/"
+
+        response = self.client.get(url)
+
+        self.assertContains(response, "late_cancel_hours")
+        self.assertContains(response, "advance_classes_per_day")
+        self.assertContains(response, "extra_booking_minutes")

@@ -10,6 +10,7 @@ class Reminder(models.Model):
         ("NO_VISIT", "Lama Tidak Visit"),
         ("MEMBERSHIP_EXPIRING", "Membership Berakhir"),
         ("PENALTI_KELAS", "Penalti Kelas"),
+        ("KELAS_LIBUR", "Kelas Ditiadakan"),
         ("LOKER", "Loker"),
         ("LAINNYA", "Lainnya"),
     ]

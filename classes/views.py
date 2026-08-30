@@ -17,6 +17,7 @@ from .calendar_export import class_instance_to_ics, ics_filename
 from .sharing import whatsapp_invite_url
 from .models import (
     ClassInstance,
+    GymClosure,
     Member,
     PenaltySettings,
     booking_block_reason,
@@ -185,6 +186,11 @@ class ClassListView(MemberRequiredMixin, ListView):
             date_groups[-1]["instances"].append(instance)
 
         context["date_groups"] = date_groups
+
+        # Days with no classes at all, which otherwise just look like a gap in
+        # the list. Told here so a member planning their week finds out from the
+        # schedule instead of from a locked door.
+        context["closures"] = GymClosure.upcoming(days=14)
         return context
 
     @staticmethod

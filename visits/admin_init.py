@@ -17,6 +17,7 @@ from classes.models import (
     Class,
     ClassInstance,
     ClassMiss,
+    GymClosure,
     PenaltySettings,
 )
 from classes.admin import (
@@ -24,6 +25,7 @@ from classes.admin import (
     ClassAdmin,
     ClassInstanceAdmin,
     ClassMissAdmin,
+    GymClosureAdmin,
     PenaltySettingsAdmin,
 )
 from payments.admin import PaymentAdminForm
@@ -414,6 +416,9 @@ if not admin_site._registry.get(ClassInstance):
     admin_site.register(ClassInstance, ClassInstanceAdmin)
 
 # No-show penalty: the rules, the misses, and the penalties handed out
+if not admin_site._registry.get(GymClosure):
+    admin_site.register(GymClosure, GymClosureAdmin)
+
 if not admin_site._registry.get(PenaltySettings):
     admin_site.register(PenaltySettings, PenaltySettingsAdmin)
 

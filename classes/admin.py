@@ -6,6 +6,7 @@ from .models import (
     ClassInstance,
     ClassMiss,
     ClassSchedule,
+    GymClosure,
     PenaltySettings,
 )
 
@@ -59,11 +60,49 @@ class ClassInstanceAdmin(admin.ModelAdmin):
     available_slots.short_description = "Available Slots"
 
 
+class GymClosureAdmin(admin.ModelAdmin):
+    """Mark a day off before the cron has made anything to cancel."""
+
+    list_display = ("start_date", "end_date", "what", "reason")
+    list_filter = ("start_date", "class_obj")
+    search_fields = ("reason",)
+    date_hierarchy = "start_date"
+    readonly_fields = ("created_at",)
+
+    def what(self, obj):
+        return obj.class_obj.name if obj.class_obj else "Semua kelas"
+
+    what.short_description = "Kelas"
+
+    def save_model(self, request, obj, form, change):
+        """Save, then report what it cleared, since the model does it silently."""
+        from django.contrib import messages as django_messages
+
+        super().save_model(request, obj, form, change)
+        # save() already cancelled them; count what is now cancelled in the range
+        # so the admin sees whether anyone has to be contacted.
+        cancelled = ClassInstance.objects.filter(
+            date__gte=obj.start_date, date__lte=obj.end_date, status="CANCELLED"
+        )
+        if obj.class_obj_id:
+            cancelled = cancelled.filter(class_schedule__class_obj_id=obj.class_obj_id)
+        count = cancelled.count()
+        if count:
+            django_messages.warning(
+                request,
+                f"{count} kelas di tanggal itu sudah terlanjur dibuat dan sekarang "
+                f"dibatalkan. Cek Reminder, member yang sudah booking ada di sana.",
+            )
+
+
 class PenaltySettingsAdmin(admin.ModelAdmin):
     """One row, edited in place. These are the numbers being experimented with."""
 
     list_display = (
         "enabled",
+        "advance_classes_per_day",
+        "extra_booking_minutes",
+        "late_cancel_hours",
         "window_days",
         "misses_allowed",
         "ban_days",
@@ -82,8 +121,15 @@ class PenaltySettingsAdmin(admin.ModelAdmin):
 
 
 class ClassMissAdmin(admin.ModelAdmin):
-    list_display = ("member", "class_name", "class_date", "class_start_time", "recorded_at")
-    list_filter = ("class_date", "class_name")
+    list_display = (
+        "member",
+        "class_name",
+        "class_date",
+        "class_start_time",
+        "kind",
+        "recorded_at",
+    )
+    list_filter = ("kind", "class_date", "class_name")
     search_fields = ("member__name", "member__email", "member__phone_number")
     date_hierarchy = "class_date"
     readonly_fields = ("recorded_at",)
