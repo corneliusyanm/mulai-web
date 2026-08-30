@@ -11,6 +11,24 @@
         </div>
     </div>
 
+    {% comment %}
+    This page never showed messages, which was fine while nothing here could
+    fail. It can now: cancelling a class from the upcoming list lands back here,
+    and whether that cancellation cost the member a strike is the one thing they
+    have to be told.
+    {% endcomment %}
+    {% if messages %}
+        <div class="row justify-content-center mb-3">
+            <div class="col-lg-8">
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} border-0 shadow-sm mb-2" style="border-radius: 12px;">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
     {% include "accounts/_class_penalty.html" %}
 
     {% if membership_nudge %}
@@ -119,7 +137,7 @@
                             {% endfor %}
                         </div>
                         <p class="text-muted small text-center mt-2 mb-0">
-                            <i class="fas fa-circle-info me-1"></i>Nggak bisa datang? Batalkan dulu biar member lain kebagian tempat.
+                            <i class="fas fa-circle-info me-1"></i>Nggak bisa datang? Batalkan dulu biar member lain kebagian tempat. <a href="{% url 'classes:class_rules' %}" class="rules-inline-link">Aturan kelas</a>
                         </p>
                     {% else %}
                         <div class="text-center py-4">

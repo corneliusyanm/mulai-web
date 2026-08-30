@@ -5,7 +5,12 @@
 
 {% block content %}
 <div class="container mt-5 classes-list-page">
-    <h1 class="text-center mb-4">Jadwal Kelas</h1>
+    <h1 class="text-center mb-2">Jadwal Kelas</h1>
+    <p class="text-center mb-4">
+        <a href="{% url 'classes:class_rules' %}" class="class-rules-link">
+            <i class="fas fa-circle-question me-1"></i>Aturan booking kelas
+        </a>
+    </p>
 
     <!-- Filter chips - 1-tap toggle, click again to clear -->
     <div class="class-filter-bar mb-4">
@@ -37,7 +42,7 @@
         {% if group.day_limit_reached %}
             <div class="class-day-cap-note mb-3">
                 <div class="fw-bold mb-1">
-                    <i class="fas fa-circle-info me-2"></i>Kamu sudah punya {{ group.held_classes|length }} kelas di hari ini
+                    <i class="fas fa-circle-info me-2"></i>Kamu udah punya {{ group.held_classes|length }} kelas di hari ini
                 </div>
                 <div class="small">
                     {% for held in group.held_classes %}
@@ -45,8 +50,11 @@
                     {% endfor %}
                 </div>
                 <div class="small mt-1">
-                    Maksimal {{ max_classes_per_day }} kelas per hari, biar semua member kebagian tempat.
-                    Batalkan salah satu kalau mau pindah ke kelas lain.
+                    Mau nambah kelas lagi di hari yang sama? Boleh, tapi tunggu sampai
+                    {{ extra_booking_wait }} sebelum kelas itu mulai. Tombolnya nulis jam
+                    berapa dia buka. Sebelum jam itu, tempatnya buat member yang belum
+                    punya kelas hari ini.
+                    <a href="{% url 'classes:class_rules' %}" class="class-day-cap-link">Kenapa gitu?</a>
                 </div>
             </div>
         {% endif %}
@@ -212,24 +220,6 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   timeChips.forEach(function(c) {
     c.addEventListener('click', function() { toggleChip(timeChips, c); });
-  });
-
-  // One-tap booking straight from the list. Cancelling asks first, since a
-  // mis-tap while scrolling hands the spot to the waitlist with no undo.
-  document.querySelectorAll('.class-card-wrapper form').forEach(function(form) {
-    form.addEventListener('submit', function(e) {
-      var question = form.dataset.confirm;
-      if (question && !window.confirm(question)) {
-        e.preventDefault();
-        return;
-      }
-      // Stop double taps on a slow connection from firing twice
-      var btn = form.querySelector('button[type="submit"]');
-      if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-      }
-    });
   });
 });
 </script>

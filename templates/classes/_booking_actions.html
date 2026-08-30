@@ -1,8 +1,29 @@
 {% comment %}
 One-tap booking actions for a class card on /kelas/.
-Expects: instance (with member_is_booked / member_is_waitlisted / booking_block
-set by ClassListView) and member.
+Expects: instance (with member_is_booked / member_is_waitlisted / booking_block /
+cancel_deadline_at / cancel_is_late set by ClassListView) and member.
+
+The cancellation deadline is spelled out as a clock time rather than "4 jam
+sebelum": most members will not do that arithmetic, and the ones most likely to
+be caught by the rule are the least likely to try.
 {% endcomment %}
+{% if member %}
+    {% if instance.member_is_booked %}
+        {% if instance.cancel_is_late %}
+            <div class="class-rule-note class-rule-note-warn mb-2">
+                <i class="fas fa-triangle-exclamation me-1"></i>Batas batalin udah lewat. Batalin sekarang dihitung sama kayak nggak dateng.
+            </div>
+        {% else %}
+            <div class="class-rule-note mb-2">
+                <i class="fas fa-circle-info me-1"></i>Nggak bisa dateng? Batalin sebelum jam {{ instance.cancel_deadline_at|time:"H:i" }}, aman.
+            </div>
+        {% endif %}
+    {% elif not instance.member_is_waitlisted and not instance.booking_block and instance.cancel_is_late %}
+        <div class="class-rule-note mb-2">
+            <i class="fas fa-circle-info me-1"></i>Kelas ini udah mepet. Kalau udah booking terus batal, dihitung sama kayak nggak dateng.
+        </div>
+    {% endif %}
+{% endif %}
 <div class="d-flex justify-content-end align-items-center flex-wrap gap-2">
     <a href="{% url 'classes:class_detail' instance.pk %}" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold">
         <i class="fas fa-eye me-1"></i>Detail
@@ -11,7 +32,7 @@ set by ClassListView) and member.
     {% if member %}
         {% if instance.member_is_booked %}
             <form method="post" action="{% url 'classes:cancel_class' instance.id %}" class="d-inline js-confirm"
-                  data-confirm="Batalkan booking {{ instance.class_schedule.class_obj.name }} {{ instance.start_time|time:'H:i' }}?">
+                  data-confirm="{% if instance.cancel_is_late %}Kelas {{ instance.class_schedule.class_obj.name }} {{ instance.start_time|time:'H:i' }} mulai sebentar lagi. Kalau dibatalkan sekarang, dihitung sama kayak nggak dateng dan masuk hitungan penalti. Tetap batalkan?{% else %}Batalkan booking {{ instance.class_schedule.class_obj.name }} {{ instance.start_time|time:'H:i' }}?{% endif %}">
                 {% csrf_token %}
                 <input type="hidden" name="next" value="list">
                 <button type="submit" class="btn btn-sm btn-danger rounded-pill px-3 fw-bold shadow-sm">
@@ -37,7 +58,7 @@ set by ClassListView) and member.
                 <i class="fas fa-ban me-1"></i>{{ instance.booking_block.short }}
             </button>
         {% else %}
-            <form method="post" action="{% url 'classes:book_class' instance.id %}" class="d-inline">
+            <form method="post" action="{% url 'classes:book_class' instance.id %}" class="d-inline js-confirm">
                 {% csrf_token %}
                 <input type="hidden" name="next" value="list">
                 {% if instance.status == 'FULL' %}

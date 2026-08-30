@@ -1,0 +1,164 @@
+{% extends 'base.html' %}
+
+{% comment %}
+Aturan Kelas. The page an admin sends instead of explaining the rules again.
+
+Written for the member who finds rules tiring: three rules, one screen each, a
+big number, one sentence, then a worked example with real clock times. Every
+number comes from the settings row, so changing the window in /admin changes this
+page and nobody ends up quoting a rule that is no longer true.
+
+The order is deliberate. Booking comes first because everybody does it, the
+cancellation deadline second because that is the new rule, and the penalty last
+because most members will never reach it and should not be greeted by it.
+{% endcomment %}
+
+{% block title %}Aturan Kelas - Mulai Gym{% endblock %}
+
+{% block content %}
+<div class="container mt-5 rules-page">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+
+            <div class="text-center mb-4">
+                <h1 class="fw-bold mb-2">Aturan Kelas</h1>
+                <p class="rules-lead mb-0">
+                    Tempat kelas cuma sedikit, dan tiap minggu makin banyak yang mau ikut.
+                    Tiga aturan ini biar tempatnya kebagian rata. Gampang kok.
+                </p>
+            </div>
+
+            {% if class_penalty %}
+                {% include "accounts/_class_penalty.html" with on_rules_page=True %}
+            {% endif %}
+
+            <!-- Rule 1 -->
+            <div class="rule-card mb-3">
+                <div class="rule-head">
+                    <span class="rule-number">1</span>
+                    <h2 class="rule-title mb-0">Sehari booking {{ rules.advance_classes_per_day }} kelas dulu</h2>
+                </div>
+                <p class="rule-body">
+                    Mau ikut kelas lagi di hari yang sama? Boleh. Tapi booking kelas
+                    keduanya baru bisa {{ extra_booking_wait }} sebelum kelas itu mulai.
+                </p>
+                <div class="rule-example">
+                    <div class="rule-example-title">Contohnya</div>
+                    <p class="mb-1">
+                        Kamu udah booking kelas pagi. Sore ada kelas jam
+                        {{ example_start|time:"H:i" }} yang kamu mau juga.
+                    </p>
+                    <p class="mb-0">
+                        Tombol bookingnya buka jam <strong>{{ example_opens|time:"H:i" }}</strong>.
+                        Di halaman jadwal, tombolnya emang nulis jam berapa dia buka,
+                        jadi nggak usah ngitung.
+                    </p>
+                </div>
+                <div class="rule-why">
+                    <i class="fas fa-heart me-2"></i>
+                    Kenapa: dulu satu orang bisa pegang 2 tempat seharian penuh, padahal
+                    ada member yang belum kebagian kelas sama sekali hari itu. Sekarang
+                    tempat keduanya baru dibuka pas mau mulai, jadi yang belum kebagian
+                    punya kesempatan duluan.
+                </div>
+            </div>
+
+            <!-- Rule 2 -->
+            <div class="rule-card mb-3">
+                <div class="rule-head">
+                    <span class="rule-number">2</span>
+                    <h2 class="rule-title mb-0">Batalin paling lambat {{ cancel_wait }} sebelum kelas</h2>
+                </div>
+                <p class="rule-body">
+                    Nggak bisa dateng itu wajar, nggak apa-apa. Yang penting batalin
+                    lebih awal, biar temen yang lagi ngantri sempet siap-siap.
+                </p>
+
+                <div class="rule-timeline" aria-hidden="true">
+                    <div class="rule-timeline-bar">
+                        <div class="rule-timeline-safe">Batalin di sini aman</div>
+                        <div class="rule-timeline-late">Dihitung nggak dateng</div>
+                    </div>
+                    <div class="rule-timeline-marks">
+                        <span>{{ cancel_wait }} sebelum kelas</span>
+                        <span>Kelas mulai</span>
+                    </div>
+                </div>
+
+                <div class="rule-example">
+                    <div class="rule-example-title">Contohnya, kelas jam {{ example_start|time:"H:i" }}</div>
+                    <div class="rule-case rule-case-ok">
+                        <i class="fas fa-circle-check me-2"></i>
+                        Batalin jam {{ example_deadline|time:"H:i" }} atau lebih awal: <strong>aman</strong>, nggak ada catatan apa-apa.
+                    </div>
+                    <div class="rule-case rule-case-bad">
+                        <i class="fas fa-circle-xmark me-2"></i>
+                        Batalin jam {{ example_late|time:"H:i" }}: <strong>dihitung nggak dateng</strong>, walaupun kamu udah batalin.
+                    </div>
+                </div>
+                <div class="rule-why">
+                    <i class="fas fa-heart me-2"></i>
+                    Kenapa: kalau dibatalin mepet, tempatnya emang kebuka, tapi yang di
+                    antrian udah nggak sempet tau dan nggak sempet berangkat. Jadinya
+                    tempat itu kosong juga. Sama aja kayak nggak dateng.
+                </div>
+            </div>
+
+            <!-- Rule 3 -->
+            <div class="rule-card mb-3">
+                <div class="rule-head">
+                    <span class="rule-number">3</span>
+                    <h2 class="rule-title mb-0">{{ strikes_before_ban }} kali buang tempat, booking kelas dikunci {{ rules.ban_days }} hari</h2>
+                </div>
+                <p class="rule-body">
+                    Yang dihitung "buang tempat" cuma dua: <strong>booking tapi nggak
+                    dateng</strong>, dan <strong>batalin kurang dari {{ cancel_wait }}
+                    sebelum kelas</strong>. Dihitung dalam {{ rules.window_days }} hari
+                    terakhir.
+                </p>
+                <ul class="rule-list">
+                    <li>Dihitung per hari. Sehari 2 kelas kelewat tetep dihitung 1 kali.</li>
+                    <li>Batalin jauh-jauh hari nggak dihitung sama sekali. Sebanyak apa pun.</li>
+                    <li>Kalau kena, yang dikunci cuma booking kelas. Latihan sendiri di gym tetep bisa kapan aja.</li>
+                    <li>Setelah {{ rules.ban_days }} hari, booking kelas balik normal sendiri.</li>
+                </ul>
+                <div class="rule-why">
+                    <i class="fas fa-heart me-2"></i>
+                    Kenapa: satu tempat yang dibuang itu satu member yang nggak jadi
+                    latihan hari itu. Dua kali masih dimaklumi, semua orang pernah ada
+                    urusan mendadak.
+                </div>
+            </div>
+
+            <!-- The short version -->
+            <div class="rule-summary mb-4">
+                <div class="rule-summary-title">Gampangnya</div>
+                <div class="rule-summary-item">
+                    <i class="fas fa-calendar-check"></i>
+                    <span>Booking {{ rules.advance_classes_per_day }} kelas per hari. Kelas tambahan buka {{ extra_booking_wait }} sebelum mulai.</span>
+                </div>
+                <div class="rule-summary-item">
+                    <i class="fas fa-clock"></i>
+                    <span>Nggak bisa dateng? Batalin dari jauh-jauh hari, gratis.</span>
+                </div>
+                <div class="rule-summary-item">
+                    <i class="fas fa-hand-holding-heart"></i>
+                    <span>Tempat yang kamu batalin pagi-pagi itu kepakai temen kamu.</span>
+                </div>
+            </div>
+
+            <div class="text-center mb-5">
+                <a href="{% url 'classes:class_list' %}" class="btn btn-secondary rounded-pill px-4 py-2 fw-bold">
+                    <i class="fas fa-calendar-alt me-2"></i>Lihat Jadwal Kelas
+                </a>
+                <div class="rules-help mt-3">
+                    Masih bingung? Tanya admin di depan, atau
+                    <a href="https://wa.me/+628996940908" target="_blank" rel="noopener noreferrer">chat WhatsApp</a>.
+                    Nggak apa-apa nanya, emang buat ditanyain.
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,23 +1,32 @@
-"""The no-show penalty: miss too many booked classes and booking locks for a few days.
+"""Waste a booked seat too often and class booking locks for a few days.
 
-Why it exists: a handful of members book several classes a week and skip a third
-of them, which holds slots nobody else can take. The 2-per-day cap stopped the
-hoarding; this is for the skipping.
+Why it exists: a handful of members book several classes a week and waste a third
+of them, which holds slots nobody else can take. The daily cap stopped the
+hoarding; this is for the wasting.
 
-How it runs: `apply_class_penalties` after the gym closes. By then every class
-that day is over, so a booking either got attended or it did not, and we do not
-have to guess about someone who is merely late.
+A seat gets wasted two ways, and they count the same because they cost the same:
 
-Three deliberate choices:
+- **Nggak dateng.** Booked, class ran, never checked in. Found by the nightly
+  command after the gym closes, when a booking either got attended or it did not
+  and we do not have to guess about someone who is merely late.
+- **Batalin mepet.** Cancelled inside `late_cancel_hours` of the start. Written
+  by `record_late_cancel` the moment it happens, since there is nothing left to
+  find out: that close in, the seat is not getting filled by anybody who was not
+  already coming.
+
+Four deliberate choices:
 
 1. **Strikes are counted per day, not per class.** One lie-in with two classes
-   booked is one strike. It reads as fairer, and with the 2-per-day cap the
+   booked is one strike. It reads as fairer, and with the daily cap the
    difference is small.
 2. **Nothing before `PenaltySettings.effective_from` counts.** Members are not
    punished for behaviour from before the rule existed.
 3. **Only bookings *after* the evening being processed are cancelled.** Today's
    bookings stay: their misses were just recorded, and deleting them would erase
    the evidence from the admin's no-show report.
+4. **A late cancel does not lock anyone on the spot.** It writes the strike and
+   the nightly run does the arithmetic, same as every other miss. One place
+   decides who gets locked, and a member is never banned mid-tap.
 """
 
 from datetime import timedelta
@@ -29,7 +38,14 @@ from accounts.models import Member
 from reminders.models import Reminder
 
 from .attendance import no_show_scan
-from .models import BookingPenalty, ClassInstance, ClassMiss, PenaltySettings
+from .models import (
+    BookingPenalty,
+    ClassInstance,
+    ClassMiss,
+    PenaltySettings,
+    WaitlistPromotion,
+    cancel_deadline_at,
+)
 
 
 def record_misses(day, settings=None):
@@ -57,6 +73,53 @@ def record_misses(day, settings=None):
         if created:
             recorded.append(miss)
     return recorded
+
+
+def record_late_cancel(member, instance, now=None, settings=None):
+    """Write a strike for cancelling inside the deadline, or return None.
+
+    The one miss that is not written by the nightly command, because by the time
+    a member taps Batalkan there is nothing left to find out: four hours before
+    the class, that seat is not getting filled by anybody who was not already
+    coming. Writing it here also means the member is told the consequence in the
+    same breath as the action, instead of discovering it the next morning.
+
+    It is still an ordinary ClassMiss, so the window count, the ban, the card on
+    /akun, the admin report and Papan Peringkat all treat it like a no-show
+    without knowing it exists.
+
+    Never a strike when: the penalty is off, the class is older than the rule,
+    the gym itself cancelled the class, the deadline has not passed, or the
+    member only got this booking by being promoted off the waitlist after the
+    deadline, which is a seat nobody told them they had.
+    """
+    settings = settings or PenaltySettings.get_solo()
+    now = now or timezone.now()
+
+    if not settings.enabled or instance.date < settings.effective_from:
+        return None
+    if instance.status == "CANCELLED":
+        return None
+
+    deadline = cancel_deadline_at(instance, settings)
+    if now < deadline:
+        return None
+    if WaitlistPromotion.objects.filter(
+        member=member, class_instance=instance, promoted_at__gte=deadline
+    ).exists():
+        return None
+
+    miss, _ = ClassMiss.objects.get_or_create(
+        member=member,
+        class_instance=instance,
+        defaults={
+            "class_date": instance.date,
+            "class_name": instance.class_schedule.class_obj.name,
+            "class_start_time": instance.start_time,
+            "kind": "LATE_CANCEL",
+        },
+    )
+    return miss
 
 
 def miss_days_in_window(member, day, settings=None):
@@ -118,8 +181,9 @@ def _staff_reminder(member, penalty):
         due_date=penalty.starts_on,
         defaults={
             "reason": (
-                f"{member.name} nggak dateng {penalty.miss_days} kali dalam "
-                f"{PenaltySettings.get_solo().window_days} hari terakhir. Booking "
+                f"{member.name} buang tempat kelas {penalty.miss_days} kali dalam "
+                f"{PenaltySettings.get_solo().window_days} hari terakhir (nggak "
+                f"dateng atau batalin mepet). Booking "
                 f"kelas dikunci sampai {penalty.blocked_until:%d %b %Y}"
                 + (
                     f", {penalty.bookings_cancelled} booking dibatalkan"
@@ -210,9 +274,15 @@ def member_state(member, today=None):
     None means they have never missed a booked class, and the whole section stays
     off their page: most members should never learn this feature exists.
 
-    Levels: `banned` while booking is locked, `warning` on their last free
-    strike, `history` for a member with a miss or two and nothing hanging over
-    them.
+    Levels: `banned` while booking is locked, `pending` when they are already
+    over the allowance and tonight's run will lock them, `warning` on their last
+    free strike, `history` for a member with a miss or two and nothing hanging
+    over them.
+
+    `pending` exists because a late cancellation is recorded the moment it
+    happens while the lock is only applied at 21:00. Without it a member who has
+    just gone over reads the calm history line, books two more classes, and finds
+    them gone in the morning with no idea why.
     """
     settings = PenaltySettings.get_solo()
     today = today or timezone.localdate()
@@ -229,8 +299,19 @@ def member_state(member, today=None):
     )
     locked = member.booking_locked(today)
 
+    # Over the allowance is not enough on its own: a member who already served a
+    # lock for these same misses is done with them. What makes it pending is a
+    # miss the nightly run has not seen yet, so their newest miss is more recent
+    # than any penalty they have been given.
+    latest_miss = misses[0].class_date
+    unprocessed = not BookingPenalty.objects.filter(
+        member=member, starts_on__gte=latest_miss
+    ).exists()
+
     if locked:
         level = "banned"
+    elif settings.enabled and in_window > settings.misses_allowed and unprocessed:
+        level = "pending"
     elif settings.enabled and in_window == settings.misses_allowed:
         level = "warning"
     else:
@@ -242,6 +323,7 @@ def member_state(member, today=None):
         "misses_allowed": settings.misses_allowed,
         "window_days": settings.window_days,
         "ban_days": settings.ban_days,
+        "late_cancel_hours": settings.late_cancel_hours,
         "blocked_until": member.booking_blocked_until if locked else None,
         "penalty": penalty if locked else None,
         "recent_misses": misses,

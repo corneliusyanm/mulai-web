@@ -78,10 +78,44 @@
                         <p class="lead text-dark">{{ instance.class_schedule.class_obj.description }}</p>
                     </div>
 
+                    <!-- Cancellation deadline, in clock time. Every member who
+                         holds this class needs it, and every member thinking of
+                         booking it should see it before they do. -->
+                    {% if member and not instance.has_started %}
+                        {% if member in instance.booked_members.all %}
+                            {% if instance.cancel_is_late %}
+                                <div class="class-rule-note class-rule-note-warn mb-3">
+                                    <i class="fas fa-triangle-exclamation me-1"></i>
+                                    Batas batalin buat kelas ini udah lewat. Kalau dibatalin sekarang, dihitung sama kayak nggak dateng.
+                                    <a href="{% url 'classes:class_rules' %}">Aturannya di sini.</a>
+                                </div>
+                            {% else %}
+                                <div class="class-rule-note mb-3">
+                                    <i class="fas fa-circle-info me-1"></i>
+                                    Kalau nggak bisa dateng, batalin sebelum jam {{ instance.cancel_deadline_at|time:"H:i" }} ({{ instance.cancel_deadline_at|date:"d M" }}). Lewat jam itu, dihitung sama kayak nggak dateng.
+                                    <a href="{% url 'classes:class_rules' %}">Aturannya di sini.</a>
+                                </div>
+                            {% endif %}
+                        {% elif instance.cancel_is_late %}
+                            <div class="class-rule-note mb-3">
+                                <i class="fas fa-circle-info me-1"></i>
+                                Kelas ini udah mepet. Kalau udah booking terus batal, dihitung sama kayak nggak dateng.
+                                <a href="{% url 'classes:class_rules' %}">Aturannya di sini.</a>
+                            </div>
+                        {% else %}
+                            <div class="class-rule-note mb-3">
+                                <i class="fas fa-circle-info me-1"></i>
+                                Kalau udah booking terus nggak bisa dateng, batalin sebelum jam {{ instance.cancel_deadline_at|time:"H:i" }} ({{ instance.cancel_deadline_at|date:"d M" }}), biar nggak kena catatan.
+                                <a href="{% url 'classes:class_rules' %}">Aturannya di sini.</a>
+                            </div>
+                        {% endif %}
+                    {% endif %}
+
                     <!-- Action Button -->
                     <div class="text-center">
                         {% if member %}
-                            <form action="{% if member in instance.booked_members.all or member in instance.waitlisted_members.all %}{% url 'classes:cancel_class' instance.id %}{% else %}{% url 'classes:book_class' instance.id %}{% endif %}" method="post" class="d-inline">
+                            <form action="{% if member in instance.booked_members.all or member in instance.waitlisted_members.all %}{% url 'classes:cancel_class' instance.id %}{% else %}{% url 'classes:book_class' instance.id %}{% endif %}" method="post" class="d-inline js-confirm"
+                                  {% if member in instance.booked_members.all %}data-confirm="{% if instance.cancel_is_late %}Kelas ini mulai sebentar lagi. Kalau dibatalkan sekarang, dihitung sama kayak nggak dateng dan masuk hitungan penalti. Tetap batalkan?{% else %}Batalkan booking kelas ini?{% endif %}"{% elif member in instance.waitlisted_members.all %}data-confirm="Keluar dari antrian kelas ini?"{% endif %}>
                                 {% csrf_token %}
                                 {% if member in instance.booked_members.all %}
                                     <button type="submit" class="btn btn-danger px-4 py-2 rounded-pill fw-bold shadow">
@@ -130,7 +164,7 @@
                                 <div class="alert alert-warning border-0 shadow-sm text-start mt-3 mb-0 mx-auto" style="border-radius: 15px; max-width: 460px;">
                                     {% if day_limit_reached %}
                                         <div class="fw-bold mb-2">
-                                            <i class="fas fa-circle-info me-2"></i>Kamu sudah punya {{ member_classes_on_date|length }} kelas di tanggal {{ instance.date|date:"d M Y" }}
+                                            <i class="fas fa-circle-info me-2"></i>Kamu udah punya {{ member_classes_on_date|length }} kelas di tanggal {{ instance.date|date:"d M Y" }}
                                         </div>
                                         <ul class="list-unstyled mb-2 small">
                                             {% for booked in member_classes_on_date %}
@@ -143,9 +177,12 @@
                                                 </li>
                                             {% endfor %}
                                         </ul>
+                                        <div class="small mb-2">
+                                            {{ booking_block.message }}
+                                        </div>
                                         <div class="small mb-0">
-                                            Maksimal {{ max_classes_per_day }} kelas per hari, biar semua member kebagian tempat.
-                                            Kalau mau pindah ke kelas ini, batalkan salah satu kelas di atas dulu.
+                                            Kalau mau pindah ke kelas ini sekarang, batalkan salah satu kelas di atas dulu.
+                                            <a href="{% url 'classes:class_rules' %}">Kenapa ada aturan ini?</a>
                                         </div>
                                     {% else %}
                                         <div class="small mb-0">
@@ -227,12 +264,16 @@
                     </div>
                 </div>
             </div>
-            <div class="mt-1">
+            <div class="mt-1 d-flex flex-wrap justify-content-between align-items-center gap-2">
               <a href="{% url 'classes:class_list' %}" class="back-button">
                 <i class="fas fa-arrow-left"></i> Kembali ke daftar kelas
-            </a>
+              </a>
+              <a href="{% url 'classes:class_rules' %}" class="class-rules-link">
+                <i class="fas fa-circle-question me-1"></i>Aturan booking kelas
+              </a>
           </div>
         </div>
     </div>
 </div>
+
 {% endblock %} 

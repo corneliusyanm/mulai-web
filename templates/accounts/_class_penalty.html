@@ -5,8 +5,9 @@ Renders nothing at all for a member who has never missed a booked class, which i
 most of them: there is no reason for someone who always turns up to learn that
 this rule exists.
 
-Three levels: `banned` while booking is locked, `warning` on the last free
-strike, `history` for a miss or two with nothing hanging over them.
+Four levels: `banned` while booking is locked, `pending` when tonight's run will
+lock them, `warning` on the last free strike, `history` for a miss or two with
+nothing hanging over them.
 {% endcomment %}
 {% if class_penalty %}
 <div class="row justify-content-center mb-4">
@@ -14,7 +15,7 @@ strike, `history` for a miss or two with nothing hanging over them.
         <div class="class-penalty class-penalty-{{ class_penalty.level }}">
             <div class="class-penalty-head">
                 <div class="class-penalty-icon">
-                    <i class="fas {% if class_penalty.level == 'banned' %}fa-lock{% elif class_penalty.level == 'warning' %}fa-triangle-exclamation{% else %}fa-calendar-xmark{% endif %}"></i>
+                    <i class="fas {% if class_penalty.level == 'banned' %}fa-lock{% elif class_penalty.level == 'pending' %}fa-hourglass-half{% elif class_penalty.level == 'warning' %}fa-triangle-exclamation{% else %}fa-calendar-xmark{% endif %}"></i>
                 </div>
                 <div class="flex-grow-1">
                     {% if class_penalty.level == 'banned' %}
@@ -31,25 +32,46 @@ strike, `history` for a miss or two with nothing hanging over them.
                             Tanggal {{ class_penalty.blocked_until|date:"d M" }} kamu udah bisa booking lagi.
                             Latihan sendiri di gym tetep bisa kapan aja, yang dikunci cuma booking kelas.
                         </div>
+                    {% elif class_penalty.level == 'pending' %}
+                        <div class="fw-bold">Nanti malam booking kelas kamu dikunci {{ class_penalty.ban_days }} hari</div>
+                        <div class="small">
+                            Dalam {{ class_penalty.window_days }} hari terakhir kamu
+                            {{ class_penalty.misses_in_window }} kali buang tempat kelas,
+                            lebih dari batasnya ({{ class_penalty.misses_allowed }} kali).
+                        </div>
+                        <div class="small mt-1">
+                            Booking kelas kamu buat hari-hari berikutnya bakal dibatalin
+                            otomatis, jadi jangan booking baru dulu ya. Latihan sendiri di
+                            gym tetep bisa kapan aja.
+                        </div>
                     {% elif class_penalty.level == 'warning' %}
                         <div class="fw-bold">
-                            Hati-hati, sekali lagi nggak dateng kena penalti
+                            Hati-hati, sekali lagi kena penalti
                         </div>
                         <div class="small">
                             Dalam {{ class_penalty.window_days }} hari terakhir kamu
-                            {{ class_penalty.misses_in_window }} kali booking tapi nggak dateng. Kalau
+                            {{ class_penalty.misses_in_window }} kali buang tempat kelas. Kalau
                             kejadian sekali lagi, booking kelas dikunci {{ class_penalty.ban_days }} hari.
                         </div>
                         <div class="small mt-1">
-                            Nggak bisa dateng? Batalkan bookingnya aja, itu nggak dihitung.
+                            Nggak bisa dateng? Batalin lebih dari {{ class_penalty.late_cancel_hours }} jam
+                            sebelum kelas, itu nggak dihitung sama sekali.
                         </div>
                     {% else %}
-                        <div class="fw-bold">Catatan kelas yang nggak kamu hadiri</div>
+                        <div class="fw-bold">Catatan tempat kelas yang kebuang</div>
                         <div class="small">
+                            Booking tapi nggak dateng, atau batalin kurang dari
+                            {{ class_penalty.late_cancel_hours }} jam sebelum kelas, dihitung sama.
                             Maksimal {{ class_penalty.misses_allowed }} kali dalam
                             {{ class_penalty.window_days }} hari. Lebih dari itu, booking kelas dikunci
-                            {{ class_penalty.ban_days }} hari. Kalau nggak bisa dateng, batalkan aja
-                            bookingnya, itu nggak dihitung.
+                            {{ class_penalty.ban_days }} hari.
+                        </div>
+                    {% endif %}
+                    {% if not on_rules_page %}
+                        <div class="small mt-2">
+                            <a href="{% url 'classes:class_rules' %}" class="class-penalty-link">
+                                <i class="fas fa-circle-question me-1"></i>Baca aturan kelas
+                            </a>
                         </div>
                     {% endif %}
                 </div>
@@ -58,7 +80,9 @@ strike, `history` for a miss or two with nothing hanging over them.
             <div class="class-penalty-list">
                 {% for miss in class_penalty.recent_misses %}
                     <div class="class-penalty-miss">
-                        <span>{{ miss.class_name }}</span>
+                        <span>{{ miss.class_name }}
+                            <span class="class-penalty-kind">{{ miss.get_kind_display|lower }}</span>
+                        </span>
                         <span class="class-penalty-date">{{ miss.class_date|date:"d M Y" }}</span>
                     </div>
                 {% endfor %}

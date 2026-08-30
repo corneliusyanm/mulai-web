@@ -466,7 +466,7 @@ class AccountCardTest(PenaltyTestCase):
 
         self.assertEqual(state["level"], "history")
         self.assertEqual(state["misses_in_window"], 1)
-        self.assertContains(response, "Catatan kelas yang nggak kamu hadiri")
+        self.assertContains(response, "Catatan tempat kelas yang kebuang")
 
     def test_the_last_free_strike_is_a_warning(self):
         self.miss_days(2)
@@ -475,7 +475,7 @@ class AccountCardTest(PenaltyTestCase):
         response = self.client.get(reverse("member_details"))
 
         self.assertEqual(response.context["class_penalty"]["level"], "warning")
-        self.assertContains(response, "sekali lagi nggak dateng kena penalti")
+        self.assertContains(response, "sekali lagi kena penalti")
 
     def test_a_locked_member_is_told_when_they_can_book_again(self):
         self.miss_days(2)
@@ -548,3 +548,264 @@ class CommandTest(PenaltyTestCase):
         self.settings.save()
 
         self.assertIn("switched off", self.run_command())
+
+
+class LateCancelTest(PenaltyTestCase):
+    """Cancelling inside the deadline costs the same as not turning up.
+
+    Times here are built from `timezone.now()` rather than a fixed hour, so a
+    class "two hours from now" is always two hours from now whenever the suite
+    runs, including across midnight.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.settings.late_cancel_hours = 4
+        self.settings.save()
+
+    def login(self, member=None):
+        session = self.client.session
+        session["member_email"] = (member or self.member).email
+        session.save()
+
+    def class_starting_in(self, minutes, member=None):
+        """A class starting `minutes` from now, with the member booked into it."""
+        start = timezone.localtime(timezone.now()) + timedelta(minutes=minutes)
+        start = start.replace(second=0, microsecond=0)
+        schedule, _ = ClassSchedule.objects.get_or_create(
+            class_obj=self.class_obj,
+            day_of_week=start.date().weekday(),
+            start_time=start.time(),
+            defaults={"end_time": (start + timedelta(hours=1)).time()},
+        )
+        instance = ClassInstance.objects.create(
+            class_schedule=schedule,
+            date=start.date(),
+            start_time=start.time(),
+            end_time=(start + timedelta(hours=1)).time(),
+        )
+        instance.booked_members.add(member or self.member)
+        return instance
+
+    def cancel(self, instance):
+        return self.client.post(
+            reverse("classes:cancel_class", args=[instance.id]), follow=True
+        )
+
+    def test_cancelling_early_costs_nothing(self):
+        instance = self.class_starting_in(60 * 6)
+        self.login()
+
+        response = self.cancel(instance)
+
+        self.assertEqual(ClassMiss.objects.count(), 0)
+        self.assertNotIn(self.member, instance.booked_members.all())
+        self.assertContains(response, "Makasih udah batalin")
+
+    def test_cancelling_inside_the_deadline_is_a_strike(self):
+        instance = self.class_starting_in(120)
+        self.login()
+
+        response = self.cancel(instance)
+
+        miss = ClassMiss.objects.get(member=self.member)
+        self.assertEqual(miss.kind, "LATE_CANCEL")
+        self.assertEqual(miss.class_date, instance.date)
+        self.assertNotIn(self.member, instance.booked_members.all())
+        self.assertContains(response, "dihitung 1 kali buang tempat")
+
+    def test_the_deadline_is_exactly_the_configured_hours(self):
+        """Four hours and one minute out is still free; three hours is not."""
+        early = self.class_starting_in(60 * 4 + 1)
+        late = self.class_starting_in(60 * 3)
+        self.login()
+
+        self.cancel(early)
+        self.assertEqual(ClassMiss.objects.count(), 0)
+
+        self.cancel(late)
+        self.assertEqual(ClassMiss.objects.count(), 1)
+
+    def test_leaving_the_waitlist_late_is_never_a_strike(self):
+        """A waitlist place is not a seat, so dropping it costs nobody one."""
+        instance = self.class_starting_in(30, member=self.a_member(
+            "holder@example.com", "628570000091"
+        ))
+        instance.waitlisted_members.add(self.member)
+        self.login()
+
+        self.cancel(instance)
+
+        self.assertEqual(ClassMiss.objects.count(), 0)
+        self.assertNotIn(self.member, instance.waitlisted_members.all())
+
+    def test_a_seat_handed_over_after_the_deadline_carries_no_strike(self):
+        """Promoted 30 minutes before, with no way to be told. Not their fault."""
+        other = self.a_member("dropper@example.com", "628570000092")
+        instance = self.class_starting_in(30, member=other)
+        instance.waitlisted_members.add(self.member)
+        instance.booked_members.remove(other)
+        instance.move_from_waitlist()
+        self.assertIn(self.member, instance.booked_members.all())
+
+        self.login()
+        self.cancel(instance)
+
+        self.assertEqual(ClassMiss.objects.count(), 0)
+
+    def test_a_seat_handed_over_before_the_deadline_still_counts(self):
+        """Promoted with a day to notice, so the ordinary rule applies."""
+        other = self.a_member("dropper2@example.com", "628570000093")
+        instance = self.class_starting_in(120, member=other)
+        instance.waitlisted_members.add(self.member)
+        instance.booked_members.remove(other)
+        instance.move_from_waitlist()
+
+        promotion = self.member.waitlist_promotions.get(class_instance=instance)
+        promotion.promoted_at = timezone.now() - timedelta(days=1)
+        promotion.save()
+
+        self.login()
+        self.cancel(instance)
+
+        self.assertEqual(ClassMiss.objects.count(), 1)
+
+    def test_a_class_the_gym_cancelled_is_not_the_members_fault(self):
+        instance = self.class_starting_in(60)
+        instance.status = "CANCELLED"
+        instance.save()
+        self.login()
+
+        self.cancel(instance)
+
+        self.assertEqual(ClassMiss.objects.count(), 0)
+
+    def test_nothing_is_recorded_while_the_penalty_is_switched_off(self):
+        self.settings.enabled = False
+        self.settings.save()
+        instance = self.class_starting_in(60)
+        self.login()
+
+        self.cancel(instance)
+
+        self.assertEqual(ClassMiss.objects.count(), 0)
+
+    def test_a_late_cancel_counts_towards_the_ban(self):
+        """Two ordinary misses plus one late cancel tips a member over."""
+        self.miss_days(2)
+        instance = self.class_starting_in(60)
+        self.login()
+
+        self.cancel(instance)
+        apply_penalties(day=instance.date)
+
+        self.member.refresh_from_db()
+        self.assertTrue(self.member.booking_locked())
+        self.assertEqual(
+            BookingPenalty.objects.get(member=self.member).miss_days, 3
+        )
+
+    def test_a_late_cancel_and_a_no_show_on_one_day_is_one_strike(self):
+        """Strikes are per day, whichever way the seats were wasted."""
+        cancelled = self.class_starting_in(60)
+        skipped = self.class_starting_in(90)
+        skipped.booked_members.add(self.member)
+        self.login()
+
+        self.cancel(cancelled)
+        record_misses(cancelled.date)
+
+        self.assertEqual(miss_days_in_window(self.member, cancelled.date), 1)
+
+    def test_cancelling_twice_cannot_double_count(self):
+        """Re-booking and cancelling the same class again is still one seat."""
+        instance = self.class_starting_in(60)
+        self.login()
+
+        self.cancel(instance)
+        instance.booked_members.add(self.member)
+        self.cancel(instance)
+
+        self.assertEqual(ClassMiss.objects.count(), 1)
+
+    def test_the_account_page_shows_which_kind_it_was(self):
+        instance = self.class_starting_in(60)
+        self.login()
+        self.cancel(instance)
+
+        response = self.client.get(reverse("member_details"))
+
+        self.assertContains(response, "batalin mepet")
+
+
+class PendingLockTest(PenaltyTestCase):
+    """The hours between going over the allowance and the nightly run.
+
+    Only reachable since late cancellations are recorded live: a member can be
+    three strikes deep at four in the afternoon while the lock does not land
+    until nine. Saying nothing during those hours is how a member ends up
+    booking two more classes and losing them overnight.
+    """
+
+    def login(self):
+        session = self.client.session
+        session["member_email"] = self.member.email
+        session.save()
+
+    def test_over_the_allowance_but_not_yet_locked_says_so(self):
+        self.miss_days(3)
+        self.login()
+
+        response = self.client.get(reverse("member_details"))
+        state = response.context["class_penalty"]
+
+        self.assertEqual(state["level"], "pending")
+        self.assertContains(response, "Nanti malam booking kelas kamu dikunci")
+
+    def test_the_lock_itself_still_wins(self):
+        self.miss_days(3)
+        apply_penalties(day=self.today - timedelta(days=1))
+        self.login()
+
+        response = self.client.get(reverse("member_details"))
+
+        self.assertEqual(response.context["class_penalty"]["level"], "banned")
+
+    def test_a_member_inside_the_allowance_is_unaffected(self):
+        self.miss_days(1)
+        self.login()
+
+        response = self.client.get(reverse("member_details"))
+
+        self.assertEqual(response.context["class_penalty"]["level"], "history")
+
+    def test_a_lock_already_served_for_those_misses_is_not_pending(self):
+        """Over the allowance, but they already did the three days for it."""
+        self.miss_days(2)
+        self.book(self.today)
+        apply_penalties(day=self.today)
+        self.member.refresh_from_db()
+        self.member.booking_blocked_until = self.today  # expired this morning
+        self.member.save()
+        self.login()
+
+        state = member_state(self.member, self.today)
+
+        self.assertEqual(state["level"], "history")
+
+    def test_a_fresh_miss_after_an_old_lock_is_pending_again(self):
+        self.miss_days(2)
+        self.book(self.today - timedelta(days=4))
+        apply_penalties(day=self.today - timedelta(days=4))
+        self.member.refresh_from_db()
+        self.member.booking_blocked_until = self.today
+        self.member.save()
+
+        # A new miss today, which tonight's run has not seen
+        self.book(self.today)
+        record_misses(self.today)
+        self.login()
+
+        state = member_state(self.member, self.today)
+
+        self.assertEqual(state["level"], "pending")

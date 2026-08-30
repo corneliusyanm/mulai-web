@@ -2,13 +2,22 @@ from django.test import TestCase, RequestFactory
 from django.utils import timezone
 from django.core.management import call_command
 from django.contrib.admin.sites import AdminSite
+from django.contrib.auth import get_user_model
 from django.contrib.auth.models import User
 from django.urls import reverse
 from datetime import date, time, timedelta
 from io import StringIO
 from urllib.parse import quote
 from accounts.models import Member
-from classes.models import Class, ClassSchedule, ClassInstance
+from classes.models import (
+    Class,
+    ClassSchedule,
+    ClassInstance,
+    ClassMiss,
+    PenaltySettings,
+    WaitlistPromotion,
+    booking_block_reason,
+)
 from classes.admin import ClassInstanceAdmin
 from classes.sharing import whatsapp_invite_url
 
@@ -681,8 +690,11 @@ class BookingValidationTest(TestCase):
             end_time="12:00:00",
         )
 
-        # Create class instances
-        today = timezone.now().date()
+        # Tomorrow, not today. These instances start at 09:00, 10:00 and 11:00,
+        # and booking now refuses a class that has already started, so dating
+        # them today would make the whole class pass or fail depending on what
+        # time of day the suite is run.
+        today = timezone.localdate() + timedelta(days=1)
         self.semi_private_instance = ClassInstance.objects.create(
             class_schedule=self.semi_private_schedule,
             date=today,
@@ -863,7 +875,7 @@ class BookingValidationTest(TestCase):
         )
         instance = ClassInstance.objects.create(
             class_schedule=schedule,
-            date=timezone.now().date(),
+            date=timezone.localdate() + timedelta(days=1),
             start_time=schedule.start_time,
             end_time=schedule.end_time,
             status="OPEN",
@@ -1158,7 +1170,7 @@ class CancelledInstanceStatusGuardTest(TestCase):
 
 
 class DailyBookingLimitTest(TestCase):
-    """Max MAX_CLASSES_PER_DAY classes per member per day, waitlist included."""
+    """One class a day booked ahead; the rest open shortly before they start."""
 
     def setUp(self):
         self.pemula = Class.objects.create(
@@ -1194,17 +1206,22 @@ class DailyBookingLimitTest(TestCase):
             active_until=timezone.now() + timedelta(days=30),
             pemula_active_until=timezone.now() + timedelta(days=30),
         )
-        self.tomorrow = timezone.now().date() + timedelta(days=1)
-        self.day_after = timezone.now().date() + timedelta(days=2)
+        self.tomorrow = timezone.localdate() + timedelta(days=1)
+        self.day_after = timezone.localdate() + timedelta(days=2)
 
     def make_instance(self, class_obj, hour, on_date=None, status="OPEN"):
         """One class instance at `hour` on `on_date` (defaults to tomorrow)."""
         on_date = on_date or self.tomorrow
+        return self.make_instance_at(
+            class_obj, on_date, time(hour, 0), time(hour + 1, 0), status
+        )
+
+    def make_instance_at(self, class_obj, on_date, start, end, status="OPEN"):
         schedule, _ = ClassSchedule.objects.get_or_create(
             class_obj=class_obj,
             day_of_week=on_date.weekday(),
-            start_time=f"{hour:02d}:00:00",
-            defaults={"end_time": f"{hour + 1:02d}:00:00"},
+            start_time=start,
+            defaults={"end_time": end},
         )
         return ClassInstance.objects.create(
             class_schedule=schedule,
@@ -1212,6 +1229,21 @@ class DailyBookingLimitTest(TestCase):
             start_time=schedule.start_time,
             end_time=schedule.end_time,
             status=status,
+        )
+
+    def starting_in(self, class_obj, minutes, status="OPEN"):
+        """A class that starts `minutes` from now.
+
+        Date and time both come from the same moment, so a test running at 23:50
+        gets tomorrow's date rather than a class in the past.
+        """
+        start = timezone.localtime(timezone.now()) + timedelta(minutes=minutes)
+        return self.make_instance_at(
+            class_obj,
+            start.date(),
+            start.time().replace(second=0, microsecond=0),
+            (start + timedelta(hours=1)).time().replace(second=0, microsecond=0),
+            status,
         )
 
     def login(self, member=None):
@@ -1224,39 +1256,68 @@ class DailyBookingLimitTest(TestCase):
             reverse("classes:book_class", args=[instance.id]), follow=True
         )
 
-    def test_third_booking_same_day_is_blocked(self):
+    def test_second_booking_the_same_day_is_blocked_in_advance(self):
         first = self.make_instance(self.pemula, 8)
-        second = self.make_instance(self.pemula, 10)
-        third = self.make_instance(self.pemula, 16)
+        second = self.make_instance(self.pemula, 16)
         self.login()
 
         self.book(first)
-        self.book(second)
-        response = self.book(third)
+        response = self.book(second)
 
-        self.assertContains(response, "Maksimal 2 kelas per hari")
-        self.assertNotIn(self.member, third.booked_members.all())
-        self.assertNotIn(self.member, third.waitlisted_members.all())
+        self.assertContains(response, "bisa dibooking mulai jam 15:00")
+        self.assertNotIn(self.member, second.booked_members.all())
+        self.assertNotIn(self.member, second.waitlisted_members.all())
         self.assertIn(self.member, first.booked_members.all())
-        self.assertIn(self.member, second.booked_members.all())
+
+    def test_the_extra_class_opens_an_hour_before_it_starts(self):
+        """The second class of a day is not refused, only held back."""
+        held = self.starting_in(self.pemula, 300)
+        soon = self.starting_in(self.semi_private, 30)
+        self.login()
+
+        self.book(held)
+        response = self.book(soon)
+
+        self.assertContains(response, "Berhasil booking")
+        self.assertIn(self.member, soon.booked_members.all())
+
+    def test_the_window_is_measured_from_the_class_start(self):
+        """Exactly at the boundary counts as open, one minute earlier does not."""
+        held = self.starting_in(self.pemula, 300)
+        edge = self.starting_in(self.semi_private, 60)
+        outside = self.starting_in(self.semi_private, 61)
+        self.login()
+        self.book(held)
+
+        self.assertIsNone(
+            booking_block_reason(self.member, edge, held_that_day=1),
+        )
+        block = booking_block_reason(self.member, outside, held_that_day=1)
+        self.assertEqual(block["code"], "DAY_LIMIT")
+
+    def test_the_first_class_of_the_day_is_never_held_back(self):
+        soon = self.starting_in(self.pemula, 300)
+        self.login()
+
+        response = self.book(soon)
+
+        self.assertContains(response, "Berhasil booking")
+        self.assertIn(self.member, soon.booked_members.all())
 
     def test_limit_counts_all_class_types_together(self):
         pemula_class = self.make_instance(self.pemula, 8)
-        semi_class = self.make_instance(self.semi_private, 10)
-        third = self.make_instance(self.pemula, 16)
+        semi_class = self.make_instance(self.semi_private, 16)
         self.login()
 
         self.book(pemula_class)
-        self.book(semi_class)
-        response = self.book(third)
+        response = self.book(semi_class)
 
-        self.assertContains(response, "Maksimal 2 kelas per hari")
-        self.assertNotIn(self.member, third.booked_members.all())
+        self.assertContains(response, "bisa dibooking mulai jam")
+        self.assertNotIn(self.member, semi_class.booked_members.all())
 
     def test_waitlist_counts_toward_the_limit(self):
-        booked = self.make_instance(self.pemula, 8)
         full_class = self.make_instance(self.semi_private, 10)
-        third = self.make_instance(self.pemula, 16)
+        second = self.make_instance(self.pemula, 16)
 
         # Fill the Semi Private class (max 2) so the member lands on the waitlist
         for i in range(2):
@@ -1275,62 +1336,64 @@ class DailyBookingLimitTest(TestCase):
         full_class.update_status()
 
         self.login()
-        self.book(booked)
         self.book(full_class)
         self.assertIn(self.member, full_class.waitlisted_members.all())
 
-        response = self.book(third)
-        self.assertContains(response, "Maksimal 2 kelas per hari")
-        self.assertNotIn(self.member, third.booked_members.all())
+        response = self.book(second)
+        self.assertContains(response, "bisa dibooking mulai jam")
+        self.assertNotIn(self.member, second.booked_members.all())
 
     def test_limit_is_per_day_not_overall(self):
         first = self.make_instance(self.pemula, 8)
-        second = self.make_instance(self.pemula, 10)
         next_day = self.make_instance(self.pemula, 8, on_date=self.day_after)
         self.login()
 
         self.book(first)
-        self.book(second)
         response = self.book(next_day)
 
-        self.assertNotContains(response, "Maksimal 2 kelas per hari")
+        self.assertContains(response, "Berhasil booking")
         self.assertIn(self.member, next_day.booked_members.all())
 
-    def test_cancelling_frees_up_a_slot(self):
+    def test_a_class_earlier_today_still_uses_up_the_day(self):
+        """Finished classes count. A second class a day is a last-minute thing."""
+        done = self.starting_in(self.pemula, -120)
+        later = self.starting_in(self.pemula, 300)
+        self.login()
+        done.booked_members.add(self.member)
+
+        response = self.book(later)
+
+        self.assertContains(response, "bisa dibooking mulai jam")
+        self.assertNotIn(self.member, later.booked_members.all())
+
+    def test_cancelling_frees_up_the_day(self):
         first = self.make_instance(self.pemula, 8)
-        second = self.make_instance(self.pemula, 10)
-        third = self.make_instance(self.pemula, 16)
+        second = self.make_instance(self.pemula, 16)
         self.login()
 
         self.book(first)
-        self.book(second)
-        self.client.post(
-            reverse("classes:cancel_class", args=[second.id]), follow=True
-        )
-        response = self.book(third)
+        self.client.post(reverse("classes:cancel_class", args=[first.id]), follow=True)
+        response = self.book(second)
 
         self.assertContains(response, "Berhasil booking")
-        self.assertIn(self.member, third.booked_members.all())
+        self.assertIn(self.member, second.booked_members.all())
 
     def test_class_cancelled_by_gym_does_not_use_up_the_quota(self):
         first = self.make_instance(self.pemula, 8)
-        second = self.make_instance(self.pemula, 10)
-        third = self.make_instance(self.pemula, 16)
+        second = self.make_instance(self.pemula, 16)
         self.login()
 
         self.book(first)
-        self.book(second)
-        # Gym cancels the 10:00 class, so it should not count anymore
-        second.status = "CANCELLED"
-        second.save()
+        # Gym cancels the 08:00 class, so it should not count anymore
+        first.status = "CANCELLED"
+        first.save()
 
-        response = self.book(third)
+        response = self.book(second)
         self.assertContains(response, "Berhasil booking")
-        self.assertIn(self.member, third.booked_members.all())
+        self.assertIn(self.member, second.booked_members.all())
 
     def test_waitlist_promotion_still_works_at_the_limit(self):
         """Promotion converts a waitlist spot that already counted, so it must pass."""
-        booked = self.make_instance(self.pemula, 8)
         full_class = self.make_instance(self.semi_private, 10)
         full_class.booked_members.add(self.other_member)
         filler = Member.objects.create(
@@ -1348,73 +1411,96 @@ class DailyBookingLimitTest(TestCase):
         full_class.update_status()
 
         self.login()
-        self.book(booked)
         self.book(full_class)
         self.assertIn(self.member, full_class.waitlisted_members.all())
 
-        # Somebody drops out: our member (2 classes that day already) gets the spot
+        # Somebody drops out: our member gets the spot they were queuing for
         full_class.booked_members.remove(filler)
         full_class.move_from_waitlist()
 
         self.assertIn(self.member, full_class.booked_members.all())
         self.assertNotIn(self.member, full_class.waitlisted_members.all())
 
-    def test_admin_can_still_add_a_third_class(self):
-        first = self.make_instance(self.pemula, 8)
-        second = self.make_instance(self.pemula, 10)
-        third = self.make_instance(self.pemula, 16)
-        self.login()
+    def test_a_promotion_is_recorded_with_its_time(self):
+        """The timestamp is what keeps a late-cancel strike off a member who
+        never knew they had the seat."""
+        full_class = self.make_instance(self.semi_private, 10)
+        for member in (self.other_member, self.member):
+            full_class.booked_members.add(member)
+        full_class.update_status()
 
-        self.book(first)
-        self.book(second)
-        # Admin override: adding directly (as /admin does) is not capped
-        third.booked_members.add(self.member)
-
-        self.assertIn(self.member, third.booked_members.all())
-
-    def test_detail_page_warns_before_booking(self):
-        first = self.make_instance(self.pemula, 8)
-        second = self.make_instance(self.pemula, 10)
-        third = self.make_instance(self.pemula, 16)
-        self.login()
-
-        self.book(first)
-        self.book(second)
-        response = self.client.get(
-            reverse("classes:class_detail", args=[third.id])
+        queued = Member.objects.create(
+            name="Ngantri",
+            email="ngantri@example.com",
+            phone_number="628555033333",
+            age=25,
+            height=170.0,
+            weight=70.0,
+            gender="M",
+            goals="Stay fit",
+            years_of_working_out="1-2 years",
+            semi_private_active_until=timezone.now() + timedelta(days=30),
         )
+        full_class.waitlisted_members.add(queued)
+        full_class.booked_members.remove(self.other_member)
+        full_class.move_from_waitlist()
+
+        promotion = WaitlistPromotion.objects.get(
+            member=queued, class_instance=full_class
+        )
+        self.assertLessEqual(promotion.promoted_at, timezone.now())
+
+    def test_admin_can_still_add_a_second_class(self):
+        first = self.make_instance(self.pemula, 8)
+        second = self.make_instance(self.pemula, 16)
+        self.login()
+
+        self.book(first)
+        # Admin override: adding directly (as /admin does) is not capped
+        second.booked_members.add(self.member)
+
+        self.assertIn(self.member, second.booked_members.all())
+
+    def test_a_class_that_already_started_cannot_be_booked(self):
+        started = self.starting_in(self.pemula, -30)
+        self.login()
+
+        response = self.book(started)
+
+        self.assertContains(response, "sudah mulai")
+        self.assertNotIn(self.member, started.booked_members.all())
+
+    def test_detail_page_says_when_booking_opens(self):
+        first = self.make_instance(self.pemula, 8)
+        second = self.make_instance(self.pemula, 16)
+        self.login()
+
+        self.book(first)
+        response = self.client.get(reverse("classes:class_detail", args=[second.id]))
 
         self.assertTrue(response.context["day_limit_reached"])
-        self.assertEqual(len(response.context["member_classes_on_date"]), 2)
-        self.assertContains(response, "Maks 2 Kelas per Hari")
+        self.assertEqual(len(response.context["member_classes_on_date"]), 1)
+        self.assertContains(response, "Bisa Booking Jam 15:00")
         self.assertNotContains(response, "Booking Sekarang")
 
     def test_detail_page_has_no_warning_below_the_limit(self):
         first = self.make_instance(self.pemula, 8)
-        second = self.make_instance(self.pemula, 10)
         self.login()
 
-        self.book(first)
-        response = self.client.get(
-            reverse("classes:class_detail", args=[second.id])
-        )
+        response = self.client.get(reverse("classes:class_detail", args=[first.id]))
 
         self.assertFalse(response.context["day_limit_reached"])
         self.assertContains(response, "Booking Sekarang")
 
     def test_booked_member_still_sees_cancel_button_at_the_limit(self):
         first = self.make_instance(self.pemula, 8)
-        second = self.make_instance(self.pemula, 10)
         self.login()
 
         self.book(first)
-        self.book(second)
-        response = self.client.get(
-            reverse("classes:class_detail", args=[second.id])
-        )
+        response = self.client.get(reverse("classes:class_detail", args=[first.id]))
 
         self.assertContains(response, "Batalkan Booking")
-        self.assertNotContains(response, "Maks 2 Kelas per Hari")
+        self.assertNotContains(response, "Bisa Booking Jam")
 
 
 class ListPageBookingTest(TestCase):
@@ -1580,32 +1666,29 @@ class ListPageBookingTest(TestCase):
 
     def test_list_blocks_and_explains_when_day_limit_reached(self):
         first = self.make_instance(self.pemula, 8)
-        second = self.make_instance(self.pemula, 10)
-        third = self.make_instance(self.pemula, 16)
+        second = self.make_instance(self.pemula, 16)
         first.booked_members.add(self.member)
-        second.booked_members.add(self.member)
         self.login()
 
         response = self.client.get(reverse("classes:class_list"))
         groups = {group["date"]: group for group in response.context["date_groups"]}
 
         self.assertTrue(groups[self.tomorrow]["day_limit_reached"])
-        self.assertEqual(len(groups[self.tomorrow]["held_classes"]), 2)
-        self.assertContains(response, "Maks 2/hari")
+        self.assertEqual(len(groups[self.tomorrow]["held_classes"]), 1)
+        # The button names the time it opens, so nobody has to work it out
+        self.assertContains(response, "Bisa jam 15:00")
         # The explanation shows once for the day, not once per card
-        self.assertContains(response, "Kamu sudah punya 2 kelas di hari ini", count=1)
+        self.assertContains(response, "Kamu udah punya 1 kelas di hari ini", count=1)
         blocked = [
             instance
             for instance in response.context["class_instances"]
-            if instance.id == third.id
+            if instance.id == second.id
         ][0]
         self.assertEqual(blocked.booking_block["code"], "DAY_LIMIT")
 
     def test_day_limit_only_marks_the_capped_date(self):
         first = self.make_instance(self.pemula, 8)
-        second = self.make_instance(self.pemula, 10)
         first.booked_members.add(self.member)
-        second.booked_members.add(self.member)
         self.make_instance(self.pemula, 8, on_date=self.day_after)
         self.login()
 
@@ -1644,14 +1727,15 @@ class ListPageBookingTest(TestCase):
         self.login()
 
         # Everything a card needs is precomputed, so the query count must stay
-        # flat no matter how many classes are listed.
-        with self.assertNumQueries(6):
+        # flat no matter how many classes are listed. Seven, not six: the rules
+        # row is one read for the whole page.
+        with self.assertNumQueries(7):
             self.client.get(reverse("classes:class_list"))
 
         for hour in (7, 9, 11, 13, 15, 17):
             self.make_instance(self.pemula, hour)
 
-        with self.assertNumQueries(6):
+        with self.assertNumQueries(7):
             self.client.get(reverse("classes:class_list"))
 
 
@@ -2038,3 +2122,116 @@ class WhatsAppInviteTest(TestCase):
                 self.instance, f"http://testserver/kelas/{self.instance.id}/"
             ),
         )
+
+
+class ClassRulesPageTest(TestCase):
+    """Aturan Kelas: the page an admin sends instead of explaining it again."""
+
+    def setUp(self):
+        self.rules = PenaltySettings.get_solo()
+        self.rules.late_cancel_hours = 4
+        self.rules.advance_classes_per_day = 1
+        self.rules.extra_booking_minutes = 60
+        self.rules.misses_allowed = 2
+        self.rules.ban_days = 3
+        self.rules.window_days = 15
+        self.rules.save()
+
+    def test_the_page_opens_without_logging_in(self):
+        """It is meant to be pasted into a WhatsApp reply."""
+        response = self.client.get(reverse("classes:class_rules"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Aturan Kelas")
+
+    def test_every_number_comes_from_the_settings_row(self):
+        self.rules.late_cancel_hours = 6
+        self.rules.extra_booking_minutes = 90
+        self.rules.ban_days = 5
+        self.rules.save()
+
+        response = self.client.get(reverse("classes:class_rules"))
+
+        self.assertContains(response, "6 jam")
+        self.assertContains(response, "90 menit")
+        self.assertContains(response, "dikunci 5 hari")
+
+    def test_it_names_the_strike_that_actually_triggers_the_ban(self):
+        """misses_allowed is 2, so the third one is the one that bites."""
+        response = self.client.get(reverse("classes:class_rules"))
+
+        self.assertEqual(response.context["strikes_before_ban"], 3)
+        self.assertContains(response, "3 kali buang tempat")
+
+    def test_the_example_deadline_matches_the_example_class(self):
+        response = self.client.get(reverse("classes:class_rules"))
+
+        start = response.context["example_start"]
+        deadline = response.context["example_deadline"]
+        opens = response.context["example_opens"]
+        self.assertEqual((start - deadline).total_seconds() / 3600, 4)
+        self.assertEqual((start - opens).total_seconds() / 60, 60)
+
+    def test_a_member_with_a_record_sees_it_on_the_page(self):
+        member = Member.objects.create(
+            name="Kena Member",
+            email="kena@example.com",
+            phone_number="628558000111",
+            age=25,
+            height=170.0,
+            weight=70.0,
+            gender="M",
+            goals="Stay fit",
+            years_of_working_out="1-2 years",
+        )
+        class_obj = Class.objects.create(
+            name="Kelas Pemula", description="Beginner", max_members=6
+        )
+        schedule = ClassSchedule.objects.create(
+            class_obj=class_obj,
+            day_of_week=0,
+            start_time=time(8, 0),
+            end_time=time(9, 0),
+        )
+        instance = ClassInstance.objects.create(
+            class_schedule=schedule,
+            date=timezone.localdate() - timedelta(days=1),
+            start_time=time(8, 0),
+            end_time=time(9, 0),
+        )
+        ClassMiss.objects.create(
+            member=member,
+            class_instance=instance,
+            class_date=instance.date,
+            class_name=class_obj.name,
+            class_start_time=instance.start_time,
+        )
+        session = self.client.session
+        session["member_email"] = member.email
+        session.save()
+
+        response = self.client.get(reverse("classes:class_rules"))
+
+        self.assertIsNotNone(response.context["class_penalty"])
+        self.assertContains(response, "Catatan tempat kelas yang kebuang")
+
+    def test_the_class_list_links_to_it(self):
+        member = Member.objects.create(
+            name="Link Member",
+            email="link@example.com",
+            phone_number="628558000222",
+            age=25,
+            height=170.0,
+            weight=70.0,
+            gender="M",
+            goals="Stay fit",
+            years_of_working_out="1-2 years",
+            active_until=timezone.now() + timedelta(days=30),
+        )
+        session = self.client.session
+        session["member_email"] = member.email
+        session.save()
+
+        response = self.client.get(reverse("classes:class_list"))
+
+        self.assertContains(response, reverse("classes:class_rules"))

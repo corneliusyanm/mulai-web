@@ -1,14 +1,11 @@
+from datetime import timedelta
+
 from django.db import models
 from django.db.models import Q
 from django.utils import timezone
 from django.core.validators import MaxValueValidator, MinValueValidator
 
 from accounts.models import Member
-
-# How many classes one member may hold per day. Members used to book 3-4 classes
-# a day just so they would never hit a "full" class, then skip most of them,
-# which locked everyone else out. Admins can still go over this from /admin.
-MAX_CLASSES_PER_DAY = 2
 
 
 class Class(models.Model):
@@ -142,7 +139,14 @@ class ClassInstance(models.Model):
                 self.waitlisted_members.remove(member_to_move)
                 self.booked_members.add(member_to_move)
                 self.update_status()
-                # Optionally, you could send a notification to the member here
+                # There is still no way to tell them. The row at least records
+                # *when* they got the seat, which is what keeps a late-cancel
+                # strike off someone who never knew they had one.
+                WaitlistPromotion.objects.update_or_create(
+                    member=member_to_move,
+                    class_instance=self,
+                    defaults={"promoted_at": timezone.now()},
+                )
                 return True
         return False
 
@@ -153,6 +157,41 @@ class ClassInstance(models.Model):
             models.Index(fields=["date", "start_time"], name="class_date_time_idx"),
             models.Index(fields=["status"], name="class_status_idx"),
         ]
+
+
+class WaitlistPromotion(models.Model):
+    """When a waitlisted member was moved into a real booking.
+
+    Members have no notification channel, so a promotion that happens an hour
+    before a class is a seat handed to somebody who will never look. That is a
+    problem we have not solved. What this row does solve is the unfair half of
+    it: a member promoted after the cancellation deadline had already passed
+    cannot then be struck for cancelling a booking they never asked for.
+
+    `update_or_create`, not `get_or_create`: a member can leave the queue, rejoin
+    and be promoted again, and it is the latest promotion that decides.
+    """
+
+    member = models.ForeignKey(
+        Member, on_delete=models.CASCADE, related_name="waitlist_promotions"
+    )
+    class_instance = models.ForeignKey(
+        ClassInstance, on_delete=models.CASCADE, related_name="waitlist_promotions"
+    )
+    promoted_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        verbose_name = "Naik dari Antrian"
+        verbose_name_plural = "Naik dari Antrian"
+        ordering = ["-promoted_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["member", "class_instance"], name="one_promotion_per_booking"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.member.name} naik dari antrian {self.class_instance}"
 
 
 def member_classes_on_dates(member, dates):
@@ -179,7 +218,55 @@ def member_classes_on_date(member, date):
     return member_classes_on_dates(member, [date])
 
 
-def booking_block_reason(member, instance, held_that_day=None):
+def class_start_at(instance):
+    """The moment the class starts, as an aware Jakarta datetime.
+
+    Every time rule in this file measures from here, so the four hours before a
+    class and the hour before a class are always measured the same way. Naive
+    date + time is what the model stores; `make_aware` reads TIME_ZONE, which is
+    Asia/Jakarta, and that is the clock members are looking at.
+    """
+    return timezone.make_aware(
+        timezone.datetime.combine(instance.date, instance.start_time)
+    )
+
+
+def cancel_deadline_at(instance, settings=None):
+    """Last moment a member can cancel this class for free.
+
+    After this, cancelling still works (the seat has to go back somehow) but it
+    counts as a miss, exactly like not turning up. Cancelling ten minutes before
+    hands the waitlist a seat nobody can act on, which is the same wasted seat as
+    a no-show with an extra person disappointed.
+    """
+    settings = settings or PenaltySettings.get_solo()
+    return class_start_at(instance) - timedelta(hours=settings.late_cancel_hours)
+
+
+def extra_booking_opens_at(instance, settings=None):
+    """When a member who already has a class that day may book this one.
+
+    The second class of a day is not something you hold all week: it opens
+    shortly before it starts, so the seat spends most of its life available to
+    members who have no class that day at all.
+    """
+    settings = settings or PenaltySettings.get_solo()
+    return class_start_at(instance) - timedelta(
+        minutes=settings.extra_booking_minutes
+    )
+
+
+def spell_minutes(minutes):
+    """"60" as "1 jam", "90" as "90 menit". For copy members have to read fast."""
+    if minutes and minutes % 60 == 0:
+        hours = minutes // 60
+        return f"{hours} jam"
+    return f"{minutes} menit"
+
+
+def booking_block_reason(
+    member, instance, held_that_day=None, now=None, settings=None
+):
     """Why `member` may not book `instance`, or None when they may.
 
     One place for the booking rules so the class list, the class detail page and
@@ -189,20 +276,37 @@ def booking_block_reason(member, instance, held_that_day=None):
 
     `held_that_day` is how many classes the member already holds on that date.
     Pass it when you already know (the list page counts every date in one query);
-    leave it out and it gets counted here.
+    leave it out and it gets counted here. `now` and `settings` are the same
+    idea: the class list resolves them once and passes them down, so drawing 12
+    cards does not mean 12 reads of the settings row.
 
     Returns None, or a dict with:
-      code    - PENALTY / DAY_LIMIT / SEMI_PRIVATE_INACTIVE / PEMULA_INACTIVE
+      code    - STARTED / PENALTY / DAY_LIMIT / SEMI_PRIVATE_INACTIVE /
+                PEMULA_INACTIVE
       short   - fits on the small disabled button in the class list
       label   - roomier button label, for the class detail page
       message - the full sentence, for messages.error()
     """
+    now = now or timezone.now()
+    settings = settings or PenaltySettings.get_solo()
     class_name = instance.class_schedule.class_obj.name.lower()
     class_date_start = timezone.make_aware(
         timezone.datetime.combine(instance.date, timezone.datetime.min.time())
     )
 
-    # First, because it outranks everything else: while a no-show penalty is
+    # Before anything about this member: a class that has already started is not
+    # bookable by anyone. The list hides those cards, but the detail page and a
+    # stale form both reach the POST, and "Kena Penalti" would be the wrong
+    # answer to give someone opening yesterday's class.
+    if class_start_at(instance) <= now:
+        return {
+            "code": "STARTED",
+            "short": "Sudah Mulai",
+            "label": "Kelas Sudah Mulai",
+            "message": "Kelas ini sudah mulai, jadi bookingnya sudah ditutup.",
+        }
+
+    # Then, because it outranks everything else: while a no-show penalty is
     # running there is no class this member may book, whatever its date. Reads a
     # field already on the member, so it costs the list page nothing. Admins book
     # through /admin, which does not come through here.
@@ -246,33 +350,45 @@ def booking_block_reason(member, instance, held_that_day=None):
             ),
         }
 
+    # The daily limit, and the one rule in here that is about *when* rather than
+    # whether. A member already holding a class that day is not refused a second
+    # one, they are told to come back shortly before it starts. Until then the
+    # seat stays available to members who have no class that day at all, which is
+    # the whole point: the evening classes were being held all week by the same
+    # faces while people who booked nothing found them full.
     if held_that_day is None:
         held_that_day = member_classes_on_date(member, instance.date).count()
-    if held_that_day >= MAX_CLASSES_PER_DAY:
-        return {
-            "code": "DAY_LIMIT",
-            "short": f"Maks {MAX_CLASSES_PER_DAY}/hari",
-            "label": f"Maks {MAX_CLASSES_PER_DAY} Kelas per Hari",
-            "message": (
-                f"Kamu sudah punya {MAX_CLASSES_PER_DAY} kelas di tanggal "
-                f"{instance.date.strftime('%d %b %Y')}. Maksimal "
-                f"{MAX_CLASSES_PER_DAY} kelas per hari, jadi batalkan salah satu "
-                f"dulu kalau mau pindah ke kelas ini."
-            ),
-        }
+    if held_that_day >= settings.advance_classes_per_day:
+        opens_at = timezone.localtime(extra_booking_opens_at(instance, settings))
+        if now < opens_at:
+            clock = opens_at.strftime("%H:%M")
+            return {
+                "code": "DAY_LIMIT",
+                "short": f"Bisa jam {clock}",
+                "label": f"Bisa Booking Jam {clock}",
+                "message": (
+                    f"Sehari booking {settings.advance_classes_per_day} kelas "
+                    f"dulu, biar member lain kebagian tempat. Kelas tambahan di "
+                    f"tanggal {instance.date.strftime('%d %b %Y')} bisa dibooking "
+                    f"mulai jam {clock}, yaitu "
+                    f"{spell_minutes(settings.extra_booking_minutes)} sebelum "
+                    f"kelasnya mulai."
+                ),
+            }
 
     return None
 
 
 class PenaltySettings(models.Model):
-    """The no-show penalty rules, editable at /admin.
+    """Every tunable number in the class rules, editable at /admin.
 
     A settings row rather than module constants, which is the opposite of what
-    this project does everywhere else (see MAX_CLASSES_PER_DAY above). The reason
-    is that these three numbers are being tuned by watching real members: the
-    right window and the right number of chances are an experiment, and a deploy
-    per experiment is the wrong shape of friction. If they ever settle, moving
-    them into code is a small change.
+    this project does everywhere else. The reason is that these numbers are being
+    tuned by watching real members: the right window, the right number of
+    chances, how early a cancellation has to be, how long before a class the
+    extra seats open. Each one is an experiment, and a deploy per experiment is
+    the wrong shape of friction. If they ever settle, moving them into code is a
+    small change.
 
     `effective_from` exists so nobody is punished for behaviour from before the
     rule existed. It is set to the day the feature was deployed, and misses on
@@ -301,6 +417,31 @@ class PenaltySettings(models.Model):
         validators=[MinValueValidator(1), MaxValueValidator(90)],
         help_text="Berapa hari booking kelas dikunci tiap kali kena penalti.",
     )
+    late_cancel_hours = models.PositiveSmallIntegerField(
+        default=4,
+        validators=[MinValueValidator(1), MaxValueValidator(48)],
+        help_text=(
+            "Batalin kurang dari sekian jam sebelum kelas mulai dihitung sama "
+            "kayak nggak dateng. Batalin lebih awal dari itu bebas, nggak ada "
+            "catatan apa-apa."
+        ),
+    )
+    advance_classes_per_day = models.PositiveSmallIntegerField(
+        default=1,
+        validators=[MinValueValidator(1), MaxValueValidator(10)],
+        help_text=(
+            "Berapa kelas per hari yang boleh dibooking jauh-jauh hari. "
+            "Kelas berikutnya di hari yang sama baru buka menjelang mulai."
+        ),
+    )
+    extra_booking_minutes = models.PositiveSmallIntegerField(
+        default=60,
+        validators=[MinValueValidator(5), MaxValueValidator(1440)],
+        help_text=(
+            "Kelas ke-2 dan seterusnya di hari yang sama baru bisa dibooking "
+            "sekian menit sebelum kelas itu mulai."
+        ),
+    )
     effective_from = models.DateField(
         help_text=(
             "Kelas sebelum tanggal ini tidak dihitung. Diisi tanggal fitur ini "
@@ -310,8 +451,8 @@ class PenaltySettings(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name = "Pengaturan Penalti Kelas"
-        verbose_name_plural = "Pengaturan Penalti Kelas"
+        verbose_name = "Aturan & Penalti Kelas"
+        verbose_name_plural = "Aturan & Penalti Kelas"
 
     def __str__(self):
         state = "aktif" if self.enabled else "mati"
@@ -334,15 +475,26 @@ class PenaltySettings(models.Model):
 
 
 class ClassMiss(models.Model):
-    """One booked class a member did not turn up for.
+    """One booked class a member did not turn up for, or dropped too late.
 
-    Recorded by the nightly command rather than derived on the fly, for two
-    reasons: the window query stays a simple date range, and the history survives
-    a booking being cancelled or a class being deleted later.
+    Recorded rather than derived on the fly, for two reasons: the window query
+    stays a simple date range, and the history survives a booking being cancelled
+    or a class being deleted later.
 
-    Unique per (member, class instance), which is what makes the command safe to
-    run twice.
+    Two kinds, counted exactly the same because they cost the same seat. A
+    NO_SHOW is written by the nightly command. A LATE_CANCEL is written the
+    moment the member cancels inside the deadline, since by then the seat is
+    already as good as wasted and there is nothing to wait for.
+
+    Unique per (member, class instance), which is what makes the nightly command
+    safe to run twice, and what stops a member who late-cancels and re-books the
+    same class collecting two strikes for one seat.
     """
+
+    KIND_CHOICES = [
+        ("NO_SHOW", "Nggak dateng"),
+        ("LATE_CANCEL", "Batalin mepet"),
+    ]
 
     member = models.ForeignKey(
         Member, on_delete=models.CASCADE, related_name="class_misses"
@@ -355,6 +507,7 @@ class ClassMiss(models.Model):
     class_date = models.DateField()
     class_name = models.CharField(max_length=100, blank=True)
     class_start_time = models.TimeField(null=True, blank=True)
+    kind = models.CharField(max_length=12, choices=KIND_CHOICES, default="NO_SHOW")
     recorded_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -369,7 +522,10 @@ class ClassMiss(models.Model):
         indexes = [models.Index(fields=["member", "class_date"])]
 
     def __str__(self):
-        return f"{self.member.name} bolos {self.class_name} {self.class_date}"
+        return (
+            f"{self.member.name} {self.get_kind_display().lower()} "
+            f"{self.class_name} {self.class_date}"
+        )
 
 
 class BookingPenalty(models.Model):

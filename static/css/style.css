@@ -3243,3 +3243,267 @@ section {
     animation: none;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Class rules: the cancellation deadline where it matters, and the guide page.
+
+   The notes are the important half. They sit on class cards, on the class page
+   and on the account page, and they are how most members will actually learn
+   the rule: not by reading a guide, but by seeing "batalin sebelum jam 13:15"
+   on the class they are holding.
+   --------------------------------------------------------------------------- */
+.class-rule-note {
+  background: rgba(255, 255, 255, 0.92);
+  color: #4a4a68;
+  border-left: 4px solid #4b4bec;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.class-rule-note a {
+  color: #4b4bec;
+  font-weight: 700;
+}
+
+.class-rule-note-warn {
+  background: rgba(255, 243, 205, 0.96);
+  color: #6b4e00;
+  border-left-color: #ffc107;
+}
+
+.class-rule-note-warn a {
+  color: #6b4e00;
+  text-decoration: underline;
+}
+
+.class-rules-link,
+.class-day-cap-link {
+  color: #bef006;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.class-day-cap-link {
+  color: #6b4e00;
+  text-decoration: underline;
+  white-space: nowrap;
+}
+
+.class-rules-link:hover {
+  color: #bef006;
+  text-decoration: underline;
+}
+
+.class-closure-note {
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 12px;
+  padding: 12px 16px;
+  color: #fff;
+}
+
+/* Aturan Kelas page. Big type, one idea per card, and a worked example under
+   each rule, because an example is what a member repeats back to a friend. */
+.rules-page .rules-lead {
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.rule-card {
+  background: #fff;
+  color: #2f2f45;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 10px 26px rgba(20, 20, 80, 0.16);
+}
+
+.rule-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.rule-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #4b4bec;
+  color: #fff;
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+
+.rule-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #2f2f45;
+  line-height: 1.3;
+}
+
+.rule-body {
+  font-size: 0.98rem;
+  line-height: 1.6;
+  margin-bottom: 14px;
+}
+
+.rule-example {
+  background: #f4f4fb;
+  border-radius: 12px;
+  padding: 14px 16px;
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.rule-example-title {
+  font-weight: 800;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6c6c8a;
+  margin-bottom: 8px;
+}
+
+.rule-case {
+  padding: 8px 0;
+}
+
+.rule-case-ok {
+  color: #1c7c4a;
+}
+
+.rule-case-bad {
+  color: #c0392b;
+}
+
+.rule-list {
+  margin: 0 0 14px 0;
+  padding-left: 20px;
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+
+.rule-why {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed #d9d9ea;
+  font-size: 0.86rem;
+  line-height: 1.6;
+  color: #5c5c78;
+}
+
+/* The deadline drawn rather than described: green up to the cut-off, red after
+   it. Members who skip the paragraph still get the shape of the rule. */
+.rule-timeline {
+  margin: 4px 0 16px;
+}
+
+.rule-timeline-bar {
+  display: flex;
+  border-radius: 10px;
+  overflow: hidden;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #fff;
+  text-align: center;
+}
+
+.rule-timeline-safe {
+  flex: 3;
+  background: #2e9e63;
+  padding: 10px 6px;
+}
+
+.rule-timeline-late {
+  flex: 2;
+  background: #d9534f;
+  padding: 10px 6px;
+}
+
+.rule-timeline-marks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: #6c6c8a;
+  margin-top: 6px;
+}
+
+.rule-summary {
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 16px;
+  padding: 18px 20px;
+  color: #fff;
+}
+
+.rule-summary-title {
+  font-weight: 800;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.85;
+  margin-bottom: 12px;
+}
+
+.rule-summary-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 7px 0;
+  font-size: 0.94rem;
+  line-height: 1.5;
+}
+
+.rule-summary-item i {
+  color: #bef006;
+  width: 22px;
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+.rules-help {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.88rem;
+}
+
+.rules-help a {
+  color: #bef006;
+  font-weight: 700;
+}
+
+.class-penalty-link {
+  color: #fff;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.class-penalty-kind {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+/* Same link on a light strip rather than the coloured penalty card, where white
+   text would simply vanish. */
+.rules-inline-link {
+  color: #4b4bec;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+/* Over the allowance, but tonight's run has not locked them yet. Same weight as
+   banned, since the outcome is already decided. */
+.class-penalty-pending {
+  background: linear-gradient(135deg, #f2683c 0%, #de4b2a 100%);
+}

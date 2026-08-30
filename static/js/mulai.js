@@ -19,6 +19,12 @@
  *   state, no transitions, no counting.
  * - **Opt in from the markup**, with data attributes, so a template asks for an
  *   effect rather than this file knowing about pages.
+ *
+ * One thing here is not motion: the confirm-before-submit on `form.js-confirm`.
+ * It lives here because cancelling a class can now cost a member a strike, and
+ * the same guard is needed on the class list, the class page and the account
+ * page. Three copies of it would eventually disagree about the wording, and the
+ * page where it went missing would be the one where the mis-tap happened.
  */
 (function () {
   "use strict";
@@ -132,6 +138,28 @@
   }
 
   window.mgGrow = grow;
+
+  // Ask before a form that says it needs asking, then stop it firing twice on a
+  // slow connection. Delegated from the document so it covers forms on any page
+  // and any that arrive later.
+  document.addEventListener(
+    "submit",
+    function (event) {
+      var form = event.target;
+      if (!form || !form.classList || !form.classList.contains("js-confirm")) return;
+
+      var question = form.dataset.confirm;
+      if (question && !window.confirm(question)) {
+        event.preventDefault();
+        return;
+      }
+      var button = form.querySelector('button[type="submit"]');
+      if (button) {
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+      }
+    }
+  );
 
   function start() {
     runEffectsIn(document);

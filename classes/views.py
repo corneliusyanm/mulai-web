@@ -1,4 +1,5 @@
 from collections import defaultdict
+from datetime import timedelta
 
 from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
@@ -15,13 +16,17 @@ from django.views.decorators.http import require_POST
 from .calendar_export import class_instance_to_ics, ics_filename
 from .sharing import whatsapp_invite_url
 from .models import (
-    MAX_CLASSES_PER_DAY,
     ClassInstance,
     Member,
+    PenaltySettings,
     booking_block_reason,
+    cancel_deadline_at,
+    class_start_at,
     member_classes_on_date,
     member_classes_on_dates,
+    spell_minutes,
 )
+from .penalties import member_state, record_late_cancel
 
 
 def member_login_required(view_func):
@@ -34,6 +39,21 @@ def member_login_required(view_func):
 
 
 # Create your views here.
+
+
+def _attach_cancel_window(instance, now, settings):
+    """Put the free-cancellation deadline on an instance, for the templates.
+
+    A clock time, not a countdown: "batalin sebelum jam 13:15" is something a
+    member can act on without doing arithmetic, and most of them will not do the
+    arithmetic. Localised here rather than in the template because the `time`
+    filter formats whatever timezone the datetime carries.
+    """
+    deadline = cancel_deadline_at(instance, settings)
+    instance.cancel_deadline_at = timezone.localtime(deadline)
+    instance.cancel_is_late = now >= deadline
+    instance.has_started = class_start_at(instance) <= now
+    return instance
 
 
 class ClassListView(MemberRequiredMixin, ListView):
@@ -75,7 +95,15 @@ class ClassListView(MemberRequiredMixin, ListView):
         if member_email:
             member = Member.objects.filter(email=member_email).first()
         context["member"] = member
-        context["max_classes_per_day"] = MAX_CLASSES_PER_DAY
+
+        # One read of the rules for the whole page. Every card needs the same
+        # numbers, and booking_block_reason() would otherwise fetch the row again
+        # per card, which is exactly the per-card query this view exists to avoid.
+        now = timezone.now()
+        settings = PenaltySettings.get_solo()
+        context["rules"] = settings
+        context["advance_classes_per_day"] = settings.advance_classes_per_day
+        context["extra_booking_wait"] = spell_minutes(settings.extra_booking_minutes)
 
         # Everything each card needs to draw its own booking button, worked out
         # here in a handful of queries. Doing it in the template instead would
@@ -134,8 +162,13 @@ class ClassListView(MemberRequiredMixin, ListView):
                 and not instance.member_is_waitlisted
             ):
                 instance.booking_block = booking_block_reason(
-                    member, instance, held_that_day=len(held_by_date[instance.date])
+                    member,
+                    instance,
+                    held_that_day=len(held_by_date[instance.date]),
+                    now=now,
+                    settings=settings,
                 )
+            _attach_cancel_window(instance, now, settings)
 
             if not date_groups or date_groups[-1]["date"] != instance.date:
                 held = held_by_date[instance.date]
@@ -144,7 +177,9 @@ class ClassListView(MemberRequiredMixin, ListView):
                         "date": instance.date,
                         "instances": [],
                         "held_classes": held,
-                        "day_limit_reached": len(held) >= MAX_CLASSES_PER_DAY,
+                        "day_limit_reached": (
+                            len(held) >= settings.advance_classes_per_day
+                        ),
                     }
                 )
             date_groups[-1]["instances"].append(instance)
@@ -193,7 +228,13 @@ class ClassDetailView(MemberRequiredMixin, DetailView):
 
         # Tell the member up front why they cannot book, instead of letting them
         # tap Booking and get an error.
-        context["max_classes_per_day"] = MAX_CLASSES_PER_DAY
+        now = timezone.now()
+        settings = PenaltySettings.get_solo()
+        context["rules"] = settings
+        context["advance_classes_per_day"] = settings.advance_classes_per_day
+        context["extra_booking_wait"] = spell_minutes(settings.extra_booking_minutes)
+        _attach_cancel_window(self.object, now, settings)
+
         classes_on_date = (
             list(member_classes_on_date(member, self.object.date)) if member else []
         )
@@ -204,7 +245,11 @@ class ClassDetailView(MemberRequiredMixin, DetailView):
             self.object.waitlisted_members.all()
         ):
             block = booking_block_reason(
-                member, self.object, held_that_day=len(classes_on_date)
+                member,
+                self.object,
+                held_that_day=len(classes_on_date),
+                now=now,
+                settings=settings,
             )
         context["booking_block"] = block
         context["day_limit_reached"] = bool(block) and block["code"] == "DAY_LIMIT"
@@ -218,6 +263,49 @@ class ClassDetailView(MemberRequiredMixin, DetailView):
             self.object, self.request.build_absolute_uri()
         )
         return context
+
+
+def class_rules(request):
+    """Aturan Kelas: the three rules, in words a member can act on.
+
+    Open to anyone, not gated behind login, because its main job is to be a link
+    an admin can paste into a WhatsApp reply and be done. Explaining the rule one
+    member at a time is the thing this page exists to stop.
+
+    Everything on it reads the live settings row, so the day an admin changes the
+    window in /admin, the page changes with it and nobody is reading last month's
+    rules.
+    """
+    settings = PenaltySettings.get_solo()
+    member = None
+    email = request.session.get("member_email")
+    if email:
+        member = Member.objects.filter(email=email).first()
+
+    # A worked example beats a rule. Built from a real evening class so the
+    # times look like the ones on their own booking.
+    example_start = timezone.localtime(timezone.now()).replace(
+        hour=17, minute=15, second=0, microsecond=0
+    )
+    example_deadline = example_start - timedelta(hours=settings.late_cancel_hours)
+    example_opens = example_start - timedelta(minutes=settings.extra_booking_minutes)
+
+    return render(
+        request,
+        "classes/class_rules.html",
+        {
+            "rules": settings,
+            "member": member,
+            "cancel_wait": spell_minutes(settings.late_cancel_hours * 60),
+            "extra_booking_wait": spell_minutes(settings.extra_booking_minutes),
+            "strikes_before_ban": settings.misses_allowed + 1,
+            "example_start": example_start,
+            "example_deadline": example_deadline,
+            "example_opens": example_opens,
+            "example_late": example_start - timedelta(minutes=30),
+            "class_penalty": member_state(member) if member else None,
+        },
+    )
 
 
 @member_login_required
@@ -262,11 +350,16 @@ def _redirect_after_action(request, instance):
 
     The class list posts next=list so a one-tap booking returns to the list,
     scrolled to that same card, instead of dropping them on the detail page.
-    Only this one fixed value is accepted, so it can't be used as an open
-    redirect the way an arbitrary next=<url> could.
+    /akun posts next=akun for the same reason: a member cancelling from their own
+    upcoming list should land back on their own upcoming list. Only these fixed
+    values are accepted, so it can't be used as an open redirect the way an
+    arbitrary next=<url> could.
     """
-    if request.POST.get("next") == "list":
+    target = request.POST.get("next")
+    if target == "list":
         return redirect(f"{reverse('classes:class_list')}#kelas-{instance.id}")
+    if target == "akun":
+        return redirect("member_details")
     return redirect("classes:class_detail", pk=instance.id)
 
 
@@ -323,12 +416,30 @@ def cancel_class(request, instance_id):
     member = get_object_or_404(Member, email=request.session.get("member_email"))
 
     if member in instance.booked_members.all():
+        # Decided before the booking is removed, since the rule is about this
+        # member holding this seat this close to the class. Waitlist places never
+        # come through here: leaving a queue costs nobody a seat.
+        settings = PenaltySettings.get_solo()
+        miss = record_late_cancel(member, instance, settings=settings)
+
         instance.booked_members.remove(member)
         instance.move_from_waitlist()
-        messages.success(
-            request,
-            f"Booking Anda untuk kelas {instance.class_schedule.class_obj.name} telah dibatalkan.",
-        )
+
+        class_name = instance.class_schedule.class_obj.name
+        if miss:
+            messages.warning(
+                request,
+                f"Booking kelas {class_name} sudah dibatalkan. Tapi karena "
+                f"kurang dari {spell_minutes(settings.late_cancel_hours * 60)} "
+                f"sebelum kelas mulai, ini dihitung 1 kali buang tempat, sama "
+                f"kayak nggak dateng. Lain kali batalin lebih awal ya.",
+            )
+        else:
+            messages.success(
+                request,
+                f"Booking kelas {class_name} sudah dibatalkan. Makasih udah "
+                f"batalin dari jauh-jauh hari, tempatnya jadi kepakai member lain.",
+            )
     elif member in instance.waitlisted_members.all():
         instance.waitlisted_members.remove(member)
         messages.success(

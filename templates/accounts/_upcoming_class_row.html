@@ -37,6 +37,17 @@ used to be copy-pasted blocks, which meant every card tweak had to be made twice
             {% endif %}
         </div>
     </a>
+    {% if not waitlist and not booking.has_started %}
+        {% if booking.cancel_is_late %}
+            <div class="class-rule-note class-rule-note-warn mt-2">
+                <i class="fas fa-triangle-exclamation me-1"></i>Batas batalin udah lewat. Batalin sekarang dihitung sama kayak nggak dateng.
+            </div>
+        {% else %}
+            <div class="class-rule-note mt-2">
+                <i class="fas fa-circle-info me-1"></i>Nggak bisa dateng? Batalin sebelum jam {{ booking.cancel_deadline_at|time:"H:i" }}, aman.
+            </div>
+        {% endif %}
+    {% endif %}
     <div class="upcoming-class-actions">
         <a href="{% url 'classes:class_calendar' booking.id %}" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold">
             <i class="fas fa-calendar-plus me-1"></i>Kalender
@@ -44,6 +55,21 @@ used to be copy-pasted blocks, which meant every card tweak had to be made twice
         <a href="{{ booking.share_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-success rounded-pill px-3 fw-bold">
             <i class="fab fa-whatsapp me-1"></i>Ajak Temen
         </a>
+        {% comment %}
+        Cancelling from here, not only from the class page. This is the page a
+        member is on when they find out they cannot come, and every tap between
+        that moment and the cancellation is a chance for the seat to be wasted.
+        {% endcomment %}
+        {% if not booking.has_started %}
+            <form method="post" action="{% url 'classes:cancel_class' booking.id %}" class="d-inline js-confirm"
+                  data-confirm="{% if waitlist %}Keluar dari antrian {{ name }} {{ booking.start_time|time:'H:i' }}?{% elif booking.cancel_is_late %}Kelas {{ name }} {{ booking.start_time|time:'H:i' }} mulai sebentar lagi. Kalau dibatalkan sekarang, dihitung sama kayak nggak dateng dan masuk hitungan penalti. Tetap batalkan?{% else %}Batalkan booking {{ name }} {{ booking.start_time|time:'H:i' }}?{% endif %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="akun">
+                <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3 fw-bold">
+                    <i class="fas fa-times me-1"></i>{% if waitlist %}Keluar Antrian{% else %}Batalkan{% endif %}
+                </button>
+            </form>
+        {% endif %}
     </div>
 </div>
 {% endwith %}

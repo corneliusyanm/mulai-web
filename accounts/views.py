@@ -13,6 +13,7 @@ from django.utils.timezone import localtime
 from django.views.generic import DetailView, TemplateView
 from django.views.generic.edit import CreateView, UpdateView
 
+from classes.models import PenaltySettings, cancel_deadline_at
 from classes.penalties import member_state as class_penalty_state
 from classes.sharing import whatsapp_invite_url
 from homepage.models import ReviewSummary, Testimonial
@@ -471,8 +472,14 @@ class MemberDetailView(MemberRequiredMixin, DetailView):
         return context
 
     def _with_when_labels(self, queryset):
-        """Attach the countdown label and the invite link to upcoming classes."""
+        """Attach the countdown, the invite link and the cancellation deadline.
+
+        The deadline belongs here more than anywhere else: this is the page a
+        member opens when they realise they cannot make it, so this is where they
+        should learn whether cancelling still costs them nothing.
+        """
         now = timezone.now()
+        rules = PenaltySettings.get_solo()
         bookings = list(queryset)
         for booking in bookings:
             start = timezone.make_aware(
@@ -480,6 +487,10 @@ class MemberDetailView(MemberRequiredMixin, DetailView):
             )
             end = timezone.make_aware(datetime.combine(booking.date, booking.end_time))
             booking.when_label, booking.when_soon = _class_when_label(start, end, now)
+            deadline = cancel_deadline_at(booking, rules)
+            booking.cancel_deadline_at = timezone.localtime(deadline)
+            booking.cancel_is_late = now >= deadline
+            booking.has_started = start <= now
             booking.share_url = whatsapp_invite_url(
                 booking,
                 self.request.build_absolute_uri(
