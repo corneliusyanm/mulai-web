@@ -232,6 +232,17 @@ def class_start_at(instance):
     )
 
 
+def class_end_at(instance):
+    """The moment the class finishes, as an aware Jakarta datetime.
+
+    The review prompt measures from here, not from the start: a member checking
+    out at 10:00 must not be asked how the 19:00 class went.
+    """
+    return timezone.make_aware(
+        timezone.datetime.combine(instance.date, instance.end_time)
+    )
+
+
 def cancel_deadline_at(instance, settings=None):
     """Last moment a member can cancel this class for free.
 
@@ -708,3 +719,116 @@ class BookingPenalty(models.Model):
     def is_active(self, today=None):
         today = today or timezone.localdate()
         return self.starts_on <= today < self.blocked_until
+
+
+class ClassReview(models.Model):
+    """What a member thought of one class session. Penilaian Kelas.
+
+    Everything after the first tap is optional, and that is the whole design.
+    The open feedback form (`accounts.Masukkan`) has collected 13 rows in the
+    life of the gym, because a blank text box asks a member to compose. Three
+    faces ask them to react, which is a thing you can do on the way out of the
+    door with one thumb.
+
+    So a row here can hold very little: a rating and nothing else is a complete,
+    countable review. `intensity`, `tags` and `comment` are what the members who
+    feel like saying more happen to leave.
+
+    Three states are all stored as a row, because "we asked and they answered"
+    and "we asked and they waved it away" have to be told apart from "we never
+    asked", or the prompt keeps coming back:
+
+    - answered      rating set (attended stays True)
+    - did not come  attended False, rating None
+    - skipped       skipped True, rating None
+
+    One row per member per session, and a member can change their mind: the same
+    row is updated, not duplicated.
+    """
+
+    KURANG = 1
+    OKE = 2
+    MANTAP = 3
+    RATING_CHOICES = [
+        (KURANG, "Kurang"),
+        (OKE, "Oke"),
+        (MANTAP, "Mantap"),
+    ]
+
+    ENTENG = 1
+    PAS = 2
+    BERAT = 3
+    INTENSITY_CHOICES = [
+        (ENTENG, "Enteng"),
+        (PAS, "Pas"),
+        (BERAT, "Berat"),
+    ]
+
+    member = models.ForeignKey(
+        Member, on_delete=models.CASCADE, related_name="class_reviews"
+    )
+    class_instance = models.ForeignKey(
+        ClassInstance, on_delete=models.CASCADE, related_name="reviews"
+    )
+    rating = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        choices=RATING_CHOICES,
+        verbose_name="Penilaian",
+        help_text="Kosong kalau member cuma melewati pertanyaannya.",
+    )
+    attended = models.BooleanField(
+        default=True,
+        verbose_name="Jadi datang",
+        help_text="Dicentang kecuali member bilang nggak jadi ikut kelasnya.",
+    )
+    intensity = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        choices=INTENSITY_CHOICES,
+        verbose_name="Beratnya",
+    )
+    tags = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name="Pilihan cepat",
+        help_text='Kode-kode dari classes/reviews.py, bentuknya ["seru", "pelatih"].',
+    )
+    comment = models.TextField(blank=True, verbose_name="Catatan")
+    skipped = models.BooleanField(
+        default=False,
+        verbose_name="Dilewati",
+        help_text="Member menutup pertanyaannya tanpa menjawab.",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Penilaian Kelas"
+        verbose_name_plural = "Penilaian Kelas"
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["member", "class_instance"], name="one_review_per_booking"
+            )
+        ]
+        indexes = [
+            models.Index(fields=["rating"], name="review_rating_idx"),
+            models.Index(fields=["created_at"], name="review_created_idx"),
+        ]
+
+    def __str__(self):
+        return f"{self.member.name}: {self.answer_label} {self.class_instance}"
+
+    @property
+    def has_answer(self):
+        """True once the member has actually told us something."""
+        return self.rating is not None or not self.attended
+
+    @property
+    def answer_label(self):
+        if not self.attended:
+            return "Nggak jadi datang"
+        if self.rating is None:
+            return "Dilewati"
+        return self.get_rating_display()
