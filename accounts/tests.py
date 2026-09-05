@@ -1628,6 +1628,77 @@ class VisitHabitStatsTest(TestCase):
         self.assertEqual(streak, 0)
 
 
+class HistoryStatDateTest(TestCase):
+    """The date tile on each history tab is read by a member, so it is Indonesian.
+
+    All three used strftime("%d %b %Y"), which is right in eight months of the
+    year and wrong in Mei, Agu, Okt and Des. Each date here is fixed and picked
+    from one of those four.
+    """
+
+    def setUp(self):
+        self.member = Member.objects.create(
+            name="Stat Member",
+            email="stat@example.com",
+            phone_number="628562000222",
+            gender="M",
+            age=25,
+            height=170,
+            weight=70,
+            years_of_working_out="1 tahun",
+            goals="Stay fit",
+            know_mulai_gym_from="friends",
+        )
+        session = self.client.session
+        session["member_email"] = self.member.email
+        session.save()
+
+    def tile(self, tab, label):
+        response = self.client.get(reverse("member_history"), {"tab": tab})
+        return next(
+            stat["value"]
+            for stat in response.context["stats"]
+            if stat["label"] == label
+        )
+
+    def test_first_visit_tile(self):
+        visit = Visit.objects.create(member=self.member)
+        Visit.objects.filter(pk=visit.pk).update(
+            check_in_time=timezone.make_aware(datetime(2020, 12, 3, 9, 0))
+        )
+
+        self.assertEqual(self.tile("kunjungan", "Pertama Kali"), "3 Des 2020")
+
+    def test_last_payment_tile(self):
+        Payment.objects.create(
+            member=self.member,
+            amount=150000,
+            payment_date=timezone.make_aware(datetime(2020, 8, 12, 9, 0)),
+        )
+
+        self.assertEqual(self.tile("pembayaran", "Terakhir"), "12 Agu 2020")
+
+    def test_last_class_tile(self):
+        from classes.models import Class, ClassSchedule, ClassInstance
+
+        class_obj = Class.objects.create(name="Kelas Pemula", max_members=10)
+        schedule = ClassSchedule.objects.create(
+            class_obj=class_obj,
+            day_of_week=0,
+            start_time=time(8, 0),
+            end_time=time(9, 0),
+        )
+        instance = ClassInstance.objects.create(
+            class_schedule=schedule,
+            date=date(2020, 10, 5),
+            start_time=time(8, 0),
+            end_time=time(9, 0),
+        )
+        instance.booked_members.add(self.member)
+
+        self.assertEqual(self.tile("kelas", "Terakhir"), "5 Okt 2020")
+
+
 class VisitChartTest(TestCase):
     """The monthly bar chart on the full history page."""
 

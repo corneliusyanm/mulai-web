@@ -23,7 +23,7 @@ from payments.models import Payment
 from visits.busy_hours import quiet_hours
 from visits.models import Visit
 
-from .dates import MONTHS_ID, MONTHS_ID_SHORT
+from .dates import MONTHS_ID, MONTHS_ID_SHORT, day_month_year
 from .forms import (
     MemberEditForm,
     MemberLoginForm,
@@ -529,7 +529,7 @@ class MemberHistoryView(MemberRequiredMixin, TemplateView):
                 },
                 {
                     "label": "Pertama Kali",
-                    "value": localtime(rows[-1].check_in_time).strftime("%d %b %Y")
+                    "value": day_month_year(localtime(rows[-1].check_in_time))
                     if rows
                     else "-",
                     "icon": "fas fa-flag",
@@ -552,7 +552,7 @@ class MemberHistoryView(MemberRequiredMixin, TemplateView):
                 },
                 {
                     "label": "Terakhir",
-                    "value": localtime(rows[0].payment_date).strftime("%d %b %Y")
+                    "value": day_month_year(localtime(rows[0].payment_date))
                     if rows
                     else "-",
                     "icon": "fas fa-clock-rotate-left",
@@ -582,7 +582,7 @@ class MemberHistoryView(MemberRequiredMixin, TemplateView):
                 },
                 {
                     "label": "Terakhir",
-                    "value": rows[0]["instance"].date.strftime("%d %b %Y")
+                    "value": day_month_year(rows[0]["instance"].date)
                     if rows
                     else "-",
                     "icon": "fas fa-clock-rotate-left",
