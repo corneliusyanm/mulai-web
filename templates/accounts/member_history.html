@@ -39,9 +39,13 @@
         font-size: .88rem;
         line-height: 1;
         white-space: nowrap;
+        /* Every tab carries its own fill, not just the active one. With only the
+           active tab filled, the other two read as loose text on the track and
+           the three run into each other on a phone. */
+        background: rgba(255, 255, 255, .12);
         transition: background-color .15s ease, color .15s ease, transform .15s ease;
     }
-    .history-tab:hover { background: rgba(255, 255, 255, .16); color: #fff; }
+    .history-tab:hover { background: rgba(255, 255, 255, .22); color: #fff; }
     .history-tab.active {
         background: #fff;
         color: var(--primary);
@@ -59,9 +63,17 @@
         background: rgba(75, 75, 236, .12);
         color: var(--primary);
     }
-    @media (max-width: 400px) {
-        .history-tab { font-size: .8rem; gap: 4px; }
+    /* Three labels plus three counts plus three icons do not fit on any phone:
+       at 430px they clear each other by a couple of pixels, which is what made
+       them look glued together. Below sm the icons go and the words breathe. */
+    @media (max-width: 575.98px) {
+        .history-tabs { gap: 6px; padding: 4px; }
+        .history-tab { font-size: .82rem; gap: 5px; padding: 9px 4px; }
         .history-tab i { display: none; }
+        .history-tab-count { font-size: .68rem; padding: 2px 6px; }
+    }
+    @media (max-width: 359.98px) {
+        .history-tab { font-size: .76rem; }
     }
 
     .history-stat {

@@ -515,7 +515,7 @@ Members open `/akun` constantly, so the site can live on their home screen inste
 - `login.html`: Updated to include email and phone number fields (with country code).
 - `check_in.html`: Updated to include email and phone number fields (with country code).
 - `signup.html`, `member_edit.html`: Include country code and phone number fields.
-- `member_history.html`: Full history page. Segmented tab bar, summary tiles, month groups each with a calendar, and a floating back-to-top button for long lists.
+- `member_history.html`: Full history page. Segmented tab bar, summary tiles, month groups each with a calendar, and a floating back-to-top button for long lists. Below `576px` the tab bar drops its icons: three labels plus three counts plus three icons clear each other by a couple of pixels on a phone, which reads as the tabs being glued together.
 
 ### Automatic `is_pemula` Calculation
 During member registration, the `is_pemula` field is automatically calculated based on the `years_of_working_out` input:
