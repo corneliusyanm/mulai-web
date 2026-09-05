@@ -1,4 +1,5 @@
 import logging
+from calendar import MONDAY, Calendar
 from datetime import datetime, timedelta
 from urllib.parse import quote
 
@@ -23,7 +24,7 @@ from payments.models import Payment
 from visits.busy_hours import quiet_hours
 from visits.models import Visit
 
-from .dates import MONTHS_ID, MONTHS_ID_SHORT, day_month_year
+from .dates import DAYS_ID_SHORT, MONTHS_ID, day_month_year
 from .forms import (
     MemberEditForm,
     MemberLoginForm,
@@ -155,38 +156,31 @@ def _membership_nudge(member, today):
     }
 
 
-VISIT_CHART_MONTHS = 12
+def _calendar_weeks(year, month, visit_days, class_days, today):
+    """One month as rows of seven cells, Monday first, ready to render.
 
-
-def _monthly_visit_chart(visits, today):
-    """Visits per month for the last VISIT_CHART_MONTHS months, oldest first.
-
-    Months with no visit are kept as zeros so the shape of the habit is honest.
-    Returns None when there is nothing worth drawing.
+    Days from the neighbouring months are None rather than their real number, so
+    the grid keeps its seven columns without the template counting anything, and
+    a member never reads a stray "1" as a day they trained.
     """
-    if not visits:
-        return None
-
-    counts = {}
-    for visit in visits:
-        day = localtime(visit.check_in_time).date()
-        counts[(day.year, day.month)] = counts.get((day.year, day.month), 0) + 1
-
-    labels = []
-    values = []
-    year, month = today.year, today.month
-    for _ in range(VISIT_CHART_MONTHS):
-        labels.append(f"{MONTHS_ID_SHORT[month]}")
-        values.append(counts.get((year, month), 0))
-        month -= 1
-        if month == 0:
-            year, month = year - 1, 12
-    labels.reverse()
-    values.reverse()
-
-    if not any(values):
-        return None
-    return {"labels": labels, "values": values}
+    weeks = []
+    for week in Calendar(firstweekday=MONDAY).monthdatescalendar(year, month):
+        cells = []
+        for day in week:
+            if day.month != month:
+                cells.append(None)
+                continue
+            cells.append(
+                {
+                    "day": day.day,
+                    "has_visit": day in visit_days,
+                    "has_class": day in class_days,
+                    "is_today": day == today,
+                    "is_future": day > today,
+                }
+            )
+        weeks.append(cells)
+    return weeks
 
 
 def _class_when_label(start, end, now):
@@ -509,7 +503,25 @@ class MemberHistoryView(MemberRequiredMixin, TemplateView):
                     visit.check_in_time, visit.check_out_time
                 )
             groups = _group_by_month(rows, lambda v: localtime(v.check_in_time).date())
-            context["visit_chart"] = _monthly_visit_chart(rows, today)
+            # A calendar per month group, so scrolling the list walks back through
+            # months the way the rows already do. Class days are marked on top of
+            # visit days: a member who checked in for a class gets both.
+            visit_days = {localtime(v.check_in_time).date() for v in rows}
+            class_days = set(
+                member.booked_classes.filter(date__lte=today).values_list(
+                    "date", flat=True
+                )
+            )
+            for group in groups:
+                group["weeks"] = _calendar_weeks(
+                    *group["key"], visit_days, class_days, today
+                )
+            context["weekday_labels"] = DAYS_ID_SHORT
+            # The lime marker only needs explaining on a calendar that shows one.
+            months_shown = {group["key"] for group in groups}
+            context["has_class_days"] = any(
+                (day.year, day.month) in months_shown for day in class_days
+            )
             this_month = sum(
                 1
                 for v in rows

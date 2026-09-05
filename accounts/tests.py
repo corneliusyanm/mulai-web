@@ -1699,13 +1699,18 @@ class HistoryStatDateTest(TestCase):
         self.assertEqual(self.tile("kelas", "Terakhir"), "5 Okt 2020")
 
 
-class VisitChartTest(TestCase):
-    """The monthly bar chart on the full history page."""
+class VisitCalendarTest(TestCase):
+    """The month calendar above each month's rows on the full history page.
+
+    Every date here is anchored to last month, which is always fully in the past
+    and always has a 10th and a 15th, so nothing in this class depends on which
+    day of the month the suite happens to run.
+    """
 
     def setUp(self):
         self.member = Member.objects.create(
-            name="Chart Member",
-            email="chart@example.com",
+            name="Calendar Member",
+            email="calendar@example.com",
             phone_number="628562000111",
             gender="M",
             age=25,
@@ -1719,52 +1724,150 @@ class VisitChartTest(TestCase):
         session["member_email"] = self.member.email
         session.save()
 
-    def visit_days_ago(self, days):
+        self.today = timezone.localdate()
+        last_month_end = self.today.replace(day=1) - timedelta(days=1)
+        self.month_key = (last_month_end.year, last_month_end.month)
+        self.tenth = last_month_end.replace(day=10)
+        self.fifteenth = last_month_end.replace(day=15)
+
+    def visit_on(self, day, hour=9):
         visit = Visit.objects.create(member=self.member)
+        check_in = timezone.make_aware(datetime.combine(day, time(hour, 0)))
         Visit.objects.filter(pk=visit.pk).update(
-            check_in_time=timezone.now() - timedelta(days=days)
+            check_in_time=check_in, check_out_time=check_in + timedelta(hours=1)
         )
 
-    def test_chart_covers_twelve_months_oldest_first(self):
-        # Both today, so neither can slip into last month's bucket
-        self.visit_days_ago(0)
-        self.visit_days_ago(0)
+    def class_on(self, day):
+        from classes.models import Class, ClassSchedule, ClassInstance
+
+        class_obj, _ = Class.objects.get_or_create(
+            name="Kelas Pemula", defaults={"max_members": 10}
+        )
+        schedule, _ = ClassSchedule.objects.get_or_create(
+            class_obj=class_obj,
+            day_of_week=day.weekday(),
+            start_time=time(8, 0),
+            end_time=time(9, 0),
+        )
+        instance = ClassInstance.objects.create(
+            class_schedule=schedule,
+            date=day,
+            start_time=time(8, 0),
+            end_time=time(9, 0),
+        )
+        instance.booked_members.add(self.member)
+        return instance
+
+    def cells(self, group):
+        return [cell for week in group["weeks"] for cell in week if cell]
+
+    def cell_for(self, group, day_number):
+        return next(c for c in self.cells(group) if c["day"] == day_number)
+
+    def last_month_group(self):
         response = self.client.get(reverse("member_history"))
-        chart = response.context["visit_chart"]
+        group = next(
+            g for g in response.context["groups"] if g["key"] == self.month_key
+        )
+        return response, group
 
-        self.assertEqual(len(chart["labels"]), 12)
-        self.assertEqual(len(chart["values"]), 12)
-        # Current month is the last bucket
-        self.assertEqual(chart["values"][-1], 2)
-        self.assertEqual(sum(chart["values"]), 2)
-
-    def test_quiet_months_are_kept_as_zero(self):
-        self.visit_days_ago(0)
-        response = self.client.get(reverse("member_history"))
-        chart = response.context["visit_chart"]
-
-        self.assertEqual(chart["values"][0], 0)
-        self.assertTrue(all(isinstance(value, int) for value in chart["values"]))
-
-    def test_no_chart_without_visits(self):
+    def test_every_month_group_carries_its_own_grid(self):
+        self.visit_on(self.tenth)
+        self.visit_on(self.today)
         response = self.client.get(reverse("member_history"))
 
-        self.assertIsNone(response.context["visit_chart"])
-        self.assertNotContains(response, "Kunjungan per bulan")
+        groups = response.context["groups"]
+        self.assertEqual(len(groups), 2)
+        for group in groups:
+            self.assertTrue(group["weeks"])
+            for week in group["weeks"]:
+                self.assertEqual(len(week), 7)
 
-    def test_chart_renders_with_data(self):
-        self.visit_days_ago(3)
+    def test_grid_holds_every_day_of_the_month_and_nothing_else(self):
+        self.visit_on(self.tenth)
+        _, group = self.last_month_group()
+
+        days = sorted(cell["day"] for cell in self.cells(group))
+        last_day = (self.today.replace(day=1) - timedelta(days=1)).day
+        self.assertEqual(days, list(range(1, last_day + 1)))
+
+    def test_week_starts_on_monday(self):
+        self.visit_on(self.tenth)
+        response, group = self.last_month_group()
+
+        self.assertEqual(
+            response.context["weekday_labels"],
+            ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"],
+        )
+        first = self.tenth.replace(day=1)
+        self.assertEqual(group["weeks"][0][first.weekday()]["day"], 1)
+
+    def test_a_day_with_a_visit_is_marked(self):
+        self.visit_on(self.tenth)
+        _, group = self.last_month_group()
+
+        self.assertTrue(self.cell_for(group, 10)["has_visit"])
+        self.assertFalse(self.cell_for(group, 11)["has_visit"])
+
+    def test_two_visits_on_one_day_mark_it_once(self):
+        self.visit_on(self.tenth, hour=8)
+        self.visit_on(self.tenth, hour=18)
+        _, group = self.last_month_group()
+
+        self.assertEqual(len(group["rows"]), 2)
+        self.assertEqual(
+            sum(1 for cell in self.cells(group) if cell["has_visit"]), 1
+        )
+
+    def test_a_class_day_is_marked_on_top_of_the_visit(self):
+        self.visit_on(self.tenth)
+        self.class_on(self.tenth)
+        _, group = self.last_month_group()
+
+        cell = self.cell_for(group, 10)
+        self.assertTrue(cell["has_visit"])
+        self.assertTrue(cell["has_class"])
+
+    def test_a_class_the_member_never_checked_in_for_still_shows(self):
+        self.visit_on(self.tenth)
+        self.class_on(self.fifteenth)
+        _, group = self.last_month_group()
+
+        cell = self.cell_for(group, 15)
+        self.assertTrue(cell["has_class"])
+        self.assertFalse(cell["has_visit"])
+
+    def test_days_after_today_are_marked_as_future(self):
+        self.visit_on(self.today)
+        response = self.client.get(reverse("member_history"))
+        group = response.context["groups"][0]
+
+        for cell in self.cells(group):
+            self.assertEqual(cell["is_future"], cell["day"] > self.today.day)
+        self.assertTrue(self.cell_for(group, self.today.day)["is_today"])
+
+    def test_legend_appears_only_when_a_class_falls_in_a_month_on_screen(self):
+        self.visit_on(self.tenth)
+        response = self.client.get(reverse("member_history"))
+        self.assertFalse(response.context["has_class_days"])
+        self.assertNotContains(response, "Ada kelas")
+
+        self.class_on(self.fifteenth)
+        response = self.client.get(reverse("member_history"))
+        self.assertTrue(response.context["has_class_days"])
+        self.assertContains(response, "Ada kelas")
+
+    def test_no_calendar_without_visits(self):
         response = self.client.get(reverse("member_history"))
 
-        self.assertContains(response, "Kunjungan per bulan")
-        self.assertContains(response, 'id="visit-chart-data"')
-        self.assertContains(response, "chart.js")
+        self.assertEqual(response.context["groups"], [])
+        self.assertNotContains(response, 'class="history-cal"')
 
-    def test_chart_only_on_the_visits_tab(self):
-        self.visit_days_ago(3)
+    def test_calendar_only_on_the_visits_tab(self):
+        self.visit_on(self.tenth)
         response = self.client.get(reverse("member_history"), {"tab": "pembayaran"})
 
-        self.assertNotContains(response, "Kunjungan per bulan")
+        self.assertNotContains(response, 'class="history-cal-week"')
 
 
 class AccountWaitlistPlaceTest(TestCase):

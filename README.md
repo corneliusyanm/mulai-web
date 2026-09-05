@@ -499,7 +499,7 @@ A small bar strip on `/akun` showing how busy each open hour usually is today, s
   - Only the active tab's rows are queried; the other tabs just get a count for their badge.
   - Rows are grouped by month (newest first) with Indonesian month labels, plus 3 summary tiles per tab (e.g. total kunjungan, kunjungan bulan ini, kunjungan pertama).
   - Kunjungan rows show the visit duration (`1j 15m`); classes tab merges booked and waitlisted past classes into one date-sorted list.
-  - **Monthly visit chart** (kunjungan tab only): 12-month bar chart via Chart.js (same CDN the admin analytics pages use), data passed with `json_script`. Quiet months stay as zeros so the shape of the habit is honest. One series, one brand hue, no legend, recessive gridlines, value on hover. `_monthly_visit_chart()` returns `None` when there is nothing to draw, and then neither the card nor the Chart.js script is rendered.
+  - **Month calendar** (kunjungan tab only): every month group carries its own grid above its rows, built by `_calendar_weeks()`, so scrolling the list walks back through months. Monday first (`DAYS_ID_SHORT`), days from the neighbouring months rendered blank rather than numbered. A day the member checked in is a filled purple circle; a day they had a class booked is lime; a day that is both is purple with a lime ring. Class days come from `booked_classes` up to today, so a class still to come is not marked on a history page. A two-swatch legend is rendered only when a class actually falls in one of the months on screen. Replaced a 12-month Chart.js bar chart, which answered the same question with less detail and a CDN dependency.
 
 ### Home Screen Install
 
@@ -515,7 +515,7 @@ Members open `/akun` constantly, so the site can live on their home screen inste
 - `login.html`: Updated to include email and phone number fields (with country code).
 - `check_in.html`: Updated to include email and phone number fields (with country code).
 - `signup.html`, `member_edit.html`: Include country code and phone number fields.
-- `member_history.html`: Full history page. Segmented tab bar, summary tiles, month groups, and a floating back-to-top button for long lists.
+- `member_history.html`: Full history page. Segmented tab bar, summary tiles, month groups each with a calendar, and a floating back-to-top button for long lists.
 
 ### Automatic `is_pemula` Calculation
 During member registration, the `is_pemula` field is automatically calculated based on the `years_of_working_out` input:

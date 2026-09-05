@@ -25,6 +25,18 @@ DAYS_ID = [
     "Minggu",
 ]
 
+# Abbreviated for a calendar header, where seven full names will not fit. Same
+# order as DAYS_ID, so both are indexed by date.weekday().
+DAYS_ID_SHORT = [
+    "Sen",
+    "Sel",
+    "Rab",
+    "Kam",
+    "Jum",
+    "Sab",
+    "Min",
+]
+
 MONTHS_ID = {
     1: "Januari",
     2: "Februari",
