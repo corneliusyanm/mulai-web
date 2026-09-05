@@ -28,8 +28,11 @@ from accounts.models import Member, Tamu
 from payments.models import Payment, Package
 from purchases.models import Sale, Product, SaleItem
 from equipment.models import Equipment
+from django.db import OperationalError, ProgrammingError
+
 from classes.attendance import no_show_scan
-from classes.models import ClassInstance
+from classes.models import ClassInstance, ClassReview
+from classes.reviews import TAG_LABELS
 from nutrition.analytics import nutrition_analytics_view
 
 
@@ -115,6 +118,14 @@ class DecimalEncoder(json.JSONEncoder):
         elif hasattr(obj, "total_seconds"):  # timedelta objects
             return obj.total_seconds() / 3600  # Convert to hours
         return super().default(obj)
+
+
+def review_dashboard_label():
+    """"Penilaian Kelas", plus how many members were unhappy this week."""
+    low = recent_low_review_count()
+    if not low:
+        return "Penilaian Kelas"
+    return f"Penilaian Kelas ({low} kurang minggu ini)"
 
 
 class CustomAdminSite(admin.AdminSite):
@@ -221,6 +232,16 @@ class CustomAdminSite(admin.AdminSite):
                         "view_only": True,
                         "perms": {"view": True},
                     },
+                    {
+                        # The count is the whole point of putting it here: a bad
+                        # week should be visible from the home page, not
+                        # something an admin only finds by opening the report.
+                        "name": review_dashboard_label(),
+                        "object_name": "Penilaian Kelas",
+                        "admin_url": reverse("admin:class-reviews"),
+                        "view_only": True,
+                        "perms": {"view": True},
+                    },
                 ],
             }
             app_list.append(analytics_app)
@@ -259,6 +280,11 @@ def get_custom_admin_urls():
             "analytics/belajar-gizi/",
             nutrition_analytics_view,
             name="belajar-gizi",
+        ),
+        path(
+            "analytics/penilaian-kelas/",
+            class_reviews_view,
+            name="class-reviews",
         ),
         path(
             "analytics/members-by-date/",
@@ -2705,3 +2731,255 @@ def visits_by_hour_view(request):
             "visits": visit_list,
         }
     )
+
+
+# --------------------------------------------------------------------------
+# Penilaian Kelas
+# --------------------------------------------------------------------------
+
+# How recent a "Kurang" has to be to still be worth chasing. Shown as a count
+# next to the dashboard link, so a bad week is visible from the admin home
+# without anybody going looking for it.
+REVIEW_ALERT_DAYS = 7
+
+
+def recent_low_review_count(days=REVIEW_ALERT_DAYS, today=None):
+    """How many members said "Kurang" about a class in the last week.
+
+    Guarded, because this runs on every admin page: the deploy starts the new
+    container before migrations finish, and an admin loading any page inside that
+    window should not meet a 500 over a badge.
+    """
+    today = today or timezone.localdate()
+    try:
+        return ClassReview.objects.filter(
+            rating=ClassReview.KURANG,
+            class_instance__date__gte=today - timedelta(days=days),
+        ).count()
+    except (ProgrammingError, OperationalError):
+        return 0
+
+
+def compute_class_review_data(start_date, end_date, today=None, now=None):
+    """Everything the Penilaian Kelas dashboard shows, for one date range.
+
+    Ranged on the **class date**, not on when the review was typed: an admin
+    asking about last week means last week's classes, whatever day a member got
+    round to answering.
+    """
+    if start_date > end_date:
+        start_date, end_date = end_date, start_date
+    today = today or timezone.localdate()
+    now = now or timezone.now()
+
+    reviews = list(
+        ClassReview.objects.filter(
+            class_instance__date__gte=start_date,
+            class_instance__date__lte=end_date,
+        ).select_related("member", "class_instance__class_schedule__class_obj")
+    )
+
+    # The denominator: bookings for classes in the range that have finished, so
+    # the response rate is out of the people we actually got to ask.
+    asked = (
+        ClassInstance.objects.filter(date__gte=start_date, date__lte=end_date)
+        .exclude(status="CANCELLED")
+        .filter(
+            Q(date__lt=today)
+            | Q(date=today, end_time__lte=timezone.localtime(now).time())
+        )
+        .aggregate(n=Count("booked_members"))["n"]
+        or 0
+    )
+
+    answered = [r for r in reviews if r.has_answer]
+    rated = [r for r in reviews if r.rating is not None]
+    skipped = [r for r in reviews if r.skipped and not r.has_answer]
+    absent = [r for r in reviews if not r.attended]
+
+    def blank_row(label):
+        return {
+            "label": label,
+            "rated": 0,
+            "kurang": 0,
+            "oke": 0,
+            "mantap": 0,
+            "score_total": 0,
+            "absent": 0,
+            "enteng": 0,
+            "pas": 0,
+            "berat": 0,
+        }
+
+    by_class = {}
+    by_slot = {}
+    for review in reviews:
+        instance = review.class_instance
+        class_label = instance.class_schedule.class_obj.name
+        slot_label = instance.start_time.strftime("%H:%M")
+        for bucket, key, label in (
+            (by_class, class_label, class_label),
+            (by_slot, slot_label, slot_label),
+        ):
+            row = bucket.setdefault(key, blank_row(label))
+            if review.rating == ClassReview.KURANG:
+                row["kurang"] += 1
+            elif review.rating == ClassReview.OKE:
+                row["oke"] += 1
+            elif review.rating == ClassReview.MANTAP:
+                row["mantap"] += 1
+            if review.rating is not None:
+                row["rated"] += 1
+                row["score_total"] += review.rating
+            if not review.attended:
+                row["absent"] += 1
+            if review.intensity == ClassReview.ENTENG:
+                row["enteng"] += 1
+            elif review.intensity == ClassReview.PAS:
+                row["pas"] += 1
+            elif review.intensity == ClassReview.BERAT:
+                row["berat"] += 1
+
+    def finish(bucket, sort_key):
+        rows = []
+        for row in bucket.values():
+            row["average"] = row["score_total"] / row["rated"] if row["rated"] else 0
+            rows.append(row)
+        rows.sort(key=sort_key)
+        return rows
+
+    class_rows = finish(by_class, lambda r: -r["rated"])
+    slot_rows = finish(by_slot, lambda r: r["label"])
+
+    tag_counts = {}
+    for review in reviews:
+        for code in review.tags or []:
+            tag_counts[code] = tag_counts.get(code, 0) + 1
+    tag_rows = sorted(
+        (
+            {"code": code, "label": TAG_LABELS.get(code, code), "count": count}
+            for code, count in tag_counts.items()
+        ),
+        key=lambda row: -row["count"],
+    )
+
+    def voice_row(review):
+        instance = review.class_instance
+        return {
+            "member_name": review.member.name,
+            "phone": review.member.phone_number or "",
+            "whatsapp_url": member_whatsapp_url(review.member),
+            "class_name": instance.class_schedule.class_obj.name,
+            "class_date": instance.date,
+            "start_time": instance.start_time,
+            "answer": review.answer_label,
+            "rating": review.rating,
+            "intensity": review.get_intensity_display() if review.intensity else "",
+            "tags": [TAG_LABELS.get(code, code) for code in review.tags or []],
+            "comment": review.comment,
+        }
+
+    def newest_first(rows):
+        rows.sort(key=lambda r: (r["class_date"], r["start_time"]), reverse=True)
+        return rows
+
+    comments = newest_first([voice_row(r) for r in reviews if r.comment.strip()])
+    low_ratings = newest_first(
+        [voice_row(r) for r in reviews if r.rating == ClassReview.KURANG]
+    )
+
+    counts = {
+        "mantap": sum(1 for r in rated if r.rating == ClassReview.MANTAP),
+        "oke": sum(1 for r in rated if r.rating == ClassReview.OKE),
+        "kurang": sum(1 for r in rated if r.rating == ClassReview.KURANG),
+    }
+    total_rated = len(rated)
+
+    return {
+        "asked": asked,
+        "answered_count": len(answered),
+        "rated_count": total_rated,
+        "skipped_count": len(skipped),
+        "absent_count": len(absent),
+        "comment_count": len(comments),
+        "response_rate": (len(answered) / asked * 100) if asked else 0.0,
+        "average_score": (
+            sum(r.rating for r in rated) / total_rated if total_rated else 0.0
+        ),
+        "share_mantap": (counts["mantap"] / total_rated * 100) if total_rated else 0.0,
+        "share_kurang": (counts["kurang"] / total_rated * 100) if total_rated else 0.0,
+        "counts": counts,
+        "class_rows": class_rows,
+        "slot_rows": slot_rows,
+        "tag_rows": tag_rows,
+        "comments": comments,
+        "low_ratings": low_ratings,
+    }
+
+
+def class_reviews_view(request):
+    """Admin dashboard: what members said about the classes they came to."""
+    if not request.user.is_staff:
+        raise PermissionDenied
+
+    today = timezone.localdate()
+    default_start = today - timedelta(days=29)
+
+    start_raw = request.GET.get("start_date", default_start.strftime("%Y-%m-%d"))
+    end_raw = request.GET.get("end_date", today.strftime("%Y-%m-%d"))
+    try:
+        start_date = datetime.strptime(start_raw, "%Y-%m-%d").date()
+        end_date = datetime.strptime(end_raw, "%Y-%m-%d").date()
+    except ValueError:
+        start_date, end_date = default_start, today
+
+    data = compute_class_review_data(start_date, end_date, today=today)
+
+    if request.GET.get("export") == "csv":
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = (
+            f'attachment; filename="penilaian_kelas_{start_date}_{end_date}.csv"'
+        )
+        writer = csv.writer(response)
+        writer.writerow(
+            [
+                "Class name",
+                "Class date",
+                "Start time",
+                "Member name",
+                "Phone",
+                "Answer",
+                "Intensity",
+                "Tags",
+                "Comment",
+            ]
+        )
+        for row in sorted(
+            data["comments"] + [r for r in data["low_ratings"] if not r["comment"]],
+            key=lambda r: (r["class_date"], r["start_time"]),
+            reverse=True,
+        ):
+            writer.writerow(
+                [
+                    row["class_name"],
+                    row["class_date"].isoformat(),
+                    row["start_time"].strftime("%H:%M"),
+                    row["member_name"],
+                    row["phone"],
+                    row["answer"],
+                    row["intensity"],
+                    ", ".join(row["tags"]),
+                    row["comment"],
+                ]
+            )
+        return response
+
+    context = {
+        **admin_site.each_context(request),
+        "title": "Penilaian Kelas",
+        "start_date": start_date,
+        "end_date": end_date,
+        "alert_days": REVIEW_ALERT_DAYS,
+        **data,
+    }
+    return render(request, "admin/analytics/class_reviews.html", context)

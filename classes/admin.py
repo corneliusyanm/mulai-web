@@ -5,6 +5,7 @@ from .models import (
     Class,
     ClassInstance,
     ClassMiss,
+    ClassReview,
     ClassSchedule,
     GymClosure,
     PenaltySettings,
@@ -163,4 +164,74 @@ class BookingPenaltyAdmin(admin.ModelAdmin):
     active_now.short_description = "Sedang berjalan"
 
     def has_add_permission(self, request):
+        return False
+
+
+class ClassReviewAdmin(admin.ModelAdmin):
+    """Penilaian Kelas, read-only.
+
+    Nothing here is typed by staff: every row is a member tapping a face. An
+    admin who could edit a rating could quietly turn a "Kurang" into a "Mantap",
+    and then the numbers on the dashboard stop meaning anything.
+    """
+
+    list_display = (
+        "class_name",
+        "class_date",
+        "member",
+        "answer_label",
+        "intensity",
+        "short_comment",
+        "created_at",
+    )
+    list_filter = ("rating", "intensity", "attended", "skipped", "created_at")
+    search_fields = (
+        "member__name",
+        "member__email",
+        "member__phone_number",
+        "comment",
+    )
+    date_hierarchy = "created_at"
+    readonly_fields = (
+        "member",
+        "class_instance",
+        "rating",
+        "attended",
+        "intensity",
+        "tags",
+        "comment",
+        "skipped",
+        "created_at",
+        "updated_at",
+    )
+
+    def get_queryset(self, request):
+        return (
+            super()
+            .get_queryset(request)
+            .select_related("member", "class_instance__class_schedule__class_obj")
+        )
+
+    def class_name(self, obj):
+        return obj.class_instance.class_schedule.class_obj.name
+
+    class_name.short_description = "Kelas"
+
+    def class_date(self, obj):
+        return obj.class_instance.date
+
+    class_date.short_description = "Tanggal kelas"
+    class_date.admin_order_field = "class_instance__date"
+
+    def short_comment(self, obj):
+        if len(obj.comment) <= 60:
+            return obj.comment
+        return obj.comment[:57] + "..."
+
+    short_comment.short_description = "Catatan"
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
         return False

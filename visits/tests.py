@@ -8,6 +8,12 @@ from django.template import Template, Context
 import json
 
 from accounts.models import Member
+from classes.models import Class, ClassInstance, ClassReview, ClassSchedule
+from .admin import (
+    compute_class_review_data,
+    recent_low_review_count,
+    review_dashboard_label,
+)
 from .busy_hours import LOOKBACK_WEEKS, quiet_hours
 from .models import Visit
 from payments.models import Payment, Package
@@ -1669,3 +1675,130 @@ class QuietHoursTest(TestCase):
         response = self.client.get(reverse("member_details"))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Jam Kosong")
+
+
+class ClassReviewDashboardTest(TestCase):
+    """The Penilaian Kelas report an admin reads on a Monday morning."""
+
+    def setUp(self):
+        self.superuser = User.objects.create_superuser(
+            "reviewadmin", "reviewadmin@example.com", "password"
+        )
+        self.client.login(username="reviewadmin", password="password")
+
+        self.gym_class = Class.objects.create(
+            name="Kelas Pemula (Leg & Core)", description="Kaki.", max_members=10
+        )
+        self.schedule = ClassSchedule.objects.create(
+            class_obj=self.gym_class,
+            day_of_week=0,
+            start_time=time(7, 0),
+            end_time=time(8, 0),
+        )
+        self.yesterday = timezone.localdate() - timedelta(days=1)
+        self.instance = ClassInstance.objects.create(
+            class_schedule=self.schedule,
+            date=self.yesterday,
+            start_time=time(7, 0),
+            end_time=time(8, 0),
+            status="COMPLETED",
+        )
+        self.members = []
+        for index in range(3):
+            member = Member.objects.create(
+                name=f"Penilai {index}",
+                email=f"penilai{index}@example.com",
+                phone_number=f"62855900055{index}",
+                age=25,
+                height=170.0,
+                weight=70.0,
+                gender="F",
+                goals="Sehat",
+                years_of_working_out="Baru mulai",
+                active_until=timezone.now() + timedelta(days=30),
+            )
+            self.members.append(member)
+            self.instance.booked_members.add(member)
+
+    def _review(self, member, **kwargs):
+        return ClassReview.objects.create(
+            member=member, class_instance=self.instance, **kwargs
+        )
+
+    def test_the_numbers_add_up(self):
+        self._review(self.members[0], rating=ClassReview.MANTAP)
+        self._review(
+            self.members[1],
+            rating=ClassReview.KURANG,
+            intensity=ClassReview.BERAT,
+            tags=["penuh"],
+            comment="Kepenuhan",
+        )
+        self._review(self.members[2], skipped=True)
+
+        data = compute_class_review_data(self.yesterday, self.yesterday)
+
+        self.assertEqual(data["asked"], 3)
+        self.assertEqual(data["answered_count"], 2)
+        self.assertEqual(data["skipped_count"], 1)
+        self.assertEqual(data["rated_count"], 2)
+        self.assertAlmostEqual(data["response_rate"], 200 / 3)
+        self.assertEqual(data["average_score"], 2.0)
+        self.assertEqual(data["counts"], {"mantap": 1, "oke": 0, "kurang": 1})
+        self.assertEqual(len(data["low_ratings"]), 1)
+        self.assertEqual(len(data["comments"]), 1)
+        self.assertEqual(data["tag_rows"][0]["label"], "Kepenuhan")
+
+    def test_a_cancelled_class_is_not_counted_as_asked(self):
+        self.instance.status = "CANCELLED"
+        self.instance.save()
+
+        data = compute_class_review_data(self.yesterday, self.yesterday)
+
+        self.assertEqual(data["asked"], 0)
+
+    def test_classes_outside_the_range_are_left_out(self):
+        self._review(self.members[0], rating=ClassReview.MANTAP)
+
+        data = compute_class_review_data(
+            self.yesterday - timedelta(days=10), self.yesterday - timedelta(days=5)
+        )
+
+        self.assertEqual(data["answered_count"], 0)
+
+    def test_the_page_renders(self):
+        self._review(self.members[0], rating=ClassReview.OKE, comment="Lumayan")
+
+        response = self.client.get(reverse("admin:class-reviews"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Penilaian Kelas")
+        self.assertContains(response, "Lumayan")
+
+    def test_the_csv_export_has_a_row_per_voice(self):
+        self._review(self.members[0], rating=ClassReview.OKE, comment="Lumayan")
+
+        response = self.client.get(reverse("admin:class-reviews"), {"export": "csv"})
+
+        self.assertEqual(response["Content-Type"], "text/csv")
+        self.assertIn("Lumayan", response.content.decode())
+
+    def test_staff_only(self):
+        self.client.logout()
+        User.objects.create_user("plain", "plain@example.com", "password")
+        self.client.login(username="plain", password="password")
+
+        response = self.client.get(reverse("admin:class-reviews"))
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_the_admin_home_counts_a_bad_week(self):
+        self._review(self.members[0], rating=ClassReview.KURANG)
+
+        self.assertEqual(recent_low_review_count(), 1)
+        self.assertIn("1 kurang minggu ini", review_dashboard_label())
+
+    def test_the_admin_home_says_nothing_when_nobody_is_unhappy(self):
+        self._review(self.members[0], rating=ClassReview.MANTAP)
+
+        self.assertEqual(review_dashboard_label(), "Penilaian Kelas")

@@ -17,6 +17,7 @@ from classes.models import (
     Class,
     ClassInstance,
     ClassMiss,
+    ClassReview,
     GymClosure,
     PenaltySettings,
 )
@@ -25,6 +26,7 @@ from classes.admin import (
     ClassAdmin,
     ClassInstanceAdmin,
     ClassMissAdmin,
+    ClassReviewAdmin,
     GymClosureAdmin,
     PenaltySettingsAdmin,
 )
@@ -427,3 +429,6 @@ if not admin_site._registry.get(ClassMiss):
 
 if not admin_site._registry.get(BookingPenalty):
     admin_site.register(BookingPenalty, BookingPenaltyAdmin)
+
+if not admin_site._registry.get(ClassReview):
+    admin_site.register(ClassReview, ClassReviewAdmin)
