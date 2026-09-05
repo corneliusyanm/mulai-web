@@ -845,6 +845,34 @@ fair number of those conversations ended in "ah ribet banget sih".
 - **Linked from** the class list header, the class detail page (both the footer and the deadline note), the day-limit note, the `/akun` cancel nudge and the penalty card.
 - **The page is the backup, not the plan.** Most members will learn the rule from the deadline printed on the class they are holding and from the "Bisa jam 16:15" button, not from reading this. That is why those notes exist on every surface rather than only here.
 
+### Penilaian Kelas (`ClassReview`)
+
+Members were never asked what they thought of a class. The one place they could
+say something, the open `Masukkan` form, has collected 13 rows in the life of the
+gym, because a blank text box asks a member to compose a paragraph. Three faces
+ask them to react, which is a thing you can do on the way out of the door with
+one thumb.
+
+- **One tap is the whole review.** Kurang / Oke / Mantap, saved the moment it is tapped. Everything after it is optional and the page says so: a member who closes the tab there has still left a complete, countable answer.
+- **Asked in two places, answered once.** The check-out success screen asks about the newest finished class (that screen used to sit idle for 5 seconds counting down to `/akun`, and 976 of 977 visits in a recent 90 days ended in a real check-out, so it is the highest-traffic moment the site has). Anything not answered there turns up as a card on `/akun`. Answering or dismissing in either place clears it from both.
+- **The nudge lasts 3 days. Rating never closes.** `REVIEW_PROMPT_DAYS` in `classes/reviews.py` decides how far back the card reaches. Past that, the class still carries a "Kasih nilai" link on the `/akun` and Riwayat Lengkap rows, forever. Nothing expires quietly: the prompt goes away, the door does not.
+- **Every waiting class gets its own row**, not just the newest, so a member who trained three days running is asked about all three and can answer or dismiss each one separately. The check-out screen is the exception and shows only the newest, because that is somebody on their way out.
+- **The second tap is "beratnya gimana?"** (Enteng / Pas / Berat). Not a rating: a class can be excellent and still too heavy, and for a gym that is roughly 80% first-timers, "kok berat banget" is the most useful thing a member could say.
+- **Then chips, then free text**, both optional. Which chips show depends on the face: after "Kurang" the question is what went wrong, after "Oke" or "Mantap" it is what to keep doing. Codes are validated against the set for that face, so a hand-made POST cannot write "Seru" onto a "Kurang".
+- **"Aku nggak jadi ikut" is an answer, not a rating.** It clears the card and records a real no-show reason, which is data the gym previously only inferred from check-ins.
+- **Dismissing writes a row too** (`skipped`), because "asked and waved away" has to be told apart from "never asked" or the card comes straight back. It never overwrites an answer already given.
+- **Editable the same day**, then locked. An admin cannot edit any of it: the model admin is read-only, since an admin who could turn a "Kurang" into a "Mantap" would make the dashboard meaningless.
+- **No points, no reward.** Reviewing is worth nothing on Papan Peringkat on purpose. Paying for ratings is the fastest known way to get a scale where everybody taps the happy face.
+- **Rated against a session** (`ClassInstance`), which rolls up to class type, weekday and time slot. There is no trainer field anywhere in the schema yet, so nothing is per-trainer; adding an instructor to `ClassInstance` later would slice the reviews already collected without losing any.
+
+### Penilaian Kelas dashboard (`/admin/analytics/penilaian-kelas/`)
+
+- **Ranged on the class date**, not on when the review was typed: "how was last week" means last week's classes.
+- **Response rate** is answers over bookings for classes in the range that have actually finished, so it is out of the people the site got to ask.
+- **"Needs a follow-up" is first**, listing everyone who said "Kurang" with a WhatsApp link. The follow-up is the point of the feature, so it is not at the bottom.
+- Then average and split per class, the same per time slot (where an always-crowded slot shows up), a chip tally, and every free-text comment with the member's name. CSV export for the lot.
+- **The admin home carries the count**: the Analytics entry reads "Penilaian Kelas (3 kurang minggu ini)" when there are recent low ratings, so a bad week is visible without anybody opening the report. The count is guarded against a missing table, since it runs on every admin page and the deploy serves new code before migrations finish.
+
 ### Libur / Kelas Ditiadakan (`GymClosure`)
 
 The generator runs 3 days ahead, so an admin who knew a month ago that the gym

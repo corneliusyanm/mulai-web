@@ -20,7 +20,7 @@ Django app running mulaigym.id, the site and admin system for Mulai Gym in Bandu
 | --- | --- | --- |
 | `accounts` | `Member`, `User`, `ActiveMember` (proxy), `Tamu`, `Masukkan`, `Prospect` | Members, signup/login, `/akun`, guest book, feedback |
 | `visits` | `Visit` | Check-in/out, **and the custom admin site + all analytics dashboards** |
-| `classes` | `Class`, `ClassSchedule`, `ClassInstance` | Class schedule, booking, waitlist |
+| `classes` | `Class`, `ClassSchedule`, `ClassInstance`, `ClassReview` | Class schedule, booking, waitlist, Penilaian Kelas |
 | `payments` | `Package`, `Payment` | Memberships; `Package.code` drives everything |
 | `purchases` | `Product`, `Sale`, `SaleItem` | Store sales |
 | `reminders` | `Reminder` | Staff follow-up queue, auto-generated daily |
