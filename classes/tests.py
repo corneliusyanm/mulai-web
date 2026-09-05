@@ -14,6 +14,7 @@ from classes.models import (
     ClassSchedule,
     ClassInstance,
     ClassMiss,
+    ClassReview,
     GymClosure,
     PenaltySettings,
     WaitlistPromotion,
@@ -21,7 +22,9 @@ from classes.models import (
 )
 from reminders.models import Reminder
 from classes.admin import ClassInstanceAdmin
+from classes.reviews import REVIEW_PROMPT_DAYS, pending_reviews
 from classes.sharing import whatsapp_invite_url
+from visits.models import Visit
 from accounts.templatetags.id_dates import (
     indonesian_date,
     indonesian_day,
@@ -2608,3 +2611,408 @@ class IndonesianDateTest(TestCase):
         response = self.client.get(reverse("classes:class_list"))
 
         self.assertContains(response, indonesian_date(holiday))
+
+
+class ClassReviewTest(TestCase):
+    """Penilaian Kelas: the queue, the tap, the skip, and what stays open."""
+
+    def setUp(self):
+        self.gym_class = Class.objects.create(
+            name="Kelas Pemula (Push)", description="Dorong.", max_members=10
+        )
+        self.schedule = ClassSchedule.objects.create(
+            class_obj=self.gym_class,
+            day_of_week=0,
+            start_time=time(7, 0),
+            end_time=time(8, 0),
+        )
+        self.member = Member.objects.create(
+            name="Nilai Member",
+            email="nilai@example.com",
+            phone_number="628559000222",
+            age=25,
+            height=170.0,
+            weight=70.0,
+            gender="F",
+            goals="Sehat",
+            years_of_working_out="Baru mulai",
+            active_until=timezone.now() + timedelta(days=30),
+        )
+        self.client.session.save()
+        session = self.client.session
+        session["member_email"] = self.member.email
+        session.save()
+
+    def _instance(self, days_ago=1, booked=True, status="COMPLETED"):
+        instance = ClassInstance.objects.create(
+            class_schedule=self.schedule,
+            date=timezone.localdate() - timedelta(days=days_ago),
+            start_time=time(7, 0),
+            end_time=time(8, 0),
+            status=status,
+        )
+        if booked:
+            instance.booked_members.add(self.member)
+        return instance
+
+    def test_a_finished_class_is_waiting_for_an_answer(self):
+        instance = self._instance()
+
+        self.assertEqual(pending_reviews(self.member), [instance])
+
+    def test_a_class_that_has_not_finished_yet_is_not_asked_about(self):
+        """At 10:00 nobody can say how the 19:00 class went."""
+        today = timezone.localdate()
+        instance = ClassInstance.objects.create(
+            class_schedule=self.schedule,
+            date=today,
+            start_time=time(19, 0),
+            end_time=time(20, 0),
+        )
+        instance.booked_members.add(self.member)
+        morning = timezone.make_aware(
+            timezone.datetime.combine(today, time(10, 0))
+        )
+
+        self.assertEqual(pending_reviews(self.member, now=morning), [])
+
+    def test_a_class_the_gym_cancelled_is_never_asked_about(self):
+        self._instance(status="CANCELLED")
+
+        self.assertEqual(pending_reviews(self.member), [])
+
+    def test_a_class_older_than_the_window_stops_being_asked_about(self):
+        self._instance(days_ago=REVIEW_PROMPT_DAYS + 1)
+
+        self.assertEqual(pending_reviews(self.member), [])
+
+    def test_a_waitlist_spot_is_not_an_opinion(self):
+        instance = self._instance(booked=False)
+        instance.waitlisted_members.add(self.member)
+
+        self.assertEqual(pending_reviews(self.member), [])
+
+    def test_the_newest_class_is_asked_about_first(self):
+        older = self._instance(days_ago=2)
+        newer = self._instance(days_ago=1)
+
+        self.assertEqual(pending_reviews(self.member), [newer, older])
+
+    def test_one_tap_saves_a_complete_review(self):
+        instance = self._instance()
+
+        response = self.client.post(
+            reverse("classes:rate_class", args=[instance.id]),
+            {"rating": ClassReview.MANTAP, "next": "akun"},
+        )
+
+        review = ClassReview.objects.get(member=self.member, class_instance=instance)
+        self.assertEqual(review.rating, ClassReview.MANTAP)
+        self.assertTrue(review.has_answer)
+        self.assertRedirects(
+            response,
+            reverse("classes:class_review", args=[instance.id]) + "?next=akun",
+        )
+
+    def test_an_answered_class_stops_being_asked_about(self):
+        instance = self._instance()
+        self.client.post(
+            reverse("classes:rate_class", args=[instance.id]),
+            {"rating": ClassReview.OKE},
+        )
+
+        self.assertEqual(pending_reviews(self.member), [])
+
+    def test_nggak_jadi_ikut_is_an_answer_not_a_rating(self):
+        instance = self._instance()
+
+        self.client.post(
+            reverse("classes:rate_class", args=[instance.id]), {"rating": "absen"}
+        )
+
+        review = ClassReview.objects.get(member=self.member, class_instance=instance)
+        self.assertFalse(review.attended)
+        self.assertIsNone(review.rating)
+        self.assertTrue(review.has_answer)
+        self.assertEqual(pending_reviews(self.member), [])
+
+    def test_a_second_tap_changes_the_answer_instead_of_adding_one(self):
+        instance = self._instance()
+        url = reverse("classes:rate_class", args=[instance.id])
+
+        self.client.post(url, {"rating": ClassReview.KURANG})
+        self.client.post(url, {"rating": ClassReview.MANTAP})
+
+        reviews = ClassReview.objects.filter(
+            member=self.member, class_instance=instance
+        )
+        self.assertEqual(reviews.count(), 1)
+        self.assertEqual(reviews.first().rating, ClassReview.MANTAP)
+
+    def test_skipping_clears_the_card_without_closing_the_door(self):
+        instance = self._instance()
+
+        self.client.post(reverse("classes:skip_class_review", args=[instance.id]))
+
+        review = ClassReview.objects.get(member=self.member, class_instance=instance)
+        self.assertTrue(review.skipped)
+        self.assertFalse(review.has_answer)
+        self.assertEqual(pending_reviews(self.member), [])
+        # The class is still rateable from the history rows, forever.
+        page = self.client.get(reverse("classes:class_review", args=[instance.id]))
+        self.assertContains(page, "Kelasnya gimana?")
+
+    def test_skipping_never_wipes_an_answer_already_given(self):
+        instance = self._instance()
+        self.client.post(
+            reverse("classes:rate_class", args=[instance.id]),
+            {"rating": ClassReview.MANTAP},
+        )
+
+        self.client.post(reverse("classes:skip_class_review", args=[instance.id]))
+
+        review = ClassReview.objects.get(member=self.member, class_instance=instance)
+        self.assertEqual(review.rating, ClassReview.MANTAP)
+        self.assertFalse(review.skipped)
+
+    def test_the_optional_half_is_saved_on_top_of_the_rating(self):
+        instance = self._instance()
+        self.client.post(
+            reverse("classes:rate_class", args=[instance.id]),
+            {"rating": ClassReview.KURANG},
+        )
+
+        response = self.client.post(
+            reverse("classes:class_review", args=[instance.id]),
+            {
+                "intensity": ClassReview.BERAT,
+                "tags": ["penuh", "kecepetan"],
+                "comment": "  Kepenuhan banget  ",
+                "next": "akun",
+            },
+        )
+
+        review = ClassReview.objects.get(member=self.member, class_instance=instance)
+        self.assertEqual(review.intensity, ClassReview.BERAT)
+        self.assertEqual(review.tags, ["penuh", "kecepetan"])
+        self.assertEqual(review.comment, "Kepenuhan banget")
+        self.assertRedirects(response, reverse("member_details"))
+
+    def test_chips_from_the_wrong_face_are_dropped(self):
+        """A hand-made POST cannot write "Seru" onto a "Kurang"."""
+        instance = self._instance()
+        self.client.post(
+            reverse("classes:rate_class", args=[instance.id]),
+            {"rating": ClassReview.KURANG},
+        )
+
+        self.client.post(
+            reverse("classes:class_review", args=[instance.id]),
+            {"tags": ["seru", "penuh", "bikin_ngantuk"]},
+        )
+
+        review = ClassReview.objects.get(member=self.member, class_instance=instance)
+        self.assertEqual(review.tags, ["penuh"])
+
+    def test_a_class_that_is_not_theirs_is_not_reviewable(self):
+        stranger = Member.objects.create(
+            name="Orang Lain",
+            email="lain@example.com",
+            phone_number="628559000333",
+            age=30,
+            height=175.0,
+            weight=75.0,
+            gender="M",
+            goals="Kuat",
+            years_of_working_out="1-2 years",
+            active_until=timezone.now() + timedelta(days=30),
+        )
+        instance = self._instance()
+        instance.booked_members.remove(self.member)
+        instance.booked_members.add(stranger)
+
+        response = self.client.post(
+            reverse("classes:rate_class", args=[instance.id]),
+            {"rating": ClassReview.MANTAP},
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(ClassReview.objects.count(), 0)
+
+    def test_the_redirect_target_is_a_fixed_set(self):
+        instance = self._instance()
+
+        response = self.client.post(
+            reverse("classes:rate_class", args=[instance.id]),
+            {"rating": "absen", "next": "https://evil.example.com/"},
+        )
+
+        self.assertRedirects(response, reverse("member_details"))
+
+    def test_yesterdays_review_is_locked(self):
+        instance = self._instance(days_ago=2)
+        review = ClassReview.objects.create(
+            member=self.member, class_instance=instance, rating=ClassReview.OKE
+        )
+        ClassReview.objects.filter(pk=review.pk).update(
+            created_at=timezone.now() - timedelta(days=1)
+        )
+
+        response = self.client.post(
+            reverse("classes:class_review", args=[instance.id]),
+            {"comment": "mau ubah"},
+        )
+
+        review.refresh_from_db()
+        self.assertEqual(review.comment, "")
+        self.assertRedirects(response, reverse("member_details"))
+
+    def test_a_logged_out_visitor_cannot_rate(self):
+        instance = self._instance()
+        self.client.session.flush()
+
+        response = self.client.post(
+            reverse("classes:rate_class", args=[instance.id]),
+            {"rating": ClassReview.MANTAP},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(ClassReview.objects.count(), 0)
+
+
+class ClassReviewPromptTest(TestCase):
+    """Where the question actually gets asked: check-out and /akun."""
+
+    def setUp(self):
+        self.gym_class = Class.objects.create(
+            name="Kelas Pemula (Pull)", description="Tarik.", max_members=10
+        )
+        self.schedule = ClassSchedule.objects.create(
+            class_obj=self.gym_class,
+            day_of_week=0,
+            start_time=time(7, 0),
+            end_time=time(8, 0),
+        )
+        self.member = Member.objects.create(
+            name="Prompt Member",
+            email="prompt@example.com",
+            phone_number="628559000444",
+            age=25,
+            height=170.0,
+            weight=70.0,
+            gender="F",
+            goals="Sehat",
+            years_of_working_out="Baru mulai",
+            active_until=timezone.now() + timedelta(days=30),
+        )
+        session = self.client.session
+        session["member_email"] = self.member.email
+        session.save()
+        self.instance = ClassInstance.objects.create(
+            class_schedule=self.schedule,
+            date=timezone.localdate() - timedelta(days=1),
+            start_time=time(7, 0),
+            end_time=time(8, 0),
+            status="COMPLETED",
+        )
+        self.instance.booked_members.add(self.member)
+
+    def test_the_account_page_asks(self):
+        response = self.client.get(reverse("member_details"))
+
+        self.assertContains(response, "Gimana kelasnya?")
+        self.assertContains(response, "Kelas Pemula (Pull)")
+
+    def test_the_account_page_asks_about_every_class_still_waiting(self):
+        """Older ones do not fall off silently, they get their own row."""
+        older = ClassInstance.objects.create(
+            class_schedule=self.schedule,
+            date=timezone.localdate() - timedelta(days=2),
+            start_time=time(19, 0),
+            end_time=time(20, 0),
+            status="COMPLETED",
+        )
+        older.booked_members.add(self.member)
+
+        response = self.client.get(reverse("member_details"))
+
+        self.assertEqual(len(response.context["pending_reviews"]), 2)
+
+    def test_the_account_page_stops_asking_once_answered(self):
+        ClassReview.objects.create(
+            member=self.member,
+            class_instance=self.instance,
+            rating=ClassReview.MANTAP,
+        )
+
+        response = self.client.get(reverse("member_details"))
+
+        self.assertNotContains(response, "Gimana kelasnya?")
+
+    def test_the_past_class_row_shows_what_they_said(self):
+        ClassReview.objects.create(
+            member=self.member,
+            class_instance=self.instance,
+            rating=ClassReview.MANTAP,
+        )
+
+        response = self.client.get(reverse("member_details"))
+
+        self.assertContains(response, "Kamu bilang: Mantap")
+
+    def test_the_past_class_row_offers_a_way_in_when_nothing_was_said(self):
+        ClassReview.objects.create(
+            member=self.member, class_instance=self.instance, skipped=True
+        )
+
+        response = self.client.get(reverse("member_details"))
+
+        self.assertNotContains(response, "Gimana kelasnya?")
+        self.assertContains(response, "Kasih nilai")
+
+    def test_the_history_page_offers_a_way_in_long_after_the_window(self):
+        old = ClassInstance.objects.create(
+            class_schedule=self.schedule,
+            date=timezone.localdate() - timedelta(days=60),
+            start_time=time(7, 0),
+            end_time=time(8, 0),
+            status="COMPLETED",
+        )
+        old.booked_members.add(self.member)
+
+        response = self.client.get(reverse("member_history") + "?tab=kelas")
+
+        self.assertContains(response, "Kasih nilai")
+        self.assertContains(
+            response, reverse("classes:class_review", args=[old.id])
+        )
+
+    def test_the_checkout_screen_asks_about_the_newest_class_only(self):
+        older = ClassInstance.objects.create(
+            class_schedule=self.schedule,
+            date=timezone.localdate() - timedelta(days=2),
+            start_time=time(19, 0),
+            end_time=time(20, 0),
+            status="COMPLETED",
+        )
+        older.booked_members.add(self.member)
+        Visit.objects.create(member=self.member)
+
+        response = self.client.get(reverse("check_out_page"))
+
+        self.assertContains(response, "Gimana kelasnya?")
+        self.assertEqual(len(response.context["pending_reviews"]), 1)
+        # The 5 second bounce to /akun is off while a question is on screen.
+        self.assertNotContains(response, "Kembali ke beranda dalam")
+
+    def test_the_checkout_screen_still_counts_down_with_nothing_to_ask(self):
+        ClassReview.objects.create(
+            member=self.member,
+            class_instance=self.instance,
+            rating=ClassReview.OKE,
+        )
+        Visit.objects.create(member=self.member)
+
+        response = self.client.get(reverse("check_out_page"))
+
+        self.assertContains(response, "Kembali ke beranda dalam")

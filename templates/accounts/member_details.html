@@ -57,6 +57,14 @@
         </div>
     {% endif %}
 
+    {% if pending_reviews %}
+        <div class="row justify-content-center mb-2">
+            <div class="col-lg-8">
+                {% include "classes/_review_prompt.html" %}
+            </div>
+        </div>
+    {% endif %}
+
     <div class="row">
         <div class="col-lg-4 mb-0 mb-lg-0">
             {% include "accounts/member_card.html" with member=member %}
@@ -310,12 +318,30 @@
                                           <div>
                                               <h6 class="mb-0 fw-bold">{{ booking.class_schedule.class_obj.name }}</h6>
                                               <small class="text-muted">
-                                                  <i class="fas fa-calendar-alt me-1"></i>{{ booking.date|indonesian_full_date }}
-                                                  <i class="fas fa-clock ms-2 me-1"></i>{{ booking.start_time|time:"H:i" }}
+                                                  <span class="text-nowrap"><i class="fas fa-calendar-alt me-1"></i>{{ booking.date|indonesian_full_date }}</span>
+                                                  <span class="text-nowrap"><i class="fas fa-clock ms-2 me-1"></i>{{ booking.start_time|time:"H:i" }}</span>
                                               </small>
                                           </div>
                                       </div>
-                                      <span class="badge bg-secondary text-white px-2 py-1 rounded-pill">Selesai</span>
+                                      <div class="text-end d-flex align-items-center gap-2">
+                                          {% if booking.review.rating %}
+                                              {% for face in review_faces %}
+                                                  {% if face.value == booking.review.rating %}
+                                                      <a href="{% url 'classes:class_review' booking.id %}?next=akun"
+                                                         class="review-row-face tone-{{ face.tone }}"
+                                                         title="Kamu bilang: {{ face.label }}">
+                                                          <i class="fas {{ face.icon }}"></i>
+                                                      </a>
+                                                  {% endif %}
+                                              {% endfor %}
+                                          {% elif booking.review and not booking.review.attended %}
+                                              <small class="text-muted">Nggak ikut</small>
+                                          {% elif booking.can_review %}
+                                              <a href="{% url 'classes:class_review' booking.id %}?next=akun"
+                                                 class="review-row-link">Kasih nilai</a>
+                                          {% endif %}
+                                          <span class="badge bg-secondary text-white px-2 py-1 rounded-pill">Selesai</span>
+                                      </div>
                                   </div>
                               </div>
                           {% endfor %}
@@ -329,8 +355,8 @@
                                           <div>
                                               <h6 class="mb-0 fw-bold">{{ booking.class_schedule.class_obj.name }}</h6>
                                               <small class="text-muted">
-                                                  <i class="fas fa-calendar-alt me-1"></i>{{ booking.date|indonesian_full_date }}
-                                                  <i class="fas fa-clock ms-2 me-1"></i>{{ booking.start_time|time:"H:i" }}
+                                                  <span class="text-nowrap"><i class="fas fa-calendar-alt me-1"></i>{{ booking.date|indonesian_full_date }}</span>
+                                                  <span class="text-nowrap"><i class="fas fa-clock ms-2 me-1"></i>{{ booking.start_time|time:"H:i" }}</span>
                                               </small>
                                           </div>
                                       </div>

@@ -1,0 +1,55 @@
+{% load id_dates %}
+{% comment %}
+Penilaian Kelas prompt. Expects `pending_reviews` (finished classes with nothing
+said yet, newest first), `review_faces`, and `review_next` ("akun" / "riwayat").
+Renders nothing when the queue is empty.
+
+One row per class, because letting the older ones fall off silently is how a
+member ends up with three classes nobody ever asked about. Every row can be
+answered in one tap or dismissed in one tap, and dismissing is per class: it
+clears that card, it does not close the door. The class stays rateable from the
+history rows forever.
+{% endcomment %}
+{% if pending_reviews %}
+<div class="review-prompt">
+    <div class="review-prompt-head">
+        <div class="review-prompt-title">Gimana kelasnya?</div>
+        <div class="review-prompt-note">Sekali tap aja, sisanya opsional.</div>
+    </div>
+    {% for instance in pending_reviews %}
+        <div class="review-prompt-row">
+            <div class="review-prompt-class">
+                <div>
+                    <div class="review-prompt-name">{{ instance.class_schedule.class_obj.name }}</div>
+                    <div class="review-prompt-when">
+                        {{ instance.date|indonesian_date }} &middot; {{ instance.start_time|time:"H:i" }}
+                    </div>
+                </div>
+                <form method="post" action="{% url 'classes:skip_class_review' instance.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ review_next|default:'akun' }}">
+                    <button type="submit" class="review-dismiss" aria-label="Lewati penilaian kelas ini">
+                        <i class="fas fa-xmark"></i>
+                    </button>
+                </form>
+            </div>
+            <form method="post" action="{% url 'classes:rate_class' instance.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ review_next|default:'akun' }}">
+                <div class="review-faces">
+                    {% for face in review_faces %}
+                        <button type="submit" name="rating" value="{{ face.value }}"
+                                class="review-face review-face-{{ face.tone }}">
+                            <i class="fas {{ face.icon }}"></i>
+                            <span>{{ face.label }}</span>
+                        </button>
+                    {% endfor %}
+                </div>
+                <button type="submit" name="rating" value="absen" class="review-absent">
+                    Aku nggak jadi ikut
+                </button>
+            </form>
+        </div>
+    {% endfor %}
+</div>
+{% endif %}

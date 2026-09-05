@@ -26,10 +26,20 @@
                             </div>
                         </div>
                         
-                        <!-- Auto-redirect countdown -->
-                        <p class="text-white mt-3" style="font-size: 14px; opacity: 0.8;">
-                            Kembali ke beranda dalam <span id="countdown">5</span> detik...
-                        </p>
+                        {% if pending_reviews %}
+                            {% comment %}
+                            The countdown is off while there is something to ask.
+                            Bouncing the page out from under a member who is
+                            reaching for a face is worse than not asking at all.
+                            {% endcomment %}
+                            {% include "classes/_review_prompt.html" %}
+                            <a href="{% url 'member_details' %}" class="text-white" style="font-size: 14px; opacity: 0.8;">Ke Akun Saya</a>
+                        {% else %}
+                            <!-- Auto-redirect countdown -->
+                            <p class="text-white mt-3" style="font-size: 14px; opacity: 0.8;">
+                                Kembali ke beranda dalam <span id="countdown">5</span> detik...
+                            </p>
+                        {% endif %}
                     </div>
                     
                     <!-- Checkered pattern sized and placed exactly -->
@@ -41,9 +51,10 @@
                     </div>
                     
                     <!-- Radial gradient at bottom positioned precisely -->
-                    <div class="position-absolute w-100" style="bottom: 15vh; height: 17vh; background: radial-gradient(circle at 50% 150%, var(--secondary) 0%, var(--secondary) 10%, rgba(75,75,236,0) 70%); opacity: 1;"></div>
+                    <div class="position-absolute w-100" style="pointer-events: none; bottom: 15vh; height: 17vh; background: radial-gradient(circle at 50% 150%, var(--secondary) 0%, var(--secondary) 10%, rgba(75,75,236,0) 70%); opacity: 1;"></div>
                 </div>
                 
+                {% if not pending_reviews %}
                 <script>
                 (function() {
                     var seconds = 5;
@@ -58,6 +69,7 @@
                     }, 1000);
                 })();
                 </script>
+                {% endif %}
             {% else %}
                 <div class="min-vh-100 d-flex flex-column justify-content-center align-items-center p-4" style="background-color: var(--primary);">
                     <h2 class="mb-4 text-white fw-bold">Sampai Jumpa, {{ member.name }}!</h2>

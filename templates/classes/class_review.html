@@ -1,0 +1,176 @@
+{% extends 'base.html' %}
+{% load id_dates %}
+
+{% comment %}
+Penilaian Kelas, the page after the tap.
+
+The rating is already saved by the time anybody gets here, so every control below
+is genuinely optional and the page says so. A member who closes the tab now has
+still left a complete review. Reached straight from a history row too, in which
+case there is no rating yet and the page opens with the same three faces the card
+shows.
+{% endcomment %}
+
+{% block title %}Penilaian Kelas - Mulai Gym{% endblock %}
+
+{% block content %}
+<div class="container py-4 review-page">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+
+            <div class="text-center mb-3">
+                <h1 class="fw-bold mb-1">{{ instance.class_schedule.class_obj.name }}</h1>
+                <p class="review-page-when mb-0">
+                    {{ instance.date|indonesian_day }} &middot;
+                    {{ instance.start_time|time:"H:i" }}-{{ instance.end_time|time:"H:i" }}
+                </p>
+            </div>
+
+            <div class="review-card">
+                {% if review and not review.attended %}
+                    <p class="review-thanks mb-2">Oke, makasih udah ngasih tau.</p>
+                    <p class="review-hint mb-3">Kamu bilang nggak jadi ikut kelas ini.</p>
+                    {% if can_edit %}
+                        <form method="post" action="{% url 'classes:rate_class' instance.id %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ return_key }}">
+                            <p class="review-hint mb-2">Ternyata jadi ikut? Kasih nilai aja:</p>
+                            <div class="review-faces">
+                                {% for face in faces %}
+                                    <button type="submit" name="rating" value="{{ face.value }}"
+                                            class="review-face review-face-{{ face.tone }}">
+                                        <i class="fas {{ face.icon }}"></i>
+                                        <span>{{ face.label }}</span>
+                                    </button>
+                                {% endfor %}
+                            </div>
+                        </form>
+                    {% endif %}
+
+                {% elif not review or not review.rating %}
+                    <p class="review-question mb-3">Kelasnya gimana?</p>
+                    <form method="post" action="{% url 'classes:rate_class' instance.id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ return_key }}">
+                        <div class="review-faces">
+                            {% for face in faces %}
+                                <button type="submit" name="rating" value="{{ face.value }}"
+                                        class="review-face review-face-{{ face.tone }}">
+                                    <i class="fas {{ face.icon }}"></i>
+                                    <span>{{ face.label }}</span>
+                                </button>
+                            {% endfor %}
+                        </div>
+                        <button type="submit" name="rating" value="absen" class="review-absent">
+                            Aku nggak jadi ikut
+                        </button>
+                    </form>
+
+                {% else %}
+                    <p class="review-thanks mb-1">{{ thanks }}</p>
+                    <p class="review-hint mb-3">
+                        Penilaian kamu udah kesimpan.
+                        {% if can_edit %}Kalau mau nambahin, di bawah ini.{% endif %}
+                    </p>
+
+                    <div class="review-chosen mb-3">
+                        {% for face in faces %}
+                            {% if face.value == review.rating %}
+                                <span class="review-face review-face-{{ face.tone }} is-chosen">
+                                    <i class="fas {{ face.icon }}"></i>
+                                    <span>{{ face.label }}</span>
+                                </span>
+                            {% endif %}
+                        {% endfor %}
+                        {% if can_edit %}
+                            <form method="post" action="{% url 'classes:rate_class' instance.id %}" class="review-change">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ return_key }}">
+                                {% for face in faces %}
+                                    {% if face.value != review.rating %}
+                                        <button type="submit" name="rating" value="{{ face.value }}"
+                                                class="review-face review-face-{{ face.tone }} is-small">
+                                            <i class="fas {{ face.icon }}"></i>
+                                            <span>{{ face.label }}</span>
+                                        </button>
+                                    {% endif %}
+                                {% endfor %}
+                            </form>
+                        {% endif %}
+                    </div>
+
+                    {% if can_edit %}
+                        <form method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ return_key }}">
+
+                            <div class="review-block">
+                                <div class="review-label">Beratnya gimana?</div>
+                                <div class="review-options">
+                                    {% for option in intensity_options %}
+                                        <label class="review-pick">
+                                            <input type="radio" name="intensity" value="{{ option.value }}"
+                                                   {% if review.intensity == option.value %}checked{% endif %}>
+                                            <span><i class="fas {{ option.icon }} me-1"></i>{{ option.label }}</span>
+                                        </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <div class="review-block">
+                                <div class="review-label">{{ tag_set.question }}</div>
+                                <div class="review-options">
+                                    {% for code, label in tag_set.options %}
+                                        <label class="review-pick">
+                                            <input type="checkbox" name="tags" value="{{ code }}"
+                                                   {% if code in review.tags %}checked{% endif %}>
+                                            <span>{{ label }}</span>
+                                        </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <div class="review-block">
+                                <div class="review-label">Mau nambahin? (boleh dikosongin)</div>
+                                <textarea name="comment" rows="3" class="review-text"
+                                          placeholder="Tulis apa aja, dibaca kok.">{{ review.comment }}</textarea>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100 rounded-pill fw-bold">
+                                Kirim
+                            </button>
+                        </form>
+                        <a href="{{ return_url }}" class="review-skip-link">Udah, gitu aja</a>
+                    {% else %}
+                        {% if review.intensity %}
+                            <div class="review-block">
+                                <div class="review-label">Beratnya</div>
+                                <div class="review-said">{{ review.get_intensity_display }}</div>
+                            </div>
+                        {% endif %}
+                        {% if review.tags %}
+                            <div class="review-block">
+                                <div class="review-options">
+                                    {% for label in chosen_tag_labels %}
+                                        <span class="review-said-tag">{{ label }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endif %}
+                        {% if review.comment %}
+                            <div class="review-block">
+                                <div class="review-said">{{ review.comment }}</div>
+                            </div>
+                        {% endif %}
+                        <p class="review-hint mb-0">Penilaian yang udah lewat sehari nggak bisa diubah lagi.</p>
+                    {% endif %}
+                {% endif %}
+            </div>
+
+            <div class="text-center mt-3">
+                <a href="{{ return_url }}" class="review-back">Kembali</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

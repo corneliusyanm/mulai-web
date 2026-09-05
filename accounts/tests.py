@@ -362,7 +362,7 @@ class MemberViewsTest(TestCase):
         self.assertIn(future_instance, upcoming_booked)
 
         # Should have yesterday in past
-        self.assertEqual(past_booked.count(), 1)
+        self.assertEqual(len(past_booked), 1)
         self.assertIn(past_instance, past_booked)
 
     def test_member_detail_view_waitlisted_classes_filter(self):
@@ -435,7 +435,7 @@ class MemberViewsTest(TestCase):
 
         # All class querysets should be empty
         self.assertEqual(len(response.context["upcoming_booked_classes"]), 0)
-        self.assertEqual(response.context["past_booked_classes"].count(), 0)
+        self.assertEqual(len(response.context["past_booked_classes"]), 0)
         self.assertEqual(len(response.context["upcoming_waitlisted_classes"]), 0)
         self.assertEqual(response.context["past_waitlisted_classes"].count(), 0)
 

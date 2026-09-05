@@ -17,17 +17,27 @@ from .calendar_export import class_instance_to_ics, ics_filename
 from .sharing import whatsapp_invite_url
 from .models import (
     ClassInstance,
+    ClassReview,
     GymClosure,
     Member,
     PenaltySettings,
     booking_block_reason,
     cancel_deadline_at,
+    class_end_at,
     class_start_at,
     member_classes_on_date,
     member_classes_on_dates,
     spell_minutes,
 )
 from .penalties import member_state, record_late_cancel
+from .reviews import (
+    FACES,
+    INTENSITY,
+    TAG_LABELS,
+    clean_tags,
+    tags_for,
+    thanks_line,
+)
 
 
 def member_login_required(view_func):
@@ -455,3 +465,160 @@ def cancel_class(request, instance_id):
 
     instance.update_status()
     return _redirect_after_action(request, instance)
+
+
+# Where a member lands after answering. A fixed set, never an arbitrary URL.
+REVIEW_RETURNS = {
+    "akun": lambda: reverse("member_details"),
+    "riwayat": lambda: reverse("member_history") + "?tab=kelas",
+}
+
+
+def _review_return_url(request):
+    target = request.POST.get("next") or request.GET.get("next") or "akun"
+    return REVIEW_RETURNS.get(target, REVIEW_RETURNS["akun"])()
+
+
+def _reviewable_instance(member, instance_id):
+    """The class, if this member may say anything about it at all.
+
+    A booking of theirs, in a class that ran and has finished. Waitlist spots are
+    not included: sitting in the queue is not an opinion about the session.
+    """
+    instance = get_object_or_404(
+        ClassInstance.objects.select_related("class_schedule__class_obj"),
+        pk=instance_id,
+        booked_members=member,
+    )
+    if instance.status == "CANCELLED":
+        return None
+    if class_end_at(instance) > timezone.now():
+        return None
+    return instance
+
+
+@require_POST
+@member_login_required
+def rate_class(request, instance_id):
+    """The first tap: one face, saved before anything else is asked.
+
+    This is the whole review as far as the member is concerned. Everything on
+    the page they land on afterwards is optional, and a member who closes the
+    tab there has still left us a complete, countable answer.
+    """
+    member = Member.objects.get(email=request.session["member_email"])
+    instance = _reviewable_instance(member, instance_id)
+    if instance is None:
+        messages.error(request, "Kelas ini belum bisa dinilai.")
+        return redirect(_review_return_url(request))
+
+    choice = request.POST.get("rating", "")
+    if choice == "absen":
+        ClassReview.objects.update_or_create(
+            member=member,
+            class_instance=instance,
+            defaults={
+                "attended": False,
+                "rating": None,
+                "intensity": None,
+                "tags": [],
+                "skipped": False,
+            },
+        )
+        messages.success(request, "Oke, makasih udah ngasih tau.")
+        return redirect(_review_return_url(request))
+
+    valid = {str(value) for value, _ in ClassReview.RATING_CHOICES}
+    if choice not in valid:
+        messages.error(request, "Penilaiannya belum kepilih.")
+        return redirect(_review_return_url(request))
+
+    ClassReview.objects.update_or_create(
+        member=member,
+        class_instance=instance,
+        defaults={"rating": int(choice), "attended": True, "skipped": False},
+    )
+    return redirect(
+        reverse("classes:class_review", args=[instance.id])
+        + f"?next={request.POST.get('next', 'akun')}"
+    )
+
+
+@require_POST
+@member_login_required
+def skip_class_review(request, instance_id):
+    """Dismiss the prompt for one class. Silent: they said no, not a mistake.
+
+    A row is written rather than nothing, because "asked and waved away" has to
+    be told apart from "never asked" or the card comes straight back. It does not
+    close the door: the class can still be rated from the history rows, which is
+    where a member who changes their mind will go looking.
+    """
+    member = Member.objects.get(email=request.session["member_email"])
+    instance = get_object_or_404(ClassInstance, pk=instance_id, booked_members=member)
+    review, _ = ClassReview.objects.get_or_create(
+        member=member, class_instance=instance
+    )
+    if not review.has_answer:
+        review.skipped = True
+        review.save(update_fields=["skipped", "updated_at"])
+    return redirect(_review_return_url(request))
+
+
+@member_login_required
+def class_review(request, instance_id):
+    """The optional half: how heavy it was, a chip or two, a note.
+
+    Reached only after a face has been tapped, or straight from a history row for
+    a class nobody nudged them about. Either way the page opens with the faces if
+    there is no rating yet, so one URL covers both.
+    """
+    member = Member.objects.get(email=request.session["member_email"])
+    instance = _reviewable_instance(member, instance_id)
+    if instance is None:
+        messages.error(request, "Kelas ini belum bisa dinilai.")
+        return redirect(_review_return_url(request))
+
+    review = ClassReview.objects.filter(
+        member=member, class_instance=instance
+    ).first()
+    today = timezone.localdate()
+    can_edit = review is None or timezone.localdate(review.created_at) == today
+
+    if request.method == "POST":
+        if review is None or review.rating is None:
+            messages.error(request, "Pilih dulu ya, kelasnya gimana.")
+            return redirect(reverse("classes:class_review", args=[instance.id]))
+        if not can_edit:
+            messages.info(request, "Penilaian yang lama udah kekunci.")
+            return redirect(_review_return_url(request))
+
+        intensity = request.POST.get("intensity", "")
+        valid_intensity = {str(value) for value, _ in ClassReview.INTENSITY_CHOICES}
+        review.intensity = int(intensity) if intensity in valid_intensity else None
+        review.tags = clean_tags(review.rating, request.POST.getlist("tags"))
+        review.comment = request.POST.get("comment", "").strip()[:2000]
+        review.save()
+        messages.success(request, "Makasih, masukan kamu udah masuk.")
+        return redirect(_review_return_url(request))
+
+    return render(
+        request,
+        "classes/class_review.html",
+        {
+            "instance": instance,
+            "review": review,
+            "can_edit": can_edit,
+            "faces": FACES,
+            "intensity_options": INTENSITY,
+            "tag_set": tags_for(review.rating) if review and review.rating else None,
+            "chosen_tag_labels": [
+                TAG_LABELS[code]
+                for code in (review.tags if review else [])
+                if code in TAG_LABELS
+            ],
+            "thanks": thanks_line(review.rating) if review and review.rating else "",
+            "return_key": request.GET.get("next", "akun"),
+            "return_url": _review_return_url(request),
+        },
+    )

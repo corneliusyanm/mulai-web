@@ -417,16 +417,34 @@
                                                 <div>
                                                     <h6 class="mb-0 fw-bold">{{ row.instance.class_schedule.class_obj.name }}</h6>
                                                     <small class="text-muted">
-                                                        <i class="fas fa-calendar-alt me-1"></i>{{ row.instance.date|indonesian_full_date }}
-                                                        <i class="fas fa-clock ms-2 me-1"></i>{{ row.instance.start_time|time:"H:i" }}
+                                                        <span class="text-nowrap"><i class="fas fa-calendar-alt me-1"></i>{{ row.instance.date|indonesian_full_date }}</span>
+                                                        <span class="text-nowrap"><i class="fas fa-clock ms-2 me-1"></i>{{ row.instance.start_time|time:"H:i" }}</span>
                                                     </small>
                                                 </div>
                                             </div>
-                                            {% if row.is_waitlist %}
-                                                <span class="badge bg-secondary text-white px-2 py-1 rounded-pill">Antrian</span>
-                                            {% else %}
-                                                <span class="badge bg-secondary text-white px-2 py-1 rounded-pill">Selesai</span>
-                                            {% endif %}
+                                            <div class="text-end d-flex align-items-center gap-2">
+                                                {% if row.is_waitlist %}
+                                                    <span class="badge bg-secondary text-white px-2 py-1 rounded-pill">Antrian</span>
+                                                {% else %}
+                                                    {% if row.instance.review.rating %}
+                                                    {% for face in review_faces %}
+                                                        {% if face.value == row.instance.review.rating %}
+                                                            <a href="{% url 'classes:class_review' row.instance.id %}?next=riwayat"
+                                                               class="review-row-face tone-{{ face.tone }}"
+                                                               title="Kamu bilang: {{ face.label }}">
+                                                                <i class="fas {{ face.icon }}"></i>
+                                                            </a>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                {% elif row.instance.review and not row.instance.review.attended %}
+                                                    <small class="text-muted">Nggak ikut</small>
+                                                {% elif row.instance.can_review %}
+                                                    <a href="{% url 'classes:class_review' row.instance.id %}?next=riwayat"
+                                                       class="review-row-link">Kasih nilai</a>
+                                                {% endif %}
+                                                    <span class="badge bg-secondary text-white px-2 py-1 rounded-pill">Selesai</span>
+                                                {% endif %}
+                                            </div>
                                         </div>
                                     </div>
                                 {% endfor %}

@@ -12,4 +12,11 @@ urlpatterns = [
     path(
         "<int:instance_id>/kalender/", views.class_calendar, name="class_calendar"
     ),
+    path("nilai/<int:instance_id>/", views.class_review, name="class_review"),
+    path("nilai/<int:instance_id>/tap/", views.rate_class, name="rate_class"),
+    path(
+        "nilai/<int:instance_id>/lewati/",
+        views.skip_class_review,
+        name="skip_class_review",
+    ),
 ]

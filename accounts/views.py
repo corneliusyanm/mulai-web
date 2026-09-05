@@ -16,6 +16,7 @@ from django.views.generic.edit import CreateView, UpdateView
 
 from classes.models import PenaltySettings, cancel_deadline_at
 from classes.penalties import member_state as class_penalty_state
+from classes.reviews import FACES as REVIEW_FACES, attach_reviews, pending_reviews
 from classes.sharing import whatsapp_invite_url
 from homepage.models import ReviewSummary, Testimonial
 from nutrition import progress as nutrition_progress
@@ -369,9 +370,14 @@ class MemberDetailView(MemberRequiredMixin, DetailView):
 
         # Filter booked classes for upcoming and past
         context["upcoming_booked_classes"] = upcoming_booked
-        context["past_booked_classes"] = past_booked.order_by("-date", "-start_time")[
-            :PAST_CLASSES_LIMIT
-        ]
+        context["past_booked_classes"] = attach_reviews(
+            member,
+            list(
+                past_booked.select_related("class_schedule__class_obj").order_by(
+                    "-date", "-start_time"
+                )[:PAST_CLASSES_LIMIT]
+            ),
+        )
 
         # Filter waitlisted classes for upcoming and past
         context["upcoming_waitlisted_classes"] = upcoming_waitlisted
@@ -433,6 +439,14 @@ class MemberDetailView(MemberRequiredMixin, DetailView):
 
         # Today's one-question quiz, the reason to open the app on a rest day.
         context["daily"] = daily_quiz_state(member)
+
+        # Penilaian Kelas. Every finished class from the last few days this
+        # member has said nothing about, not only the newest: dropping the older
+        # ones silently is how somebody ends up with three classes nobody ever
+        # asked about. Each row answers or dismisses on its own.
+        context["pending_reviews"] = pending_reviews(member)
+        context["review_faces"] = REVIEW_FACES
+        context["review_next"] = "akun"
         return context
 
     def _with_when_labels(self, queryset):
@@ -588,6 +602,7 @@ class MemberHistoryView(MemberRequiredMixin, TemplateView):
                 key=lambda row: (row["instance"].date, row["instance"].start_time),
                 reverse=True,
             )
+            attach_reviews(member, rows, get_instance=lambda row: row["instance"])
             groups = _group_by_month(rows, lambda row: row["instance"].date)
             stats = [
                 {
@@ -610,6 +625,7 @@ class MemberHistoryView(MemberRequiredMixin, TemplateView):
             ]
 
         context["member"] = member
+        context["review_faces"] = REVIEW_FACES
         context["active_tab"] = tab
         context["tabs"] = [{**t, "count": counts[t["key"]]} for t in HISTORY_TABS]
         context["stats"] = stats

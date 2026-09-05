@@ -3,6 +3,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from accounts.models import Member
+from classes.reviews import FACES as REVIEW_FACES, pending_reviews
 
 from .models import Visit
 
@@ -105,10 +106,21 @@ def check_out_page(request):
             messages.success(
                 request, f"Selamat tinggal, {member.name}! Check-out berhasil."
             )
+            # The best moment to ask how the class was is the one where they are
+            # still standing in the room it happened in. Only the newest class
+            # here, though: this screen is somebody on their way out of the door,
+            # and the account page picks up whatever they leave behind.
             return render(
                 request,
                 "visits/quick_check_out.html",
-                {"member": member, "success": True, "visit": visit},
+                {
+                    "member": member,
+                    "success": True,
+                    "visit": visit,
+                    "pending_reviews": pending_reviews(member)[:1],
+                    "review_faces": REVIEW_FACES,
+                    "review_next": "akun",
+                },
             )
         except Visit.DoesNotExist:
             return render(request, "visits/check_out_failed.html", {"member": member})
