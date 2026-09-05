@@ -499,7 +499,8 @@ A small bar strip on `/akun` showing how busy each open hour usually is today, s
   - Only the active tab's rows are queried; the other tabs just get a count for their badge.
   - Rows are grouped by month (newest first) with Indonesian month labels, plus 3 summary tiles per tab (e.g. total kunjungan, kunjungan bulan ini, kunjungan pertama).
   - Kunjungan rows show the visit duration (`1j 15m`); classes tab merges booked and waitlisted past classes into one date-sorted list.
-  - **Month calendar** (kunjungan tab only): every month group carries its own grid above its rows, built by `_calendar_weeks()`, so scrolling the list walks back through months. Monday first (`DAYS_ID_SHORT`), days from the neighbouring months rendered blank rather than numbered. A day the member checked in is a filled purple circle; a day they had a class booked is lime; a day that is both is purple with a lime ring. Class days come from `booked_classes` up to today, so a class still to come is not marked on a history page. A two-swatch legend is rendered only when a class actually falls in one of the months on screen. Replaced a 12-month Chart.js bar chart, which answered the same question with less detail and a CDN dependency.
+  - **Month calendars** (kunjungan tab only): the page is in two halves, "Kalender" then "Semua kunjungan". Every month that has a visit gets a grid, all of them stacked in one card above the whole row list, newest first and in the same order as the month groups below (`calendar_months`, built by `_calendar_weeks()`). The grids answer one question about the whole history, so reading them should not mean scrolling past a month of rows to reach the next month. Monday first (`DAYS_ID_SHORT`), days from the neighbouring months rendered blank rather than numbered, each month repeating the weekday header. A day the member checked in is a filled purple circle; a day they had a class booked is lime; a day that is both is purple with a lime ring. Class days come from `booked_classes` up to today, so a class still to come is not marked on a history page. A two-swatch legend is rendered only when a class actually falls in one of the months on screen. Replaced a 12-month Chart.js bar chart, which answered the same question with less detail and a CDN dependency.
+  - **No cap on the number of grids**: the median member has 2 months of visits, p95 is 9 and the busiest has 13, so every month fits and the one member who has been coming for a year gets to see the whole year.
 
 ### Home Screen Install
 
@@ -515,7 +516,7 @@ Members open `/akun` constantly, so the site can live on their home screen inste
 - `login.html`: Updated to include email and phone number fields (with country code).
 - `check_in.html`: Updated to include email and phone number fields (with country code).
 - `signup.html`, `member_edit.html`: Include country code and phone number fields.
-- `member_history.html`: Full history page. Segmented tab bar, summary tiles, month groups each with a calendar, and a floating back-to-top button for long lists. Below `576px` the tab bar drops its icons: three labels plus three counts plus three icons clear each other by a couple of pixels on a phone, which reads as the tabs being glued together.
+- `member_history.html`: Full history page. Segmented tab bar, summary tiles, a calendar section, month groups, and a floating back-to-top button for long lists. Below `576px` the tab bar drops its icons: three labels plus three counts plus three icons clear each other by a couple of pixels on a phone, which reads as the tabs being glued together.
 
 ### Automatic `is_pemula` Calculation
 During member registration, the `is_pemula` field is automatically calculated based on the `years_of_working_out` input:

@@ -117,6 +117,12 @@
         height: 1px;
         background: rgba(255, 255, 255, .25);
     }
+    /* "Kalender" and "Semua kunjungan": the two halves of the page, a step above
+       the month headings that sit inside the second one. */
+    .history-section {
+        font-size: 1.05rem;
+        margin-bottom: 14px;
+    }
 
     .history-icon {
         width: 38px;
@@ -129,10 +135,7 @@
     }
 
     /* Month calendar, one per month group, sitting above that month's rows */
-    .history-cal {
-        padding: 14px 8px 8px;
-        border-bottom: 1px solid #f1f1f1;
-    }
+    .history-cal { padding: 0 8px 10px; }
     /* Capped so a wide card does not stretch seven columns into a sparse grid
        the eye has to travel across. The rule sits on the card, the grid does not. */
     .history-cal-grid {
@@ -144,6 +147,10 @@
         display: grid;
         grid-template-columns: repeat(7, 1fr);
     }
+    /* Every month repeats the weekday header. One header for the whole run,
+       held in place with position: sticky, is what this wants, but body carries
+       overflow-x: hidden site-wide, which makes body the scroll container and
+       leaves a sticky child pinned to nothing. */
     .history-cal-head span {
         text-align: center;
         font-size: .65rem;
@@ -152,6 +159,19 @@
         text-transform: uppercase;
         letter-spacing: .02em;
         padding-bottom: 8px;
+    }
+    .history-cal-month {
+        font-weight: 700;
+        font-size: .85rem;
+        color: var(--dark);
+        border-top: 1px solid #f1f1f1;
+        margin-top: 14px;
+        padding: 18px 2px 8px;
+    }
+    .history-cal-grid > .history-cal-month:first-child {
+        border-top: none;
+        margin-top: 0;
+        padding-top: 14px;
     }
     .history-cal-day {
         display: flex;
@@ -272,12 +292,48 @@
                 </div>
             </div>
 
-            {% if has_class_days %}
-                <div class="card border-0 shadow-sm rounded-3 mb-4">
-                    <div class="card-body py-2 px-3 history-legend">
-                        <span><i></i>Kamu datang</span>
-                        <span><i class="is-class"></i>Ada kelas</span>
+            {% if calendar_months %}
+                <div class="history-month history-section">
+                    <span>Kalender</span>
+                    <span class="history-month-line"></span>
+                </div>
+
+                {% if has_class_days %}
+                    <div class="card border-0 shadow-sm rounded-3 mb-2">
+                        <div class="card-body py-2 px-3 history-legend">
+                            <span><i></i>Kamu datang</span>
+                            <span><i class="is-class"></i>Ada kelas</span>
+                        </div>
                     </div>
+                {% endif %}
+
+                <div class="card border-0 shadow-sm rounded-3 mb-4">
+                    <div class="history-cal">
+                        <div class="history-cal-grid">
+                            {% for month in calendar_months %}
+                                <div class="history-cal-month">{{ month.label }}</div>
+                                <div class="history-cal-head" aria-hidden="true">
+                                    {% for label in weekday_labels %}<span>{{ label }}</span>{% endfor %}
+                                </div>
+                                {% for week in month.weeks %}
+                                    <div class="history-cal-week">
+                                        {% for cell in week %}
+                                            <div class="history-cal-day">
+                                                {% if cell %}
+                                                    <span class="history-cal-num{% if cell.has_visit %} is-visit{% endif %}{% if cell.has_class %} is-class{% endif %}{% if cell.is_today %} is-today{% endif %}{% if cell.is_future %} is-future{% endif %}">{{ cell.day }}</span>
+                                                {% endif %}
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                {% endfor %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="history-month history-section">
+                    <span>Semua kunjungan</span>
+                    <span class="history-month-line"></span>
                 </div>
             {% endif %}
 
@@ -289,26 +345,6 @@
                         <span class="history-month-line"></span>
                     </div>
                     <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
-                        {% if group.weeks %}
-                            <div class="history-cal">
-                                <div class="history-cal-grid">
-                                    <div class="history-cal-head" aria-hidden="true">
-                                        {% for label in weekday_labels %}<span>{{ label }}</span>{% endfor %}
-                                    </div>
-                                    {% for week in group.weeks %}
-                                        <div class="history-cal-week">
-                                            {% for cell in week %}
-                                                <div class="history-cal-day">
-                                                    {% if cell %}
-                                                        <span class="history-cal-num{% if cell.has_visit %} is-visit{% endif %}{% if cell.has_class %} is-class{% endif %}{% if cell.is_today %} is-today{% endif %}{% if cell.is_future %} is-future{% endif %}">{{ cell.day }}</span>
-                                                    {% endif %}
-                                                </div>
-                                            {% endfor %}
-                                        </div>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                        {% endif %}
                         <div class="list-group list-group-flush">
                             {% if active_tab == 'kunjungan' %}
                                 {% for visit in group.rows %}

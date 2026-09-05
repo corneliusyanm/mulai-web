@@ -12,6 +12,7 @@ from unittest.mock import Mock, patch
 from .models import Member, ActiveMember, Tamu, Masukkan, Prospect
 from .admin import ProspectAdmin, MemberAdmin, ActiveMemberAdmin, SaleInline
 from .models import User
+from .dates import MONTHS_ID
 from .views import VISIT_MILESTONES, _visit_milestone
 from visits.admin import admin_site
 from visits.models import Visit
@@ -1726,7 +1727,7 @@ class VisitCalendarTest(TestCase):
 
         self.today = timezone.localdate()
         last_month_end = self.today.replace(day=1) - timedelta(days=1)
-        self.month_key = (last_month_end.year, last_month_end.month)
+        self.month_label = f"{MONTHS_ID[last_month_end.month]} {last_month_end.year}"
         self.tenth = last_month_end.replace(day=10)
         self.fifteenth = last_month_end.replace(day=15)
 
@@ -1758,93 +1759,107 @@ class VisitCalendarTest(TestCase):
         instance.booked_members.add(self.member)
         return instance
 
-    def cells(self, group):
-        return [cell for week in group["weeks"] for cell in week if cell]
+    def cells(self, month):
+        return [cell for week in month["weeks"] for cell in week if cell]
 
-    def cell_for(self, group, day_number):
-        return next(c for c in self.cells(group) if c["day"] == day_number)
+    def cell_for(self, month, day_number):
+        return next(c for c in self.cells(month) if c["day"] == day_number)
 
-    def last_month_group(self):
+    def last_month(self):
         response = self.client.get(reverse("member_history"))
-        group = next(
-            g for g in response.context["groups"] if g["key"] == self.month_key
+        month = next(
+            m
+            for m in response.context["calendar_months"]
+            if m["label"] == self.month_label
         )
-        return response, group
+        return response, month
 
-    def test_every_month_group_carries_its_own_grid(self):
+    def test_one_grid_per_month_that_has_a_visit(self):
         self.visit_on(self.tenth)
         self.visit_on(self.today)
         response = self.client.get(reverse("member_history"))
 
-        groups = response.context["groups"]
-        self.assertEqual(len(groups), 2)
-        for group in groups:
-            self.assertTrue(group["weeks"])
-            for week in group["weeks"]:
+        months = response.context["calendar_months"]
+        self.assertEqual(len(months), 2)
+        self.assertEqual(
+            [month["label"] for month in months],
+            [group["label"] for group in response.context["groups"]],
+        )
+        for month in months:
+            self.assertTrue(month["weeks"])
+            for week in month["weeks"]:
                 self.assertEqual(len(week), 7)
+
+    def test_every_calendar_comes_before_the_first_visit_row(self):
+        self.visit_on(self.tenth)
+        self.visit_on(self.today)
+        response = self.client.get(reverse("member_history"))
+        body = response.content.decode()
+
+        last_grid = body.rindex('class="history-cal-week"')
+        first_row = body.index('class="list-group-item')
+        self.assertLess(last_grid, first_row)
 
     def test_grid_holds_every_day_of_the_month_and_nothing_else(self):
         self.visit_on(self.tenth)
-        _, group = self.last_month_group()
+        _, month = self.last_month()
 
-        days = sorted(cell["day"] for cell in self.cells(group))
+        days = sorted(cell["day"] for cell in self.cells(month))
         last_day = (self.today.replace(day=1) - timedelta(days=1)).day
         self.assertEqual(days, list(range(1, last_day + 1)))
 
     def test_week_starts_on_monday(self):
         self.visit_on(self.tenth)
-        response, group = self.last_month_group()
+        response, month = self.last_month()
 
         self.assertEqual(
             response.context["weekday_labels"],
             ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"],
         )
         first = self.tenth.replace(day=1)
-        self.assertEqual(group["weeks"][0][first.weekday()]["day"], 1)
+        self.assertEqual(month["weeks"][0][first.weekday()]["day"], 1)
 
     def test_a_day_with_a_visit_is_marked(self):
         self.visit_on(self.tenth)
-        _, group = self.last_month_group()
+        _, month = self.last_month()
 
-        self.assertTrue(self.cell_for(group, 10)["has_visit"])
-        self.assertFalse(self.cell_for(group, 11)["has_visit"])
+        self.assertTrue(self.cell_for(month, 10)["has_visit"])
+        self.assertFalse(self.cell_for(month, 11)["has_visit"])
 
     def test_two_visits_on_one_day_mark_it_once(self):
         self.visit_on(self.tenth, hour=8)
         self.visit_on(self.tenth, hour=18)
-        _, group = self.last_month_group()
+        response, month = self.last_month()
 
-        self.assertEqual(len(group["rows"]), 2)
-        self.assertEqual(
-            sum(1 for cell in self.cells(group) if cell["has_visit"]), 1
-        )
+        self.assertEqual(len(response.context["groups"][0]["rows"]), 2)
+        self.assertEqual(sum(1 for cell in self.cells(month) if cell["has_visit"]), 1)
 
     def test_a_class_day_is_marked_on_top_of_the_visit(self):
         self.visit_on(self.tenth)
         self.class_on(self.tenth)
-        _, group = self.last_month_group()
+        _, month = self.last_month()
 
-        cell = self.cell_for(group, 10)
+        cell = self.cell_for(month, 10)
         self.assertTrue(cell["has_visit"])
         self.assertTrue(cell["has_class"])
 
     def test_a_class_the_member_never_checked_in_for_still_shows(self):
         self.visit_on(self.tenth)
         self.class_on(self.fifteenth)
-        _, group = self.last_month_group()
+        _, month = self.last_month()
 
-        cell = self.cell_for(group, 15)
+        cell = self.cell_for(month, 15)
         self.assertTrue(cell["has_class"])
         self.assertFalse(cell["has_visit"])
 
     def test_days_after_today_are_marked_as_future(self):
         self.visit_on(self.today)
         response = self.client.get(reverse("member_history"))
-        group = response.context["groups"][0]
+        month = response.context["calendar_months"][0]
 
-        for cell in self.cells(group):
+        for cell in self.cells(month):
             self.assertEqual(cell["is_future"], cell["day"] > self.today.day)
-        self.assertTrue(self.cell_for(group, self.today.day)["is_today"])
+        self.assertTrue(self.cell_for(month, self.today.day)["is_today"])
 
     def test_legend_appears_only_when_a_class_falls_in_a_month_on_screen(self):
         self.visit_on(self.tenth)
@@ -1861,6 +1876,7 @@ class VisitCalendarTest(TestCase):
         response = self.client.get(reverse("member_history"))
 
         self.assertEqual(response.context["groups"], [])
+        self.assertEqual(response.context["calendar_months"], [])
         self.assertNotContains(response, 'class="history-cal"')
 
     def test_calendar_only_on_the_visits_tab(self):

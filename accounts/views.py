@@ -503,8 +503,11 @@ class MemberHistoryView(MemberRequiredMixin, TemplateView):
                     visit.check_in_time, visit.check_out_time
                 )
             groups = _group_by_month(rows, lambda v: localtime(v.check_in_time).date())
-            # A calendar per month group, so scrolling the list walks back through
-            # months the way the rows already do. Class days are marked on top of
+            # Every calendar first, then every list. The grids answer "when do I
+            # actually come in", which is one question about the whole history,
+            # so reading them should not mean scrolling past a month of rows to
+            # reach the next one. One grid per month that has a visit, newest
+            # first, matching the groups below. Class days are marked on top of
             # visit days: a member who checked in for a class gets both.
             visit_days = {localtime(v.check_in_time).date() for v in rows}
             class_days = set(
@@ -512,10 +515,15 @@ class MemberHistoryView(MemberRequiredMixin, TemplateView):
                     "date", flat=True
                 )
             )
-            for group in groups:
-                group["weeks"] = _calendar_weeks(
-                    *group["key"], visit_days, class_days, today
-                )
+            context["calendar_months"] = [
+                {
+                    "label": group["label"],
+                    "weeks": _calendar_weeks(
+                        *group["key"], visit_days, class_days, today
+                    ),
+                }
+                for group in groups
+            ]
             context["weekday_labels"] = DAYS_ID_SHORT
             # The lime marker only needs explaining on a calendar that shows one.
             months_shown = {group["key"] for group in groups}
