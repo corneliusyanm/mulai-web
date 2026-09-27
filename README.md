@@ -18,6 +18,71 @@ Insights:
 
 Mulai Gym was opened since June 28, 2025.
 
+## Business facts
+
+What the owner has confirmed, as of September 2026. The facts the website prints live in `homepage/business.py` and `homepage/content.py`; keep them in step with this list.
+
+- **Coaches**, both certified:
+  - **Dastin N. Alfiyyah**: Sertifikasi Advanced Fitness Trainer (Rai Institute), S1 Pendidikan Jasmani Kesehatan dan Rekreasi (UPI).
+  - **Naufal Fauzan**: 5 years in fitness, 70 clients in the last 3 years.
+  - Their profile cards are in `media/foto_pelatih`.
+- **Programs**:
+  - **Gym** (Bronze), including a one-day pass.
+  - **Kelas Pemula** (Silver): Push, Pull and Leg & Core, at most 6 people with 1 coach.
+  - **Semi Private** (Gold).
+  - **Personal Trainer 1-on-1** (Diamond).
+  - **All In** (Platinum, Silver and Gold together).
+  - Classes run Monday to Saturday.
+- **Semi Private is undersold if it is described as a group class.** It is nearly a personal trainer:
+  - at most 4 people per coach, and often 1-on-1 when it is quiet, so nobody waits long for the coach's attention;
+  - paid monthly, not per session. A traditional 1-on-1 trainer is paid per visit, which quietly discourages coming often; here coming more often never costs more.
+- **Price is not published anywhere online.** A first-timer is given the price in person at the gym, where the admins have time to explain what training will do for them and can see who is serious. Somebody who already trains does not need that, and can be told the price on WhatsApp.
+- **WhatsApp buttons: fewer is better.** Too many "chat dulu" buttons read as pushy.
+- **Paying**:
+  - Instalments (cicilan) with no credit card and no interest. Most membership payments are instalments: 544 of 833.
+  - Methods: transfer, QRIS and cash.
+- **Membership freeze** is available for illness or a long trip. It is not something to headline.
+- **Facilities**:
+  - Gym floor with 23 machines, every one with a video in Panduan Alat.
+  - Cardio area.
+  - Bathroom with shower.
+  - Lockers (daily and monthly rental).
+  - Lounge.
+  - Musholla.
+  - Parking for motorbikes and cars.
+- **Hours**:
+  - Monday to Friday 07:00-21:00.
+  - Saturday 07:00-20:00.
+  - Sunday 07:30-20:00.
+- **Address**: Jl. Jend. Sudirman No. 643, Warung Muncang, Kec. Bandung Kulon, Bandung 40211, across from SMPK 5 BPK Penabur. Google Maps: 5,0 from 145 reviews.
+- **Consent**:
+  - The members in the photos and videos in `media/` agreed to appear in promotion.
+  - Google reviews may be quoted with the reviewer's first name.
+- **Marketing material** lives in `media/`, which is git-ignored:
+  - photos, class videos, logos and the coaches' profile cards;
+  - `media/promo_video`: the 30 second "3 dari 4" reel and its voiceover script.
+
+### Data snapshot (production, 27 Sep 2026)
+
+Measured once, for decisions; these go stale, so query again before quoting one.
+
+- **Members**:
+  - 861 members; 109 active on the day.
+  - 75% had never trained before; 52% women; median age 25.
+  - The most common goal at signup is "sehat" (412 mentions, against 84 for "otot").
+  - The most common reasons for choosing Mulai: close to home or office, then nyaman, pemula, murah, ramah.
+- **How they heard of the gym**: Instagram, passing by, friends and family, TikTok, Google Maps.
+- **Where they live**: mostly the west side. Andir, Cijerah, Pagarsih, Garuda, Rajawali, Holis, Kopo, and Cimahi.
+- **Growth is the problem to solve**:
+  - Signups peaked at about 125 a month in July and August 2025, and have been about 27 a month since July 2026.
+  - Walk-in guests fell from about 40 to about 7 a month.
+- **Classes**: 94% of 194 class ratings are "Mantap" and none "Kurang"; of those who answered the load question, 86% said "Pas".
+- **Busy hours**: busiest check-ins are 16:00-19:00 and 07:00; the quietest are 10:00-14:00.
+- **What visitors raised in the feedback box**:
+  - The front can look closed because of the garage door.
+  - Asked for a musholla (there is one now).
+  - Asked for classes not to clash with prayer times.
+
 > This file documents **what the system does**: per-feature behaviour, business rules, admin workflows, infra. How to work in the codebase (stack, commands, conventions, testing, gotchas) lives in `CLAUDE.md`.
 
 # Overall Architecture
