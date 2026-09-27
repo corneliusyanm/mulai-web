@@ -18,7 +18,10 @@ from classes.models import PenaltySettings, cancel_deadline_at
 from classes.penalties import member_state as class_penalty_state
 from classes.reviews import FACES as REVIEW_FACES, attach_reviews, pending_reviews
 from classes.sharing import whatsapp_invite_url
+from homepage import business
+from homepage import content as homepage_content
 from homepage.models import ReviewSummary, Testimonial
+from homepage.stats import homepage_stats
 from nutrition import progress as nutrition_progress
 from nutrition.daily import state_for as daily_quiz_state
 from payments.models import Payment
@@ -649,7 +652,26 @@ class MemberEditView(MemberRequiredMixin, UpdateView):
 
 
 def home(request):
-    return render(request, "home.html", _homepage_reviews())
+    stats = homepage_stats()
+    faq_items = homepage_content.faqs(stats)
+    context = {
+        **_homepage_reviews(),
+        "stats": stats,
+        "claims": homepage_content.claims(stats),
+        "faqs": faq_items,
+        "programs": homepage_content.programs(stats),
+        "wa": homepage_content.whatsapp_links(),
+        "gym": business,
+        "opening_hours": business.opening_hours_rows(),
+        "nearby_areas": business.nearby_areas_text(),
+        "seo_title": homepage_content.SEO_TITLE,
+        "seo_description": homepage_content.seo_description(stats),
+        "structured_data": [
+            homepage_content.as_ld_json(block)
+            for block in homepage_content.structured_data(faq_items)
+        ],
+    }
+    return render(request, "home.html", context)
 
 
 def _homepage_reviews():

@@ -26,7 +26,7 @@ Django app running mulaigym.id, the site and admin system for Mulai Gym in Bandu
 | `reminders` | `Reminder` | Staff follow-up queue, auto-generated daily |
 | `equipment` | `Equipment` | Panduan Alat guides + view analytics |
 | `announcements` | `Announcement` | Site-wide banner |
-| `homepage` | `ReviewSummary`, `Testimonial` | Curated Google reviews shown on the homepage |
+| `homepage` | `ReviewSummary`, `Testimonial` | The homepage: curated Google reviews, live numbers (`stats.py`), copy and FAQ (`content.py`), and the gym's public facts (`business.py`) |
 | `nutrition` | `ChapterProgress`, `QuizAnswer`, `DailyQuestion`, `DailyAnswer` | Belajar Gizi chapters at `/gizi/` (content in `content.py`, not the DB) + Kuis Harian at `/gizi/harian/` (seeded into the DB) |
 | `leaderboard` | none | Papan Peringkat at `/papan/`: points computed live from visits, classes and quizzes, cached, no tables |
 | `grand_opening` | `GrandOpeningRegistration` | One-off launch event |
@@ -73,7 +73,9 @@ User-facing copy is **Indonesian**, informal and warm ("Kamu", "Yuk", "biar ngga
 - **`position: sticky` does not stick anywhere on this site.** `body` carries `overflow-x: hidden` (`static/css/style.css`), which makes body a scroll container, so a sticky child resolves against the body box, which is as tall as the page, and never pins. It fails silently: the element just scrolls away. Repeat the header, or reach for something else.
 - **`btn-primary` is invisible outside a white card**, since it is the same purple as the page background. On the purple, use `btn-secondary` (lime). Same trap for text: `body` sets white type, so anything inside a white card must name its own colour or it disappears.
 - **Hand-written multiple choice drifts to the middle answer.** Authored by hand, 77 of 100 daily questions had the answer at B and none at C. Any new question set goes through `place_answer()` in `nutrition/shuffle.py`, and a test asserts no letter takes more than half.
+- **Prefix page-specific classes.** `style.css` is one file for the whole site, so a generic name collides. `.review-card` and `.review-text` were both a homepage testimonial and a Penilaian Kelas element, so each page drew the other's styles (a textarea border around every testimonial, a flex layout on the rating card) until the homepage ones became `testimonial-*`. New homepage sections use `hp-`; grep `style.css` for a class name before reusing one.
 - **The gym's facts live in `homepage/business.py`**: address, opening times, phone, WhatsApp, socials, map pin. Read them from there instead of retyping them (older templates still hardcode the WhatsApp number; move them over when you touch them). The Jam Kosong strip already derives its hours from it.
+- **No prices on the homepage.** Price is talked through on WhatsApp; `HomepageHasNoPricesTest` fails on anything that looks like one.
 - **Every public page gets a title and a description.** `base.html` has `title`, `meta_description`, `og_title`, `og_description` and `extra_head` blocks, and prints the canonical link for you. A new public page also goes in `mulai_web/sitemaps.py`.
 - **No emoji in body copy.** They read as machine-written, and that is the wrong impression for anything a member has to trust. Emoji are fine as icons in a list or a tile, where they replace an image; not inside sentences, headings, or explanations.
 - **A rule the member has to compute is a rule they will break.** Times in class copy are printed as clock times the server worked out ("batalin sebelum jam 13:15", "Bisa jam 16:15"), never as offsets ("4 jam sebelum"). Roughly 80% of members are first-timers and a good number find rules tiring; the ones most likely to be caught by a deadline are the least likely to work it out. The rule also has to appear on the surface where the action happens (the card, the account row, the confirm box), not only on the guide page, which is the backup for the ones who ask.
@@ -102,6 +104,7 @@ The custom admin site is `admin_site` in `visits/admin.py`, and much of the mode
 - Test names read as sentences describing the behaviour (`test_waitlist_promotion_still_works_at_the_limit`), not `test_1`.
 - Cover the boundaries, not just the happy path: the day before / of / after an expiry, an empty list, a member with no membership, a cancelled class.
 - Watch out for **date-relative assumptions**. `timedelta(days=1)` can cross a month boundary and break a "this month" assertion. Anchor such tests to values that cannot straddle the boundary.
+- **The cache survives between tests.** `LocMemCache` is per process, not per test, so anything cached (homepage numbers, leaderboard, Jam Kosong) leaks from one test into the next. Tests that read a cached value start from `cache.clear()` (`FreshCacheMixin` in `homepage/tests.py`).
 - `Visit.check_in_time` is `auto_now_add`, so passing it to `create()` is silently ignored. Set it with `Visit.objects.filter(pk=...).update(check_in_time=...)`.
 - **A class instance dated "today" makes a test depend on the hour it runs.** Booking now refuses a class that has already started, so a fixture at 09:00 today passes all morning and fails all afternoon. Date fixtures tomorrow, or build them from `timezone.now() + timedelta(...)` and take the date *and* time from the same moment so a run at 23:50 does not produce a class in the past.
 

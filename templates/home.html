@@ -1,44 +1,81 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Mulai Gym{% endblock %}
+{% block title %}{{ seo_title }}{% endblock %}
+{% block meta_description %}{{ seo_description }}{% endblock %}
+{% block og_title %}{{ seo_title }}{% endblock %}
+{% block og_description %}{{ seo_description }}{% endblock %}
+
+{% block extra_head %}
+    <link rel="preload" as="image" href="{% static 'images/home/hero-poster.webp' %}" fetchpriority="high">
+    {% for block in structured_data %}
+    <script type="application/ld+json">{{ block|safe }}</script>
+    {% endfor %}
+{% endblock %}
 
 {% block content %}
-<div class="outer-container" style="background-color: #4B4BEC;">
-    <div class="mx-auto mobile-container" style="max-width: 500px; overflow-x: hidden;">
-        <!-- Hero Section -->
-        <section id="home" style="min-height: 100vh; padding-top: 80px; padding-bottom: 0px; text-align: center; color: white; position: relative; overflow: hidden;">
-            <img src="{% static 'images/wave.png' %}" alt="Wave Background" class="full-width-img" style="position: absolute; bottom: 13%; left: 0; height: 20%; width: 100%; z-index: 0;">
-            <div class="container-fluid px-4" style="position: relative; z-index: 1;">
-                <img src="/static/images/karena_hidup_sehatmu.png" alt="KARENA HIDUP SEHATMU" style="max-width: 80%; height: auto; margin-bottom: 0rem; margin-top: 1rem;">
-                
-                <div style="margin: 1rem 0;">
-                    <img src="/static/images/mulai_dari_sini.png" alt="Mulai DARI SINI" style="max-width: 80%; height: auto; margin-bottom: 1.75rem;">
-                </div>
-                
-                <div class="row justify-content-center">
+{% comment %}
+Every word on this page is real text, not text inside an image, so search
+engines can read it and it stays sharp on every screen. The numbers come from
+homepage/stats.py, the FAQ and program cards from homepage/content.py, and the
+address and hours from homepage/business.py. There are no prices on purpose:
+every program ends in a WhatsApp link instead.
+{% endcomment %}
+<div class="hp">
+
+    {# ============ HERO ============ #}
+    <section class="hp-hero" id="home">
+        <div class="hp-hero-stage" aria-hidden="true">
+            <div class="hp-hero-media">
+                <video class="hp-hero-video" muted loop playsinline preload="none"
+                       poster="{% static 'images/home/hero-poster.webp' %}"
+                       data-src="{% static 'images/home/hero-loop.mp4' %}"></video>
+            </div>
+            {% if claims.pemula_size %}
+            <span class="hp-float-chip hp-float-chip-a"><i class="fas fa-people-group"></i> Kelas {{ claims.pemula_size }}</span>
+            {% endif %}
+            {% if review_summary %}
+            <span class="hp-float-chip hp-float-chip-b"><i class="fas fa-star"></i> {{ review_summary.rating_display }} di Google</span>
+            {% endif %}
+        </div>
+        <div class="hp-hero-shade"></div>
+
+        <div class="hp-wrap hp-hero-inner">
+            <div class="hp-hero-copy">
+                <h1 class="hp-hero-title">
+                    <span class="hp-chip hp-rise" style="--i: 0">Gym pemula di Bandung</span>
+                    <span class="hp-hero-line hp-rise" style="--i: 1">Belum pernah <span class="hp-nowrap">nge-gym?</span></span>
+                    <span class="hp-hero-accent hp-rise" style="--i: 2">Tenang.</span>
+                </h1>
+                <p class="hp-hero-sub hp-rise" style="--i: 3">
+                    {% if stats.pemula_share %}<strong>{{ stats.pemula_share|capfirst }}</strong> member kami juga mulai dari nol.{% else %}Banyak member kami juga mulai dari nol.{% endif %}
+                    Coach-nya sabar, kelasnya kecil, suasananya kayak rumah kedua.
+                </p>
+                <div class="hp-hero-ctas hp-rise" style="--i: 4">
+                    <a class="hp-btn hp-btn-lime" href="{{ wa.general }}" target="_blank" rel="noopener noreferrer">
+                        <i class="fab fa-whatsapp"></i> Chat dulu, tanya-tanya gratis
+                    </a>
                     {% if request.session.member_email %}
-                    <div class="col-5">
-                        <a href="{% url 'member_details' %}" class="btn w-100" style="background-color: #BEF006; color: #4B4BEC; font-weight: bold; border-radius: 30vh; padding: 1.2vh;">Akun Saya</a>
-                    </div>
+                    <a class="hp-btn hp-btn-ghost" href="{% url 'member_details' %}">Akun Saya</a>
                     {% else %}
-                    <div class="col-5">
-                        <a href="{% url 'signup' %}" class="btn w-100" style="background-color: #BEF006; color: #4B4BEC; font-weight: bold; border-radius: 30vh; padding: 1.2vh;">DAFTAR</a>
-                    </div>
-                    <div class="col-5">
-                        <a href="{% url 'member_login' %}" class="btn w-100" style="background-color: #4B4BEC; color: #BEF006; font-weight: bold; border: 0.3vh solid #BEF006; border-radius: 30vh; padding: 1.2vh;">MASUK</a>
-                    </div>
+                    <a class="hp-btn hp-btn-ghost" href="{% url 'signup' %}">Daftar member</a>
                     {% endif %}
                 </div>
-                
+                <div class="hp-hero-meta hp-rise" style="--i: 5">
+                    {% if review_summary %}
+                    <a class="hp-rating-pill" href="{{ review_summary.maps_url }}" target="_blank" rel="noopener noreferrer">
+                        <span class="hp-stars" aria-hidden="true"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></span>
+                        <span><strong>{{ review_summary.rating_display }}</strong> dari {{ review_summary.review_count }} ulasan Google</span>
+                    </a>
+                    {% endif %}
+                    {% if not request.session.member_email %}
+                    <span class="hp-hero-login">Sudah member? <a href="{% url 'member_login' %}">Masuk</a></span>
+                    {% endif %}
+                </div>
+
                 {% if RAMADAN_MODE %}
-                <a href="#ramadan" class="ramadan-hero-banner ramadan-hero-banner-large">
+                <a href="#ramadan" class="ramadan-hero-banner ramadan-hero-banner-large hp-rise" style="--i: 6">
                     <span class="ramadan-hero-banner-glow"></span>
-                    <span class="ramadan-hero-sparkle" style="top: 8px; right: 60px; animation-delay: 0s;"></span>
-                    <span class="ramadan-hero-sparkle" style="top: 50%; right: 12px; transform: translateY(-50%); animation-delay: 0.7s;"></span>
-                    <span class="ramadan-hero-sparkle" style="bottom: 10px; left: 40px; animation-delay: 1.4s;"></span>
-                    <span class="ramadan-hero-sparkle" style="top: 12px; left: 50px; animation-delay: 2.1s;"></span>
-                    <span class="ramadan-hero-sparkle" style="bottom: 6px; right: 90px; animation-delay: 2.8s;"></span>
                     <span class="ramadan-hero-banner-content">
                         <span class="ramadan-hero-banner-crescent">&#9790;</span>
                         <span class="ramadan-hero-banner-body">
@@ -50,14 +87,47 @@
                 </a>
                 {% endif %}
             </div>
-        </section>
+        </div>
+    </section>
 
-        {% if RAMADAN_MODE %}
-        <!-- Ramadan Section -->
+    {# ============ PROOF ============ #}
+    {% if stats.pemula_share or stats.pemula_class_size or stats.mantap_percent or review_summary %}
+    <section class="hp-proof" aria-label="Mulai Gym dalam angka">
+        <div class="hp-wrap">
+            <ul class="hp-proof-grid">
+                {% if stats.pemula_share %}
+                <li class="hp-stat">
+                    <span class="hp-stat-num">{{ stats.pemula_share }}</span>
+                    <span class="hp-stat-label">member kami mulai dari nol</span>
+                </li>
+                {% endif %}
+                {% if stats.pemula_class_size %}
+                <li class="hp-stat">
+                    <span class="hp-stat-num">Maks {{ stats.pemula_class_size }}</span>
+                    <span class="hp-stat-label">orang per Kelas Pemula</span>
+                </li>
+                {% endif %}
+                {% if stats.mantap_percent %}
+                <li class="hp-stat">
+                    <span class="hp-stat-num" data-count-up="{{ stats.mantap_percent }}" data-count-suffix="%">{{ stats.mantap_percent }}%</span>
+                    <span class="hp-stat-label">member bilang kelasnya Mantap</span>
+                </li>
+                {% endif %}
+                {% if review_summary %}
+                <li class="hp-stat">
+                    <span class="hp-stat-num">{{ review_summary.rating_display }} <i class="fas fa-star hp-stat-star" aria-hidden="true"></i></span>
+                    <span class="hp-stat-label">dari {{ review_summary.review_count }} ulasan Google</span>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+    </section>
+    {% endif %}
+
+    {% if RAMADAN_MODE %}
+    <div class="hp-ramadan">
         <section id="ramadan" class="ramadan-section">
             <div class="container-fluid px-4">
-
-                <!-- Promo Ramadan Carousel -->
                 <div class="ramadan-carousel-block ramadan-reveal">
                     <div class="ramadan-section-header">
                         <span class="ramadan-section-label">Promo Ramadan</span>
@@ -95,7 +165,6 @@
                     </div>
                 </div>
 
-                <!-- Giveaway -->
                 <div class="ramadan-image-block ramadan-reveal">
                     <div class="ramadan-section-header">
                         <span class="ramadan-section-label">Giveaway</span>
@@ -103,7 +172,6 @@
                     <img src="{% static 'images/ramadan/giveaway.png' %}" alt="Giveaway Ramadan" class="img-fluid ramadan-img" loading="lazy">
                 </div>
 
-                <!-- Jadwal Kelas -->
                 <div class="ramadan-image-block ramadan-reveal">
                     <div class="ramadan-section-header">
                         <span class="ramadan-section-label">Jadwal Kelas</span>
@@ -116,7 +184,6 @@
                     </div>
                 </div>
 
-                <!-- Puasa kok malah gendutan Carousel -->
                 <div class="ramadan-carousel-block ramadan-reveal">
                     <div class="ramadan-section-header">
                         <span class="ramadan-section-label">Tips Ramadan</span>
@@ -154,128 +221,431 @@
                     </div>
                 </div>
 
-                <!-- CTA -->
                 <div class="ramadan-cta-block ramadan-reveal">
                     <p class="ramadan-cta-text">Ada pertanyaan tentang program Ramadan?</p>
-                    <a href="https://wa.me/+628996940908?text=Halo%20Mulai%20Gym%2C%20mau%20tanya%20tentang%20program%20Ramadan" class="ramadan-wa-btn" target="_blank" rel="noopener noreferrer">
+                    <a href="{{ wa.ramadan }}" class="ramadan-wa-btn" target="_blank" rel="noopener noreferrer">
                         <i class="fab fa-whatsapp"></i> Chat kami
                     </a>
                 </div>
-
             </div>
         </section>
+    </div>
 
-        <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Carousel counter & dot sync
-            document.querySelectorAll('.ramadan-carousel').forEach(function(el) {
-                var id = el.id;
-                var counterEl = document.querySelector('[data-carousel="' + id + '"]');
-                if (!counterEl) return;
-                var total = el.querySelectorAll('.carousel-item').length;
-                var dotsContainer = el.closest('.ramadan-carousel-block').querySelector('.ramadan-dots');
-
-                el.addEventListener('slid.bs.carousel', function(e) {
-                    var current = e.to + 1;
-                    counterEl.textContent = current + '/' + total;
-                    if (dotsContainer) {
-                        dotsContainer.querySelectorAll('.ramadan-dot').forEach(function(dot, i) {
-                            dot.classList.toggle('active', i === e.to);
-                        });
-                    }
-                });
-
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.ramadan-carousel').forEach(function(el) {
+            var counterEl = document.querySelector('[data-carousel="' + el.id + '"]');
+            if (!counterEl) return;
+            var total = el.querySelectorAll('.carousel-item').length;
+            var dotsContainer = el.closest('.ramadan-carousel-block').querySelector('.ramadan-dots');
+            el.addEventListener('slid.bs.carousel', function(e) {
+                counterEl.textContent = (e.to + 1) + '/' + total;
                 if (dotsContainer) {
-                    dotsContainer.querySelectorAll('.ramadan-dot').forEach(function(dot) {
-                        dot.addEventListener('click', function() {
-                            var slideTo = parseInt(this.getAttribute('data-bs-slide-to'));
-                            bootstrap.Carousel.getOrCreateInstance(el).to(slideTo);
-                        });
+                    dotsContainer.querySelectorAll('.ramadan-dot').forEach(function(dot, i) {
+                        dot.classList.toggle('active', i === e.to);
                     });
                 }
             });
-
-            // Scroll-triggered reveal animations
-            var observer = new IntersectionObserver(function(entries) {
-                entries.forEach(function(entry) {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add('ramadan-visible');
-                        observer.unobserve(entry.target);
-                    }
+            if (dotsContainer) {
+                dotsContainer.querySelectorAll('.ramadan-dot').forEach(function(dot) {
+                    dot.addEventListener('click', function() {
+                        bootstrap.Carousel.getOrCreateInstance(el).to(parseInt(this.getAttribute('data-bs-slide-to')));
+                    });
                 });
-            }, { threshold: 0.15 });
-
-            document.querySelectorAll('.ramadan-reveal').forEach(function(el) {
-                observer.observe(el);
-            });
+            }
         });
-        </script>
-        {% endif %}
+        var observer = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('ramadan-visible');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.15 });
+        document.querySelectorAll('.ramadan-reveal').forEach(function(el) { observer.observe(el); });
+    });
+    </script>
+    {% endif %}
 
-        <!-- Kenapa Mulai Gym Section -->
-        <section id="kenapa-mulai" class="feature-section" style="min-height: 100vh; padding-top: 25px; padding-bottom: 0; text-align: center; color: white; position: relative; overflow: hidden;">
-            <div class="container-fluid px-4">
-                <img src="{% static 'images/kenapa_mulai_gym.png' %}" alt="Kenapa Mulai Gym?" class="img-fluid mx-auto d-block mb-4" style="max-width: 67%;">
-                
-                <div class="text-center mb-5">
-                    <img src="{% static 'images/visi.png' %}" alt="Visi Mulai Gym" class="img-fluid mx-auto d-block" style="max-width: 100%;">
+    {# ============ KENAPA ============ #}
+    <section class="hp-section" id="kenapa">
+        <div class="hp-wrap">
+            <header class="hp-head">
+                <p class="hp-kicker">Kenapa Mulai Gym</p>
+                <h2 class="hp-h2">Dibikin buat yang <em>baru mulai.</em></h2>
+                <p class="hp-lede">Nggak perlu udah jago, nggak perlu hafal alat. Cukup datang, sisanya kita temenin.</p>
+            </header>
+
+            <div class="hp-why">
+                <article class="hp-why-card">
+                    <div class="hp-why-photo">
+                        <img src="{% static 'images/home/why-coach.webp' %}" width="800" height="1000" loading="lazy" decoding="async"
+                             alt="Coach Dastin mendampingi member latihan di mesin">
+                    </div>
+                    <div class="hp-why-body">
+                        <span class="hp-why-num">01</span>
+                        <h3 class="hp-h3">Coach yang sabar dan tersertifikasi</h3>
+                        <p>Gerakan kamu dibenerin pelan-pelan, dari posisi duduk di alat sampai cara napasnya. Nggak ada pertanyaan yang terlalu dasar.</p>
+                    </div>
+                </article>
+
+                <article class="hp-why-card">
+                    <div class="hp-why-photo">
+                        <img src="{% static 'images/home/why-class.webp' %}" width="800" height="1000" loading="lazy" decoding="async"
+                             alt="Member Kelas Pemula latihan bareng pakai dumbbell, didampingi coach">
+                    </div>
+                    <div class="hp-why-body">
+                        <span class="hp-why-num">02</span>
+                        <h3 class="hp-h3">{% if claims.pemula_size %}Kelas Pemula, {{ claims.pemula_size }}{% else %}Kelas Pemula yang kecil{% endif %}</h3>
+                        <p>Latihan bareng, dipimpin 1 coach, jadi gerakan kamu tetap kepantau. Ada Push, Pull, dan Leg &amp; Core, jadi seluruh badan kebagian.</p>
+                    </div>
+                </article>
+
+                <article class="hp-why-card">
+                    <div class="hp-why-photo">
+                        <img src="{% static 'images/home/why-alat.webp' %}" width="576" height="720" loading="lazy" decoding="async"
+                             alt="Halaman Panduan Alat Mulai Gym dibuka di HP, menampilkan video cara pakai alat">
+                    </div>
+                    <div class="hp-why-body">
+                        <span class="hp-why-num">03</span>
+                        <h3 class="hp-h3">{{ claims.equipment_videos|default:"Tiap alat ada panduannya" }}</h3>
+                        <p>Lupa cara pakai alat? Buka Panduan Alat di HP, lengkap sama otot yang dilatih.</p>
+                        <a class="hp-why-link" href="{% url 'equipment:list' %}">Lihat Panduan Alat <i class="fas fa-arrow-right"></i></a>
+                    </div>
+                </article>
+
+                <article class="hp-why-card">
+                    <div class="hp-why-photo">
+                        <img src="{% static 'images/home/why-community.webp' %}" width="800" height="1000" loading="lazy" decoding="async"
+                             alt="Member Kelas Pemula foto bareng coach sambil pegang papan Kami Sudah Mulai">
+                    </div>
+                    <div class="hp-why-body">
+                        <span class="hp-why-num">04</span>
+                        <h3 class="hp-h3">Suasananya kayak rumah kedua</h3>
+                        <p>Member di sini saling sapa, saling bawain makanan, sampai main bareng di luar gym. Datang sendiri pun, pulangnya bisa punya temen.</p>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    {# ============ SEHAT ============ #}
+    <section class="hp-sehat" aria-label="Tujuan member Mulai Gym">
+        <div class="hp-sehat-words" aria-hidden="true">
+            <span style="--x: 6%; --y: 14%">turunin berat</span>
+            <span style="--x: 64%; --y: 10%">bugar</span>
+            <span style="--x: 72%; --y: 80%">badan ideal</span>
+            <span style="--x: 4%; --y: 82%">nggak gampang capek</span>
+            <span style="--x: 40%; --y: 90%">kuat</span>
+        </div>
+        <div class="hp-wrap hp-sehat-inner">
+            <p class="hp-sehat-kicker">Tujuan paling banyak dari member kami:</p>
+            <p class="hp-sehat-word">SEHAT.</p>
+            <p class="hp-sehat-sub">Bukan body goals yang ngeri-ngeri. Mulai aja dulu, pelan-pelan.</p>
+        </div>
+    </section>
+
+    {# ============ PROGRAM ============ #}
+    <section class="hp-section hp-section-light" id="program">
+        <div class="hp-wrap">
+            <header class="hp-head">
+                <p class="hp-kicker">Program</p>
+                <h2 class="hp-h2">Pilih cara <em>mulaimu.</em></h2>
+                <p class="hp-lede">Bisa mulai dari gym aja, atau langsung ditemenin coach. Harganya? Tanya aja dulu, gratis.</p>
+            </header>
+
+            <div class="hp-programs">
+                {% for program in programs %}
+                <article class="hp-program{% if program.badge %} is-featured{% endif %}">
+                    {% if program.badge %}<span class="hp-program-badge">{{ program.badge }}</span>{% endif %}
+                    <span class="hp-program-icon"><i class="fas {{ program.icon }}" aria-hidden="true"></i></span>
+                    <h3 class="hp-h3">{{ program.title }}</h3>
+                    <p class="hp-program-text">{{ program.text }}</p>
+                    <ul class="hp-program-points">
+                        {% for point in program.points %}
+                        <li><i class="fas fa-check" aria-hidden="true"></i>{{ point }}</li>
+                        {% endfor %}
+                    </ul>
+                    <a class="hp-btn hp-btn-outline" href="{{ program.ask_url }}" target="_blank" rel="noopener noreferrer" aria-label="Tanya harga {{ program.title }} lewat WhatsApp">
+                        <i class="fab fa-whatsapp"></i> Tanya harga
+                    </a>
+                </article>
+                {% endfor %}
+            </div>
+
+            <div class="hp-cicilan">
+                <span class="hp-cicilan-icon"><i class="fas fa-wallet" aria-hidden="true"></i></span>
+                <div>
+                    <p class="hp-cicilan-title">Bisa cicilan, tanpa kartu kredit dan tanpa bunga.</p>
+                    <p class="hp-cicilan-sub">Paket panjang bisa dibayar bertahap. Tanya admin buat detailnya.</p>
                 </div>
-
-                <img class="full-width-img" src="{% static 'images/kenapa_mulai_3.png' %}" alt="Pemula aman, Trainer terlatih, Peralatan internasional, Mulai dari 180 ribu!" style="position: absolute; left: 0; width: 100%; z-index: 0; margin-top: -10px;">
             </div>
-        </section>
+        </div>
+    </section>
 
-        {% include "home/_reviews.html" %}
-
-        <!-- Mari Mulai Section -->
-        <section id="mari-mulai" class="feature-section" style="min-height: 90vh; padding-top: 25px; padding-bottom: 0px; text-align: center; color: white; position: relative; overflow: hidden;">
-            <div class="container-fluid px-4">
-              <img src="{% static 'images/mari_mulai.png' %}" alt="Mari Mulai!" class="img-fluid mx-auto d-block mb-4" style="max-width: 85%;">
+    {# ============ COACH ============ #}
+    <section class="hp-section" id="coach">
+        <div class="hp-wrap hp-coach-layout">
+            <header class="hp-head">
+                <p class="hp-kicker">Kenalan dulu</p>
+                <h2 class="hp-h2">Coach yang bakal <em>nemenin kamu.</em></h2>
+                <p class="hp-lede">Dua-duanya tersertifikasi, dan sudah biasa ngajarin orang yang baru pertama kali pegang alat.</p>
+                <a class="hp-btn hp-btn-ghost hp-coach-cta" href="{% url 'classes:class_rules' %}">Cara booking kelas</a>
+            </header>
+            <div class="hp-coaches">
+                <figure class="hp-coach">
+                    <img src="{% static 'images/home/coach-dastin.webp' %}" width="800" height="1000" loading="lazy" decoding="async"
+                         alt="Coach Dastin mendampingi member di mesin latihan kaki">
+                    <figcaption><span class="hp-chip">Coach Dastin</span></figcaption>
+                </figure>
+                <figure class="hp-coach">
+                    <img src="{% static 'images/home/coach-naufal.webp' %}" width="800" height="1000" loading="lazy" decoding="async"
+                         alt="Coach Naufal mendampingi member latihan dumbbell press">
+                    <figcaption><span class="hp-chip">Coach Naufal</span></figcaption>
+                </figure>
             </div>
-        </section>
+        </div>
+    </section>
 
-        <!-- Fasilitas Section -->
-        <section id="fasilitas" class="feature-section" style="min-height: 80vh; padding-top: 0; padding-bottom: 0; text-align: center; color: white; position: relative; overflow: hidden; margin-bottom: 50px;">
-            <img src="{% static 'images/fasilitas.png' %}" alt="Fasilitas" class="full-width-img" style="margin-top: 0;">
-        </section>
+    {% include "home/_reviews.html" %}
 
+    {# ============ FASILITAS ============ #}
+    <section class="hp-section hp-section-light" id="fasilitas">
+        <div class="hp-wrap">
+            <header class="hp-head">
+                <p class="hp-kicker">Fasilitas</p>
+                <h2 class="hp-h2">Bersih, terang, dan <em>lengkap buat mulai.</em></h2>
+            </header>
 
-        <a href="https://wa.me/+628996940908" class="btn py-1 px-4 rounded d-flex align-items-center justify-content-center" style="background-color: white; color: #4B4BEC; height: 32px; white-space: nowrap; overflow: hidden; font-size: 14px; width: auto;" target="_blank" rel="noopener noreferrer">
-          <div class="d-flex align-items-center justify-content-center me-2" style="background-color: #25D366; width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;">
-              <i class="fab fa-whatsapp" style="color: white; font-size: 14px;"></i>
-          </div>
-          <span style="font-weight: bold;">Tanya-tanya gratis</span>
-        </a>
+            <div class="hp-gallery">
+                <figure class="hp-gal is-big">
+                    <img src="{% static 'images/home/fac-gym.webp' %}" width="720" height="900" loading="lazy" decoding="async" alt="Area gym Mulai Gym dengan lantai kayu dan dinding ungu hijau">
+                    <figcaption>Area gym</figcaption>
+                </figure>
+                <figure class="hp-gal">
+                    <img src="{% static 'images/home/fac-rack.webp' %}" width="720" height="900" loading="lazy" decoding="async" alt="Rack dan cable machine">
+                    <figcaption>Rack &amp; cable</figcaption>
+                </figure>
+                <figure class="hp-gal">
+                    <img src="{% static 'images/home/fac-cardio.webp' %}" width="720" height="900" loading="lazy" decoding="async" alt="Treadmill di area kardio dekat jendela">
+                    <figcaption>Area kardio</figcaption>
+                </figure>
+                <figure class="hp-gal">
+                    <img src="{% static 'images/home/fac-locker.webp' %}" width="720" height="900" loading="lazy" decoding="async" alt="Loker dan wastafel">
+                    <figcaption>Loker</figcaption>
+                </figure>
+                <figure class="hp-gal">
+                    <img src="{% static 'images/home/fac-lounge.webp' %}" width="720" height="900" loading="lazy" decoding="async" alt="Lounge dengan sofa dan kulkas minuman">
+                    <figcaption>Lounge</figcaption>
+                </figure>
+            </div>
 
-        <!-- Footer -->
-        <footer id="kontak" class="bg-primary text-white py-3" style="margin-top: 50px; margin-bottom: 75px;">
-            <div class="container-fluid px-4">
-                <div class="text-center mb-3">
-                    <img src="{% static 'images/logo_white.png' %}" alt="Mulai Gym" height="40" class="mb-2">
-                    <p class="mb-1"><i class="fas fa-map-marker-alt me-2"></i> <a href="https://maps.app.goo.gl/NGSqB9qy22e1Zssk8" class="text-white" target="_blank" rel="noopener noreferrer">Jl. Jend. Sudirman No.643, Bandung</a></p>
-                    <p class="mb-1">(Seberang SMPK 5)</p>
-                    <p class="mb-0"><i class="fab fa-whatsapp me-2"></i><a href="https://wa.me/+628996940908" class="text-white" target="_blank" rel="noopener noreferrer">08996940908</a></p>
-                    <p class="mb-1"><i class="fab fa-instagram me-2"></i> <a href="https://instagram.com/mulaigym.id" class="text-white" target="_blank" rel="noopener noreferrer">mulaigym.id</a></p>
-                    <p class="mb-1"><i class="fab fa-tiktok me-2"></i> <a href="https://tiktok.com/@mulaigym.id" class="text-white" target="_blank" rel="noopener noreferrer">@mulaigym.id</a></p>
+            <ul class="hp-amenities">
+                {% if claims.equipment %}<li><i class="fas fa-dumbbell" aria-hidden="true"></i>{{ claims.equipment }} gym</li>{% endif %}
+                <li><i class="fas fa-person-running" aria-hidden="true"></i>Area kardio</li>
+                <li><i class="fas fa-shower" aria-hidden="true"></i>Kamar mandi &amp; shower</li>
+                <li><i class="fas fa-lock" aria-hidden="true"></i>Loker</li>
+                <li><i class="fas fa-couch" aria-hidden="true"></i>Lounge</li>
+                <li><i class="fas fa-mosque" aria-hidden="true"></i>Musholla</li>
+                <li><i class="fas fa-square-parking" aria-hidden="true"></i>Parkir motor &amp; mobil</li>
+            </ul>
+        </div>
+    </section>
+
+    {# ============ CARA MULAI ============ #}
+    <section class="hp-section" id="cara-mulai">
+        <div class="hp-wrap">
+            <header class="hp-head">
+                <p class="hp-kicker">Cara mulai</p>
+                <h2 class="hp-h2">Mari mulai. <em>4 langkah aja.</em></h2>
+            </header>
+            <ol class="hp-steps">
+                <li class="hp-step">
+                    <span class="hp-step-num">1</span>
+                    <h3 class="hp-h3">Tentukan <span class="hp-nowrap">goals-mu</span></h3>
+                    <p>Mau lebih sehat, turunin berat, atau sekadar rutin gerak. Semua boleh.</p>
+                </li>
+                <li class="hp-step">
+                    <span class="hp-step-num">2</span>
+                    <h3 class="hp-h3">Kasih tau crew kita</h3>
+                    <p>Chat WhatsApp atau mampir langsung. Ceritain aja kondisimu sekarang.</p>
+                </li>
+                <li class="hp-step">
+                    <span class="hp-step-num">3</span>
+                    <h3 class="hp-h3">Pilih program</h3>
+                    <p>Admin bantu cariin yang paling pas. Konsultasinya gratis.</p>
+                </li>
+                <li class="hp-step">
+                    <span class="hp-step-num">4</span>
+                    <h3 class="hp-h3">Hayuk atuh, mulai!</h3>
+                    <p>Datang, kenalan sama coach, dan mulai dari gerakan pertama.</p>
+                </li>
+            </ol>
+            <div class="hp-center">
+                <a class="hp-btn hp-btn-lime" href="{{ wa.general }}" target="_blank" rel="noopener noreferrer">
+                    <i class="fab fa-whatsapp"></i> Mulai dari chat dulu
+                </a>
+            </div>
+        </div>
+    </section>
+
+    {# ============ FAQ ============ #}
+    <section class="hp-section hp-section-light" id="faq">
+        <div class="hp-wrap hp-faq-wrap">
+            <header class="hp-head">
+                <p class="hp-kicker">FAQ</p>
+                <h2 class="hp-h2">Yang sering <em>ditanyain.</em></h2>
+            </header>
+            <div class="hp-faq">
+                {% for item in faqs %}
+                <details class="hp-faq-item"{% if forloop.first %} open{% endif %}>
+                    <summary>{{ item.question }}<i class="fas fa-plus" aria-hidden="true"></i></summary>
+                    <p>{{ item.answer }}</p>
+                </details>
+                {% endfor %}
+            </div>
+            <p class="hp-faq-more">Masih ada yang mau ditanyain? <a href="{{ wa.general }}" target="_blank" rel="noopener noreferrer">Chat kami di WhatsApp</a></p>
+        </div>
+    </section>
+
+    {# ============ LOKASI ============ #}
+    <section class="hp-section" id="lokasi">
+        <div class="hp-wrap">
+            <header class="hp-head">
+                <p class="hp-kicker">Lokasi</p>
+                <h2 class="hp-h2">Mampir, <em>yuk.</em></h2>
+            </header>
+            <div class="hp-location">
+                <div class="hp-loc-card">
+                    <img class="hp-loc-photo" src="{% static 'images/home/storefront.webp' %}" width="1200" height="750" loading="lazy" decoding="async"
+                         alt="Tampak depan Mulai Gym di {{ gym.STREET }}, {{ gym.CITY }}">
+                    <div class="hp-loc-body">
+                        <p class="hp-loc-address"><i class="fas fa-location-dot" aria-hidden="true"></i>{{ gym.STREET }}, {{ gym.CITY }}</p>
+                        <p class="hp-loc-area">{{ gym.AREA_LINE }}</p>
+                        <p class="hp-loc-landmark">{{ gym.LANDMARK }}. Cari gedung ungu dengan logo Mulai warna hijau di depannya.</p>
+                        <div class="hp-loc-actions">
+                            <a class="hp-btn hp-btn-primary" href="{{ gym.MAPS_URL }}" target="_blank" rel="noopener noreferrer"><i class="fas fa-diamond-turn-right"></i> Buka Google Maps</a>
+                            <a class="hp-btn hp-btn-outline" href="{{ wa.visit }}" target="_blank" rel="noopener noreferrer"><i class="fab fa-whatsapp"></i> Chat dulu</a>
+                        </div>
+                        <h3 class="hp-loc-hours-title"><i class="fas fa-clock" aria-hidden="true"></i> Jam buka</h3>
+                        <dl class="hp-hours">
+                            {% for days, hours in opening_hours %}
+                            <div><dt>{{ days }}</dt><dd>{{ hours }}</dd></div>
+                            {% endfor %}
+                        </dl>
+                        <p class="hp-loc-areas">Banyak member kami datang dari {{ nearby_areas }}.</p>
+                    </div>
+                </div>
+                <div class="hp-map">
+                    <iframe title="Peta lokasi Mulai Gym" src="{{ gym.MAPS_EMBED_URL }}" loading="lazy"
+                            referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
                 </div>
             </div>
-        </footer>
-    </div>
+        </div>
+    </section>
+
+    {# ============ PENUTUP ============ #}
+    <section class="hp-final">
+        <svg class="hp-final-swoosh" viewBox="0 0 1200 600" preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+                <linearGradient id="hpSwoosh" x1="0" y1="1" x2="1" y2="0">
+                    <stop offset="0" stop-color="#BEF006" stop-opacity="0"/>
+                    <stop offset=".6" stop-color="#BEF006" stop-opacity=".35"/>
+                    <stop offset="1" stop-color="#BEF006" stop-opacity=".9"/>
+                </linearGradient>
+            </defs>
+            <path d="M-40 596 C 380 588, 820 548, 1180 400" fill="none" stroke="url(#hpSwoosh)" stroke-width="16" stroke-linecap="round"/>
+        </svg>
+        <div class="hp-wrap hp-final-inner">
+            <p class="hp-final-kicker">Karena hidup sehatmu</p>
+            <img class="hp-final-logo" src="{% static 'images/home/logo-white.webp' %}" width="720" height="365" loading="lazy" decoding="async" alt="Mulai Gym">
+            <p class="hp-final-dari">DARI SINI</p>
+            <p class="hp-final-sub">Mereka sudah mulai. Sekarang giliran kamu.</p>
+            <div class="hp-final-ctas">
+                <a class="hp-btn hp-btn-lime" href="{{ wa.general }}" target="_blank" rel="noopener noreferrer"><i class="fab fa-whatsapp"></i> Chat dulu, tanya-tanya gratis</a>
+                {% if not request.session.member_email %}
+                <a class="hp-btn hp-btn-ghost" href="{% url 'signup' %}">Daftar member</a>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+    {# ============ FOOTER ============ #}
+    <footer class="hp-footer" id="kontak">
+        <div class="hp-wrap hp-footer-grid">
+            <div class="hp-footer-brand">
+                <img src="{% static 'images/home/logo-white.webp' %}" width="720" height="365" loading="lazy" decoding="async" alt="Mulai Gym">
+                <p>Gym paling nyaman buat pemula di Bandung.</p>
+            </div>
+            <div>
+                <h3 class="hp-footer-title">Kontak</h3>
+                <ul class="hp-footer-list">
+                    <li><a href="{{ gym.MAPS_URL }}" target="_blank" rel="noopener noreferrer"><i class="fas fa-location-dot" aria-hidden="true"></i><span>{{ gym.STREET }}<br><small>{{ gym.AREA_LINE }}</small><br><small>{{ gym.LANDMARK }}</small></span></a></li>
+                    <li><a href="{{ wa.general }}" target="_blank" rel="noopener noreferrer"><i class="fab fa-whatsapp" aria-hidden="true"></i>{{ gym.PHONE_DISPLAY }}</a></li>
+                    <li><a href="{{ gym.INSTAGRAM_URL }}" target="_blank" rel="noopener noreferrer"><i class="fab fa-instagram" aria-hidden="true"></i>@mulaigym.id</a></li>
+                    <li><a href="{{ gym.TIKTOK_URL }}" target="_blank" rel="noopener noreferrer"><i class="fab fa-tiktok" aria-hidden="true"></i>@mulaigym.id</a></li>
+                </ul>
+            </div>
+            <div>
+                <h3 class="hp-footer-title">Jam buka</h3>
+                <dl class="hp-hours hp-hours-footer">
+                    {% for days, hours in opening_hours %}
+                    <div><dt>{{ days }}</dt><dd>{{ hours }}</dd></div>
+                    {% endfor %}
+                </dl>
+            </div>
+            <div>
+                <h3 class="hp-footer-title">Jelajahi</h3>
+                <ul class="hp-footer-list">
+                    <li><a href="{% url 'equipment:list' %}">Panduan Alat</a></li>
+                    <li><a href="{% url 'nutrition:index' %}">Belajar Gizi</a></li>
+                    <li><a href="{% url 'classes:class_rules' %}">Aturan Kelas</a></li>
+                    <li><a href="{% url 'tamu_signup' %}">Registrasi Tamu</a></li>
+                    <li><a href="{% url 'masukkan' %}">Kotak Masukkan</a></li>
+                </ul>
+            </div>
+        </div>
+        <p class="hp-footer-copy">&copy; {% now "Y" %} Mulai Gym, Bandung</p>
+    </footer>
+
+    <a class="hp-float-wa" href="{{ wa.general }}" target="_blank" rel="noopener noreferrer" aria-label="Chat Mulai Gym di WhatsApp">
+        <span class="hp-float-wa-icon"><i class="fab fa-whatsapp"></i></span><span>Chat dulu</span>
+    </a>
 </div>
 
-<style>
-    @media (min-width: 501px) {
-        .outer-container {
-            background-color: #a0a0f1 !important;
-            min-height: 100vh;
-            padding: 0px;
-        }
-        .mobile-container {
-            background-color: #4B4BEC;
-            box-shadow: 0 0 20px rgba(0,0,0,0.2);
-            border-radius: 10px;
-            overflow: hidden;
+<script>
+(function () {
+    var calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var saveData = navigator.connection && navigator.connection.saveData;
+
+    // The hero loop is extra, never required: the poster is already the picture.
+    // Skipped for reduced motion and data saver, and paused while off screen.
+    var video = document.querySelector('.hp-hero-video');
+    if (video && !calm && !saveData && video.dataset.src) {
+        video.src = video.dataset.src;
+        video.addEventListener('playing', function () { video.classList.add('is-playing'); });
+        var tryPlay = function () {
+            var p = video.play();
+            if (p && p.catch) p.catch(function () {});
+        };
+        if ('IntersectionObserver' in window) {
+            new IntersectionObserver(function (entries) {
+                entries.forEach(function (e) { e.isIntersecting ? tryPlay() : video.pause(); });
+            }).observe(video);
+        } else {
+            tryPlay();
         }
     }
-</style>
-{% endblock %} 
+
+    // The floating chat button waits until the hero, which has its own, is gone.
+    var float = document.querySelector('.hp-float-wa');
+    var hero = document.querySelector('.hp-hero');
+    if (float && hero && 'IntersectionObserver' in window) {
+        float.classList.add('is-waiting');
+        new IntersectionObserver(function (entries) {
+            float.classList.toggle('is-waiting', entries[0].isIntersecting);
+        }, { threshold: 0.05 }).observe(hero);
+    }
+})();
+</script>
+{% endblock %}
