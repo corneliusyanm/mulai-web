@@ -1421,6 +1421,15 @@ class UpcomingClassCountdownTest(TestCase):
     """The account page says when a class starts, in words."""
 
     def setUp(self):
+        # Every test here books a class relative to "now", so the clock is pinned
+        # to midday. Unpinned, a one-hour class near midnight ends past midnight,
+        # which no real class does and which reads as already over, so these
+        # failed in the evening, CI included.
+        midday = timezone.make_aware(datetime.combine(timezone.localdate(), time(12, 0)))
+        clock = patch("django.utils.timezone.now", return_value=midday)
+        clock.start()
+        self.addCleanup(clock.stop)
+
         from classes.models import Class, ClassSchedule, ClassInstance
 
         self.Class = Class
@@ -1473,24 +1482,16 @@ class UpcomingClassCountdownTest(TestCase):
         return response.context["upcoming_booked_classes"]
 
     def test_minutes_when_it_starts_very_soon(self):
-        # Pinned to midday. After about 20:20 a one-hour class that starts in 40
-        # minutes ends past midnight, which no real class does, and it read as
-        # already over: the test failed every evening, CI included.
-        midday = timezone.make_aware(datetime.combine(timezone.localdate(), time(12, 0)))
-        with patch("django.utils.timezone.now", return_value=midday):
-            self.book_at(midday + timedelta(minutes=40))
-            self.login()
+        self.book_at(timezone.now() + timedelta(minutes=40))
+        self.login()
 
-            booking = self.upcoming(self.client.get(reverse("member_details")))[0]
+        booking = self.upcoming(self.client.get(reverse("member_details")))[0]
 
         self.assertIn("menit lagi", booking.when_label)
         self.assertTrue(booking.when_soon)
 
     def test_hours_when_it_starts_later_today(self):
-        start = timezone.now() + timedelta(hours=4)
-        if timezone.localtime(start).date() != timezone.localdate():
-            self.skipTest("4 hours from now is tomorrow, timing-specific case")
-        self.book_at(start)
+        self.book_at(timezone.now() + timedelta(hours=4))
         self.login()
 
         booking = self.upcoming(self.client.get(reverse("member_details")))[0]
