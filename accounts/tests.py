@@ -1473,10 +1473,15 @@ class UpcomingClassCountdownTest(TestCase):
         return response.context["upcoming_booked_classes"]
 
     def test_minutes_when_it_starts_very_soon(self):
-        self.book_at(timezone.now() + timedelta(minutes=40))
-        self.login()
+        # Pinned to midday. After about 20:20 a one-hour class that starts in 40
+        # minutes ends past midnight, which no real class does, and it read as
+        # already over: the test failed every evening, CI included.
+        midday = timezone.make_aware(datetime.combine(timezone.localdate(), time(12, 0)))
+        with patch("django.utils.timezone.now", return_value=midday):
+            self.book_at(midday + timedelta(minutes=40))
+            self.login()
 
-        booking = self.upcoming(self.client.get(reverse("member_details")))[0]
+            booking = self.upcoming(self.client.get(reverse("member_details")))[0]
 
         self.assertIn("menit lagi", booking.when_label)
         self.assertTrue(booking.when_soon)

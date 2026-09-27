@@ -5,8 +5,9 @@ from django.contrib.admin.sites import AdminSite
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import User
 from django.urls import reverse
-from datetime import date, time, timedelta
+from datetime import date, datetime, time, timedelta
 from io import StringIO
+from unittest.mock import patch
 from urllib.parse import quote
 from accounts.models import Member
 from classes.models import (
@@ -1367,12 +1368,17 @@ class DailyBookingLimitTest(TestCase):
 
     def test_a_class_earlier_today_still_uses_up_the_day(self):
         """Finished classes count. A second class a day is a last-minute thing."""
-        done = self.starting_in(self.pemula, -120)
-        later = self.starting_in(self.pemula, 300)
-        self.login()
-        done.booked_members.add(self.member)
+        # Pinned to midday so "two hours ago" and "five hours from now" fall on
+        # the same date. Unpinned, from 19:00 the later class landed tomorrow and
+        # the test failed every evening, CI included.
+        midday = timezone.make_aware(datetime.combine(timezone.localdate(), time(12, 0)))
+        with patch("django.utils.timezone.now", return_value=midday):
+            done = self.starting_in(self.pemula, -120)
+            later = self.starting_in(self.pemula, 300)
+            self.login()
+            done.booked_members.add(self.member)
 
-        response = self.book(later)
+            response = self.book(later)
 
         self.assertContains(response, "bisa dibooking mulai jam")
         self.assertNotIn(self.member, later.booked_members.all())
