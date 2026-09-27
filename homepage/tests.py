@@ -3,6 +3,9 @@ from unittest.mock import patch
 from django.test import TestCase
 from django.urls import reverse
 
+from visits import busy_hours
+
+from . import business
 from .models import ReviewSummary, Testimonial
 
 
@@ -146,3 +149,21 @@ class HomepageSurvivesMissingTablesTest(TestCase):
                 response = self.client.get(reverse("home"))
 
         self.assertEqual(response.status_code, 200)
+
+
+class OpeningHoursTest(TestCase):
+    def test_weekdays_with_the_same_hours_fold_into_one_row(self):
+        self.assertEqual(
+            business.opening_hours_rows(),
+            [
+                ("Senin - Jumat", "07:00 - 21:00"),
+                ("Sabtu", "07:00 - 20:00"),
+                ("Minggu", "07:30 - 20:00"),
+            ],
+        )
+
+    def test_jam_kosong_reads_the_same_hours(self):
+        # Sunday opens 07:30, so its first bar is still the 07:00 hour
+        self.assertEqual(busy_hours.OPENING_HOURS[0], (7, 21))
+        self.assertEqual(busy_hours.OPENING_HOURS[5], (7, 20))
+        self.assertEqual(busy_hours.OPENING_HOURS[6], (7, 20))

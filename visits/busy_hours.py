@@ -17,18 +17,15 @@ from django.db.models import Count
 from django.db.models.functions import ExtractHour, ExtractIsoWeekDay
 from django.utils import timezone
 
+from homepage.business import OPENING_TIMES
+
 from .models import Visit
 
-# Python weekday() (Monday=0) -> (first hour open, hour the gym closes).
-# Sunday opens 07:30, so its 07:00 bar only covers half an hour.
+# Python weekday() (Monday=0) -> (first hour open, hour the gym closes), read from
+# the same opening times the homepage prints. Sunday opens 07:30, so its 07:00 bar
+# only covers half an hour.
 OPENING_HOURS = {
-    0: (7, 21),
-    1: (7, 21),
-    2: (7, 21),
-    3: (7, 21),
-    4: (7, 21),
-    5: (7, 20),
-    6: (7, 20),
+    day: (opens.hour, closes.hour) for day, (opens, closes) in OPENING_TIMES.items()
 }
 
 # How far back to average. Long enough to smooth out one odd week, short enough
