@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.humanize",
+    "django.contrib.sitemaps",
     # Our apps
     "accounts",
     "visits",
@@ -100,6 +101,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "mulai_web.context_processors.debug_context",
+                "mulai_web.context_processors.seo",
             ],
         },
     },

@@ -278,6 +278,13 @@ erDiagram
 
 Section order: hero → Ramadan (when on) → Kenapa Mulai → **Ulasan** → Mari Mulai → Fasilitas → kontak footer. The proof lands right after the reasons to join and directly before the Mari Mulai steps, so a visitor reads it at the moment they are deciding.
 
+### SEO
+
+- **Every page**: `<html lang="id">`, charset, a meta description (the `meta_description` block, with a site-wide default), a canonical link, and Open Graph / Twitter tags so a link pasted into WhatsApp shows `static/images/home/og.jpg`. The canonical is always `https://mulaigym.id` plus the path, because `www.mulaigym.id` serves the same pages without redirecting and Google would otherwise see two copies of every page. Built in `mulai_web.context_processors.seo`.
+- **`/sitemap.xml`**: the homepage, Panduan Alat and every machine, Belajar Gizi and every chapter, and Aturan Kelas, always on the bare https domain. Member-only pages are left out since a search visitor would only see the login form. Cached 6 hours.
+- **`/robots.txt`**: disallows `/admin/`, `/akun/`, check-in/out, and points at the sitemap. Until now the live file was only Cloudflare's managed content-signal comments with no rules; check the live file after the first deploy to confirm Cloudflare keeps these lines.
+- **Not in code, and worth more than all of it**: the Google Business Profile. Keep the website link, hours and photos there current, and keep the review count on `Ringkasan Ulasan Google` in the admin in step with it.
+
 ### Member Reviews (Ulasan)
 
 Social proof from the Google Maps listing, curated rather than pulled from an API.

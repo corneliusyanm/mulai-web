@@ -1,10 +1,29 @@
 {% load static %}
 
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
+    <meta charset="utf-8">
     <title>{% block title %}Mulai Gym{% endblock %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="{% block meta_description %}{{ DEFAULT_DESCRIPTION }}{% endblock %}">
+    <link rel="canonical" href="{{ canonical_url }}">
+
+    {# Social preview: what WhatsApp, Instagram and Facebook show when the link is shared #}
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Mulai Gym">
+    <meta property="og:locale" content="id_ID">
+    <meta property="og:url" content="{{ canonical_url }}">
+    <meta property="og:title" content="{% block og_title %}Mulai Gym{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}{{ DEFAULT_DESCRIPTION }}{% endblock %}">
+    {% if SHARE_IMAGE_URL %}
+    <meta property="og:image" content="{{ SHARE_IMAGE_URL }}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    {% endif %}
+    <meta name="twitter:card" content="summary_large_image">
+    {% block extra_head %}{% endblock %}
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{% static 'css/style.css' %}?v=66">
@@ -282,7 +301,7 @@
             </ul>
             <div class="mt-auto">
                 <div class="nav-item mb-2 d-flex justify-content-center">
-                  <a href="https://wa.me/+628996940908" class="btn py-1 px-3 rounded d-flex align-items-center justify-content-center" style="background-color: white; color: #4B4BEC; height: 28px; white-space: nowrap; overflow: hidden; font-size: 13px; width: fit-content;" target="_blank" rel="noopener noreferrer">
+                  <a href="{{ WHATSAPP_URL }}" class="btn py-1 px-3 rounded d-flex align-items-center justify-content-center" style="background-color: white; color: #4B4BEC; height: 28px; white-space: nowrap; overflow: hidden; font-size: 13px; width: fit-content;" target="_blank" rel="noopener noreferrer">
                     <div class="d-flex align-items-center justify-content-center me-1" style="background-color: #25D366; width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0;">
                         <i class="fab fa-whatsapp" style="color: white; font-size: 12px;"></i>
                     </div>

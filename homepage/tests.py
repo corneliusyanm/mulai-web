@@ -1,11 +1,16 @@
+import re
 from unittest.mock import patch
+from xml.etree import ElementTree
 
+from django.contrib.staticfiles import finders
+from django.core.cache import cache
 from django.test import TestCase
 from django.urls import reverse
 
+from equipment.models import Equipment
 from visits import busy_hours
 
-from . import business
+from . import business, seo
 from .models import ReviewSummary, Testimonial
 
 
@@ -167,3 +172,106 @@ class OpeningHoursTest(TestCase):
         self.assertEqual(busy_hours.OPENING_HOURS[0], (7, 21))
         self.assertEqual(busy_hours.OPENING_HOURS[5], (7, 20))
         self.assertEqual(busy_hours.OPENING_HOURS[6], (7, 20))
+
+
+class FreshCacheMixin:
+    """The homepage numbers are cached, so every test starts from a cold cache."""
+
+    def setUp(self):
+        super().setUp()
+        cache.clear()
+
+    def tearDown(self):
+        cache.clear()
+        super().tearDown()
+
+
+class SiteSeoTest(FreshCacheMixin, TestCase):
+    """What every page tells search engines, from base.html and context_processors.seo."""
+
+    def _body(self, url, **extra):
+        response = self.client.get(url, **extra)
+        self.assertEqual(response.status_code, 200)
+        return response.content.decode()
+
+    def test_pages_are_declared_indonesian(self):
+        self.assertIn('<html lang="id">', self._body(reverse("equipment:list")))
+
+    def test_canonical_is_the_bare_domain_even_from_www(self):
+        body = self._body(reverse("home"), HTTP_HOST="www.mulaigym.id")
+
+        self.assertIn('<link rel="canonical" href="https://mulaigym.id/">', body)
+        self.assertIn('<meta property="og:url" content="https://mulaigym.id/">', body)
+
+    def test_every_page_gets_its_own_canonical(self):
+        body = self._body(reverse("equipment:list"))
+
+        self.assertIn('<link rel="canonical" href="https://mulaigym.id/alat/">', body)
+
+    def test_a_page_without_its_own_description_gets_the_default(self):
+        body = self._body(reverse("equipment:list"))
+
+        description = re.search(r'<meta name="description" content="([^"]+)"', body).group(1)
+        self.assertIn("pemula di Bandung", description)
+
+    def test_the_landmark_keeps_its_capitals_mid_sentence(self):
+        body = self._body(reverse("equipment:list"))
+
+        self.assertIn("seberang SMPK 5 BPK Penabur", body)
+        self.assertNotIn("smpk", body)
+
+    def test_share_preview_image_is_an_absolute_https_url(self):
+        body = self._body(reverse("equipment:list"))
+
+        image = re.search(r'<meta property="og:image" content="([^"]+)"', body).group(1)
+        self.assertTrue(image.startswith("https://mulaigym.id/static/"))
+
+    def test_the_share_image_exists(self):
+        self.assertIsNotNone(finders.find(seo.SHARE_IMAGE))
+
+    def test_a_missing_share_image_drops_the_preview_instead_of_the_page(self):
+        with patch("homepage.seo.static", side_effect=ValueError("not in manifest")):
+            with self.assertLogs("homepage.seo", level="ERROR"):
+                body = self._body(reverse("equipment:list"))
+
+        self.assertNotIn('property="og:image"', body)
+
+    def test_the_menu_whatsapp_link_uses_the_one_number(self):
+        body = self._body(reverse("equipment:list"))
+
+        self.assertIn(f'href="https://wa.me/{business.WHATSAPP_NUMBER}"', body)
+
+
+class SitemapAndRobotsTest(TestCase):
+    NS = {"sm": "http://www.sitemaps.org/schemas/sitemap/0.9"}
+
+    def test_sitemap_lists_the_public_pages_on_the_bare_domain(self):
+        Equipment.objects.create(name="Leg Press", video_link="https://youtu.be/abc")
+
+        response = self.client.get("/sitemap.xml", HTTP_HOST="www.mulaigym.id")
+
+        self.assertEqual(response.status_code, 200)
+        locs = [el.text for el in ElementTree.fromstring(response.content).findall("sm:url/sm:loc", self.NS)]
+        self.assertIn("https://mulaigym.id/", locs)
+        self.assertIn("https://mulaigym.id/alat/leg-press/", locs)
+        self.assertIn("https://mulaigym.id/gizi/kalori/", locs)
+        self.assertTrue(all(loc.startswith("https://mulaigym.id/") for loc in locs))
+        self.assertFalse(any("/akun" in loc or "/admin" in loc for loc in locs))
+
+    def test_every_sitemap_page_actually_loads(self):
+        Equipment.objects.create(name="Leg Press", video_link="https://youtu.be/abc")
+        body = self.client.get("/sitemap.xml").content
+
+        for loc in ElementTree.fromstring(body).findall("sm:url/sm:loc", self.NS):
+            path = loc.text.replace("https://mulaigym.id", "")
+            self.assertEqual(self.client.get(path).status_code, 200, path)
+
+    def test_robots_points_at_the_sitemap_and_keeps_private_pages_out(self):
+        response = self.client.get("/robots.txt")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response["Content-Type"].startswith("text/plain"))
+        text = response.content.decode()
+        self.assertIn("Sitemap: https://mulaigym.id/sitemap.xml", text)
+        self.assertIn("Disallow: /admin/", text)
+        self.assertIn("Disallow: /akun/", text)
