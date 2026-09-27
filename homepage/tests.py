@@ -506,6 +506,28 @@ class HomepagePageTest(FreshCacheMixin, TestCase):
         self.assertContains(response, "Coach Dastin</span>")
         self.assertContains(response, "Coach Naufal</span>")
 
+    def test_the_top_numbers_leave_out_the_class_size(self):
+        Class.objects.create(name="Kelas Pemula (Push)", max_members=6).schedules.create(
+            day_of_week=0, start_time=time(7, 15), end_time=time(8, 15)
+        )
+
+        body = self.client.get(reverse("home")).content.decode()
+        strip = body[body.index('class="hp-proof"'):body.index('id="kenapa"')]
+
+        self.assertNotIn("Maks", strip)
+        self.assertNotIn("Kelas maks", body[:body.index('class="hp-proof"')])
+        # still said where it belongs, on the Kelas Pemula card
+        self.assertContains(self.client.get(reverse("home")), "Latihan bareng maks 6 orang")
+
+    def test_semi_private_is_sold_on_monthly_not_per_session(self):
+        response = self.client.get(reverse("home"))
+
+        semi = next(p for p in response.context["programs"] if p["key"] == "semi")
+        self.assertIn("Bayar bulanan, bukan per sesi", semi["points"])
+        self.assertIn("1-on-1", semi["text"])
+        featured = [p["key"] for p in response.context["programs"] if p["featured"]]
+        self.assertEqual(featured, ["pemula"])
+
     def test_visitor_sees_daftar_and_masuk(self):
         response = self.client.get(reverse("home"))
 

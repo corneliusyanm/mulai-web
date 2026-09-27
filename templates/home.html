@@ -32,9 +32,6 @@ WhatsApp buttons are kept to three (hero, closing section, floating pill).
                        poster="{% static 'images/home/hero-poster.webp' %}"
                        data-src="{% static 'images/home/hero-loop.mp4' %}"></video>
             </div>
-            {% if claims.pemula_size %}
-            <span class="hp-float-chip hp-float-chip-a"><i class="fas fa-people-group"></i> Kelas {{ claims.pemula_size }}</span>
-            {% endif %}
             {% if review_summary %}
             <span class="hp-float-chip hp-float-chip-b"><i class="fas fa-star"></i> {{ review_summary.rating_display }} di Google</span>
             {% endif %}
@@ -92,7 +89,7 @@ WhatsApp buttons are kept to three (hero, closing section, floating pill).
     </section>
 
     {# ============ PROOF ============ #}
-    {% if stats.pemula_share or stats.pemula_class_size or stats.mantap_percent or review_summary %}
+    {% if stats.pemula_share or stats.mantap_percent or review_summary %}
     <section class="hp-proof" aria-label="Mulai Gym dalam angka">
         <div class="hp-wrap">
             <ul class="hp-proof-grid">
@@ -100,12 +97,6 @@ WhatsApp buttons are kept to three (hero, closing section, floating pill).
                 <li class="hp-stat">
                     <span class="hp-stat-num">{{ stats.pemula_share }}</span>
                     <span class="hp-stat-label">member kami mulai dari nol</span>
-                </li>
-                {% endif %}
-                {% if stats.pemula_class_size %}
-                <li class="hp-stat">
-                    <span class="hp-stat-num">Maks {{ stats.pemula_class_size }}</span>
-                    <span class="hp-stat-label">orang per Kelas Pemula</span>
                 </li>
                 {% endif %}
                 {% if stats.mantap_percent %}
@@ -357,7 +348,7 @@ WhatsApp buttons are kept to three (hero, closing section, floating pill).
 
             <div class="hp-programs">
                 {% for program in programs %}
-                <article class="hp-program{% if program.badge %} is-featured{% endif %}">
+                <article class="hp-program{% if program.featured %} is-featured{% endif %}">
                     {% if program.badge %}<span class="hp-program-badge">{{ program.badge }}</span>{% endif %}
                     <span class="hp-program-icon"><i class="fas {{ program.icon }}" aria-hidden="true"></i></span>
                     <h3 class="hp-h3">{{ program.title }}</h3>

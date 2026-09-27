@@ -66,6 +66,7 @@ def programs(stats):
             "icon": "fa-dumbbell",
             "title": "Gym",
             "badge": "",
+            "featured": False,
             "text": "Akses semua alat selama jam buka. Cocok kalau kamu mau latihan sendiri, dibantu Panduan Alat.",
             "points": [
                 said["equipment_videos"] or "Cara pakai alat ada di Panduan Alat",
@@ -78,6 +79,7 @@ def programs(stats):
             "icon": "fa-people-group",
             "title": "Kelas Pemula",
             "badge": "Paling pas buat pemula",
+            "featured": True,
             "text": f"Latihan bareng {said['pemula_size'] or 'dalam kelompok kecil'}, dipimpin 1 coach.",
             "points": [
                 "Push, Pull, dan Leg & Core",
@@ -90,18 +92,27 @@ def programs(stats):
             "key": "semi",
             "icon": "fa-user-group",
             "title": "Semi Private",
-            "badge": "",
+            "badge": "Hampir kayak 1-on-1",
+            "featured": False,
+            # Its real pitch: a personal trainer's attention, paid monthly rather
+            # than per session, so coming more often never costs more.
             "text": (
-                f"Kayak latihan sama personal trainer, tapi bareng {said['semi_size'] or 'beberapa orang'}. "
-                "Coach-nya muter, bimbing satu-satu."
+                f"Rasanya hampir kayak personal trainer. Satu coach pegang {said['semi_size'] or 'sedikit orang'}, "
+                "jadi nggak lama nunggu giliran, dan kalau lagi sepi sering jadi 1-on-1."
             ),
-            "points": ["Program lebih personal", "Jadwal pagi dan sore", "Paketnya sudah termasuk akses gym"],
+            "points": [
+                "Bayar bulanan, bukan per sesi",
+                "Makin sering datang, makin worth it",
+                "Jadwal pagi dan sore",
+                "Paketnya sudah termasuk akses gym",
+            ],
         },
         {
             "key": "pt",
             "icon": "fa-user",
             "title": "Personal Trainer",
             "badge": "",
+            "featured": False,
             "text": "1 coach, khusus buat kamu. Buat yang mau program paling personal.",
             "points": ["Latihan 1-on-1", "Program disusun khusus buat kamu"],
         },
@@ -165,8 +176,9 @@ def faqs(stats):
         (
             "Bedanya Kelas Pemula, Semi Private, dan Personal Trainer apa?",
             f"Kelas Pemula itu latihan bareng {said['pemula_size'] or 'dalam kelompok kecil'}, "
-            "dipimpin 1 coach. Semi Private kayak personal trainer tapi bareng "
-            f"{said['semi_size'] or 'beberapa orang'}, coach-nya muter bimbing satu-satu. "
+            "dipimpin 1 coach. Semi Private rasanya hampir kayak personal trainer: satu coach "
+            f"pegang {said['semi_size'] or 'sedikit orang'} dan kalau lagi sepi sering jadi 1-on-1, "
+            "tapi bayarnya bulanan, bukan per sesi, jadi makin sering datang makin worth it. "
             "Personal Trainer itu 1 coach khusus buat kamu.",
         ),
         (
