@@ -108,6 +108,32 @@ def programs(stats):
     ]
 
 
+# From the coaches' own profile cards (media/foto_pelatih); the photos are the
+# original shoots in front of the chevron wall. The quotes are what members said
+# about them, as printed on those cards.
+COACHES = [
+    {
+        "short": "Dastin",
+        "name": "Dastin N. Alfiyyah",
+        "photo": "images/home/coach-dastin.webp",
+        "facts": [
+            "Sertifikasi Advanced Fitness Trainer, Rai Institute",
+            "S1 Pendidikan Jasmani Kesehatan dan Rekreasi, UPI",
+        ],
+        "quote": "Si introvert yang ngajarnya sabar, jadi bikin nyaman.",
+        "quote_by": "kata member pemula",
+    },
+    {
+        "short": "Naufal",
+        "name": "Naufal Fauzan",
+        "photo": "images/home/coach-naufal.webp",
+        "facts": ["5 tahun di dunia kebugaran", "70 klien dalam 3 tahun terakhir"],
+        "quote": "Ngebantu capai goal secara menyeluruh, nggak cuma ngelatih di tempat doang.",
+        "quote_by": "kata member",
+    },
+]
+
+
 def faqs(stats):
     said = claims(stats)
     share = stats.get("pemula_share")

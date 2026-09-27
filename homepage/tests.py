@@ -496,6 +496,16 @@ class HomepagePageTest(FreshCacheMixin, TestCase):
         self.assertIn("mampir", answer)
         self.assertIn("sudah biasa nge-gym", answer)
 
+    def test_both_coaches_are_introduced_with_their_credentials(self):
+        response = self.client.get(reverse("home"))
+
+        self.assertContains(response, "Dastin N. Alfiyyah")
+        self.assertContains(response, "Sertifikasi Advanced Fitness Trainer, Rai Institute")
+        self.assertContains(response, "Naufal Fauzan")
+        self.assertContains(response, "70 klien dalam 3 tahun terakhir")
+        self.assertContains(response, "Coach Dastin</span>")
+        self.assertContains(response, "Coach Naufal</span>")
+
     def test_visitor_sees_daftar_and_masuk(self):
         response = self.client.get(reverse("home"))
 

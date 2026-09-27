@@ -391,16 +391,22 @@ WhatsApp buttons are kept to three (hero, closing section, floating pill).
                 <a class="hp-btn hp-btn-ghost hp-coach-cta" href="{% url 'classes:class_rules' %}">Cara booking kelas</a>
             </header>
             <div class="hp-coaches">
-                <figure class="hp-coach">
-                    <img src="{% static 'images/home/coach-dastin.webp' %}" width="800" height="1000" loading="lazy" decoding="async"
-                         alt="Coach Dastin mendampingi member di mesin latihan kaki">
-                    <figcaption><span class="hp-chip">Coach Dastin</span></figcaption>
-                </figure>
-                <figure class="hp-coach">
-                    <img src="{% static 'images/home/coach-naufal.webp' %}" width="800" height="1000" loading="lazy" decoding="async"
-                         alt="Coach Naufal mendampingi member latihan dumbbell press">
-                    <figcaption><span class="hp-chip">Coach Naufal</span></figcaption>
-                </figure>
+                {% for coach in coaches %}
+                <article class="hp-coach">
+                    <div class="hp-coach-photo">
+                        <img src="{% static coach.photo %}" width="640" height="800" loading="lazy" decoding="async"
+                             alt="Coach {{ coach.name }}, pelatih di Mulai Gym">
+                        <span class="hp-chip">Coach {{ coach.short }}</span>
+                    </div>
+                    <div class="hp-coach-body">
+                        <h3 class="hp-h3">{{ coach.name }}</h3>
+                        <ul class="hp-coach-facts">
+                            {% for fact in coach.facts %}<li><i class="fas fa-check" aria-hidden="true"></i>{{ fact }}</li>{% endfor %}
+                        </ul>
+                        <blockquote class="hp-coach-quote">&ldquo;{{ coach.quote }}&rdquo; <span>{{ coach.quote_by }}</span></blockquote>
+                    </div>
+                </article>
+                {% endfor %}
             </div>
         </div>
     </section>

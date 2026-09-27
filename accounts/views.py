@@ -660,6 +660,7 @@ def home(request):
         "claims": homepage_content.claims(stats),
         "faqs": faq_items,
         "programs": homepage_content.programs(stats),
+        "coaches": homepage_content.COACHES,
         "wa": homepage_content.whatsapp_links(),
         "gym": business,
         "opening_hours": business.opening_hours_rows(),
