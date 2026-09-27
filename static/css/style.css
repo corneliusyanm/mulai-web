@@ -699,7 +699,7 @@ section {
   display: none;
 }
 
-.review-card {
+.testimonial-card {
   flex: 0 0 86%;
   scroll-snap-align: center;
   margin: 0;
@@ -713,14 +713,14 @@ section {
   flex-direction: column;
 }
 
-.review-card-head {
+.testimonial-head {
   display: flex;
   align-items: center;
   gap: 10px;
   margin-bottom: 10px;
 }
 
-.review-avatar {
+.testimonial-avatar {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -733,19 +733,19 @@ section {
   font-weight: 700;
 }
 
-.review-name {
+.testimonial-name {
   margin: 0;
   font-weight: 700;
   font-size: 0.95rem;
 }
 
-.review-stars {
+.testimonial-stars {
   color: #f5a623;
   font-size: 0.72rem;
   letter-spacing: 1px;
 }
 
-.review-text {
+.testimonial-text {
   margin: 0;
   font-size: 0.9rem;
   line-height: 1.55;
@@ -753,7 +753,7 @@ section {
   white-space: pre-line;
 }
 
-.review-link {
+.testimonial-link {
   margin-top: 10px;
   font-size: 0.78rem;
   font-weight: 600;

@@ -23,19 +23,19 @@ Renders nothing at all when there is neither a rating badge nor a review.
         {% if testimonials %}
             <div class="reviews-scroller">
                 {% for review in testimonials %}
-                    <figure class="review-card">
-                        <div class="review-card-head">
-                            <span class="review-avatar">{{ review.initial }}</span>
-                            <div class="review-who">
-                                <figcaption class="review-name">{{ review.author_name }}</figcaption>
-                                <span class="review-stars" aria-label="{{ review.rating }} dari 5">
+                    <figure class="testimonial-card">
+                        <div class="testimonial-head">
+                            <span class="testimonial-avatar">{{ review.initial }}</span>
+                            <div class="testimonial-who">
+                                <figcaption class="testimonial-name">{{ review.author_name }}</figcaption>
+                                <span class="testimonial-stars" aria-label="{{ review.rating }} dari 5">
                                     {% for _ in review.stars %}<i class="fas fa-star"></i>{% endfor %}
                                 </span>
                             </div>
                         </div>
-                        <blockquote class="review-text">{{ review.text }}</blockquote>
+                        <blockquote class="testimonial-text">{{ review.text }}</blockquote>
                         {% if review.review_url %}
-                            <a href="{{ review.review_url }}" target="_blank" rel="noopener noreferrer" class="review-link">
+                            <a href="{{ review.review_url }}" target="_blank" rel="noopener noreferrer" class="testimonial-link">
                                 Lihat di Google
                             </a>
                         {% endif %}
