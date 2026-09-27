@@ -26,7 +26,7 @@
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=67">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=68">
     
     <link rel="icon" type="image/png" href="{% static 'favicons/favicon-96x96.png' %}" sizes="96x96" />
     <link rel="icon" type="image/svg+xml" href="{% static 'favicons/favicon.svg' %}" />
@@ -300,14 +300,6 @@
                 </li> -->
             </ul>
             <div class="mt-auto">
-                <div class="nav-item mb-2 d-flex justify-content-center">
-                  <a href="{{ WHATSAPP_URL }}" class="btn py-1 px-3 rounded d-flex align-items-center justify-content-center" style="background-color: white; color: #4B4BEC; height: 28px; white-space: nowrap; overflow: hidden; font-size: 13px; width: fit-content;" target="_blank" rel="noopener noreferrer">
-                    <div class="d-flex align-items-center justify-content-center me-1" style="background-color: #25D366; width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0;">
-                        <i class="fab fa-whatsapp" style="color: white; font-size: 12px;"></i>
-                    </div>
-                    <span style="font-weight: bold;">Tanya-tanya gratis</span>
-                  </a>
-                </div>
                 {% if request.session.member_email %}
                     <div class="nav-item mb-2">
                         <a class="btn btn-secondary w-100" href="{% url 'member_details' %}">Akun Saya</a>

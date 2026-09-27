@@ -24,7 +24,6 @@ def seo(request):
         "DEFAULT_DESCRIPTION": DEFAULT_DESCRIPTION,
         # None if the file ever goes missing: the page loses its preview, not its 200
         "SHARE_IMAGE_URL": absolute_static(SHARE_IMAGE),
-        "WHATSAPP_URL": business.whatsapp_url(),
     }
 
 

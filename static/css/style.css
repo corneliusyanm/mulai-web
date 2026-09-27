@@ -4376,7 +4376,7 @@ section {
 }
 
 .hp-program-points {
-  margin: 0 0 20px;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
@@ -4390,8 +4390,6 @@ section {
 }
 
 .hp-program-points .fa-check { margin-top: 4px; color: var(--primary); font-size: 0.85rem; }
-
-.hp-program .hp-btn { margin-top: auto; width: 100%; font-size: 0.95rem; }
 
 .hp-cicilan {
   display: flex;

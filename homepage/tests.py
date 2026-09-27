@@ -246,10 +246,10 @@ class SiteSeoTest(FreshCacheMixin, TestCase):
 
         self.assertNotIn('property="og:image"', body)
 
-    def test_the_menu_whatsapp_link_uses_the_one_number(self):
+    def test_the_side_menu_has_no_whatsapp_button(self):
         body = self._body(reverse("equipment:list"))
 
-        self.assertIn(f'href="https://wa.me/{business.WHATSAPP_NUMBER}"', body)
+        self.assertNotIn("wa.me", body)
 
 
 class SitemapAndRobotsTest(TestCase):
@@ -473,13 +473,28 @@ class HomepagePageTest(FreshCacheMixin, TestCase):
         self.assertNotIn("wa.me/+", body)
         self.assertIn(f"https://wa.me/{business.WHATSAPP_NUMBER}", body)
 
-    def test_every_program_asks_for_the_price_on_whatsapp(self):
+    def test_programs_do_not_ask_for_the_price(self):
         response = self.client.get(reverse("home"))
 
+        self.assertNotContains(response, "Tanya harga")
+        self.assertNotContains(response, "tanya harga")
         for program in response.context["programs"]:
-            self.assertIn(f"wa.me/{business.WHATSAPP_NUMBER}", program["ask_url"])
-            self.assertIn("harga", program["ask_url"])
-        self.assertContains(response, "Tanya harga", count=len(response.context["programs"]) * 2)
+            self.assertNotIn("ask_url", program)
+
+    def test_only_the_important_whatsapp_buttons(self):
+        body = self.client.get(reverse("home")).content.decode()
+
+        # hero, closing section, floating pill, plus the FAQ text link and the
+        # footer number. The side menu has none.
+        self.assertEqual(body.count(f"https://wa.me/{business.WHATSAPP_NUMBER}"), 5)
+        self.assertNotIn("Tanya-tanya gratis</span>", body)
+
+    def test_the_price_answer_sends_first_timers_to_the_gym(self):
+        response = self.client.get(reverse("home"))
+
+        answer = next(f["answer"] for f in response.context["faqs"] if f["question"] == "Berapa harganya?")
+        self.assertIn("mampir", answer)
+        self.assertIn("sudah biasa nge-gym", answer)
 
     def test_visitor_sees_daftar_and_masuk(self):
         response = self.client.get(reverse("home"))
@@ -510,7 +525,7 @@ class HomepagePageTest(FreshCacheMixin, TestCase):
 
 
 class HomepageHasNoPricesTest(FreshCacheMixin, TestCase):
-    """Prices are talked through in a chat, never printed on the homepage."""
+    """A first-timer hears the price in person, so it is never printed here."""
 
     def test_no_price_anywhere_on_the_page(self):
         body = self.client.get(reverse("home")).content.decode()

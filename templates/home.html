@@ -18,8 +18,9 @@
 Every word on this page is real text, not text inside an image, so search
 engines can read it and it stays sharp on every screen. The numbers come from
 homepage/stats.py, the FAQ and program cards from homepage/content.py, and the
-address and hours from homepage/business.py. There are no prices on purpose:
-every program ends in a WhatsApp link instead.
+address and hours from homepage/business.py. There are no prices and no "tanya
+harga" buttons on purpose: a first-timer hears the price in person, at the gym.
+WhatsApp buttons are kept to three (hero, closing section, floating pill).
 {% endcomment %}
 <div class="hp">
 
@@ -351,7 +352,7 @@ every program ends in a WhatsApp link instead.
             <header class="hp-head">
                 <p class="hp-kicker">Program</p>
                 <h2 class="hp-h2">Pilih cara <em>mulaimu.</em></h2>
-                <p class="hp-lede">Bisa mulai dari gym aja, atau langsung ditemenin coach. Harganya? Tanya aja dulu, gratis.</p>
+                <p class="hp-lede">Bisa mulai dari gym aja, atau langsung ditemenin coach.</p>
             </header>
 
             <div class="hp-programs">
@@ -366,9 +367,6 @@ every program ends in a WhatsApp link instead.
                         <li><i class="fas fa-check" aria-hidden="true"></i>{{ point }}</li>
                         {% endfor %}
                     </ul>
-                    <a class="hp-btn hp-btn-outline" href="{{ program.ask_url }}" target="_blank" rel="noopener noreferrer" aria-label="Tanya harga {{ program.title }} lewat WhatsApp">
-                        <i class="fab fa-whatsapp"></i> Tanya harga
-                    </a>
                 </article>
                 {% endfor %}
             </div>
@@ -481,11 +479,6 @@ every program ends in a WhatsApp link instead.
                     <p>Datang, kenalan sama coach, dan mulai dari gerakan pertama.</p>
                 </li>
             </ol>
-            <div class="hp-center">
-                <a class="hp-btn hp-btn-lime" href="{{ wa.general }}" target="_blank" rel="noopener noreferrer">
-                    <i class="fab fa-whatsapp"></i> Mulai dari chat dulu
-                </a>
-            </div>
         </div>
     </section>
 
@@ -525,7 +518,6 @@ every program ends in a WhatsApp link instead.
                         <p class="hp-loc-landmark">{{ gym.LANDMARK }}. Cari gedung ungu dengan logo Mulai warna hijau di depannya.</p>
                         <div class="hp-loc-actions">
                             <a class="hp-btn hp-btn-primary" href="{{ gym.MAPS_URL }}" target="_blank" rel="noopener noreferrer"><i class="fas fa-diamond-turn-right"></i> Buka Google Maps</a>
-                            <a class="hp-btn hp-btn-outline" href="{{ wa.visit }}" target="_blank" rel="noopener noreferrer"><i class="fab fa-whatsapp"></i> Chat dulu</a>
                         </div>
                         <h3 class="hp-loc-hours-title"><i class="fas fa-clock" aria-hidden="true"></i> Jam buka</h3>
                         <dl class="hp-hours">

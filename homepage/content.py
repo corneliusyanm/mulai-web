@@ -5,9 +5,11 @@ data, so both read this one list and cannot say different things. The program
 cards live here so the four of them are one loop, not four copies, and every
 number-or-fallback phrase is written once in `claims()`.
 
-No prices anywhere, on purpose: the gym would rather talk price in a chat, where
-the admin can find the program that fits, than be picked or skipped on a number.
-Every program ends in a WhatsApp link instead. `HomepageHasNoPricesTest` holds it.
+No prices anywhere, and no "tanya harga" button, on purpose. A first-timer hears
+the price in person at the gym, where the admin has time to explain what training
+will do for them and can see who is serious. Somebody who already trains does not
+need that, so the FAQ tells them they can ask on WhatsApp. `HomepageHasNoPricesTest`
+holds it.
 """
 
 import json
@@ -51,16 +53,12 @@ def seo_description(stats):
 def whatsapp_links():
     return {
         "general": business.whatsapp_url("Halo Mulai Gym, aku mau tanya-tanya dulu."),
-        "visit": business.whatsapp_url("Halo Mulai Gym, aku mau mampir lihat tempatnya."),
         "ramadan": business.whatsapp_url("Halo Mulai Gym, mau tanya tentang program Ramadan"),
     }
 
 
 def programs(stats):
     said = claims(stats)
-
-    def ask(name):
-        return business.whatsapp_url(f"Halo Mulai Gym, aku mau tanya harga {name}.")
 
     return [
         {
@@ -74,7 +72,6 @@ def programs(stats):
                 "Datang kapan aja selama jam buka",
                 "Ada pilihan sekali datang",
             ],
-            "ask_url": ask("membership gym"),
         },
         {
             "key": "pemula",
@@ -88,7 +85,6 @@ def programs(stats):
                 "Booking lewat website",
                 "Paketnya sudah termasuk akses gym",
             ],
-            "ask_url": ask("Kelas Pemula"),
         },
         {
             "key": "semi",
@@ -100,7 +96,6 @@ def programs(stats):
                 "Coach-nya muter, bimbing satu-satu."
             ),
             "points": ["Program lebih personal", "Jadwal pagi dan sore", "Paketnya sudah termasuk akses gym"],
-            "ask_url": ask("Semi Private"),
         },
         {
             "key": "pt",
@@ -109,7 +104,6 @@ def programs(stats):
             "badge": "",
             "text": "1 coach, khusus buat kamu. Buat yang mau program paling personal.",
             "points": ["Latihan 1-on-1", "Program disusun khusus buat kamu"],
-            "ask_url": ask("Personal Trainer"),
         },
     ]
 
@@ -151,8 +145,9 @@ def faqs(stats):
         ),
         (
             "Berapa harganya?",
-            "Tergantung program dan durasinya. Chat kami di WhatsApp, tanya-tanya gratis, "
-            "nanti admin bantu cariin yang paling pas buat kamu.",
+            "Harganya tergantung program dan durasi, dan kami jelasin langsung waktu kamu "
+            "mampir, biar sekalian lihat tempatnya dan kenalan sama coach. Kalau kamu sudah "
+            "biasa nge-gym, boleh tanya langsung lewat WhatsApp.",
         ),
         (
             "Bisa bayar cicilan?",
