@@ -8,6 +8,7 @@ from django.shortcuts import render
 import csv
 
 from visits.admin import admin_site
+from .forms import member_style_phone
 from .models import Member, ActiveMember, User, Tamu, Masukkan, Prospect
 from payments.models import Payment
 from purchases.models import Sale, SaleItem
@@ -768,6 +769,22 @@ class TamuAdmin(WhatsAppLinkMixin, admin.ModelAdmin):
     list_filter = ("is_pemula", "has_worked_out_before", "created_at")
     search_fields = ("name", "phone_number", "social_media_username")
     readonly_fields = ("created_at",)
+
+    def get_search_results(self, request, queryset, search_term):
+        """Match a phone number however it is typed and however it was stored.
+
+        New guests are stored "62812...", older ones as they typed them, mostly
+        "0812...". Staff search the way people say numbers, so a search that is
+        a phone number also matches on the part after the 0 or 62.
+        """
+        results, may_have_duplicates = super().get_search_results(
+            request, queryset, search_term
+        )
+        typed = search_term.replace(" ", "").replace("-", "").replace("+", "")
+        if len(typed) >= 6 and typed.isdigit():
+            core = member_style_phone(typed)[2:]
+            results = results | queryset.filter(phone_number__contains=core)
+        return results, may_have_duplicates
 
 
 class MasukkanAdmin(admin.ModelAdmin):

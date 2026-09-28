@@ -2547,7 +2547,14 @@ class BukuTamuTest(TestCase):
         )
 
     def test_the_number_is_saved_the_way_member_numbers_are(self):
-        for typed in ("0812-3456-7890", "+62 812 3456 7890", "81234567890", "6281234567890"):
+        for typed in (
+            "0812-3456-7890",
+            "+62 812 3456 7890",
+            "+62 0812 3456 7890",
+            "0062 812 3456 7890",
+            "81234567890",
+            "6281234567890",
+        ):
             with self.subTest(typed=typed):
                 Tamu.objects.all().delete()
                 self.assertRedirects(self.post(typed), reverse("tamu_signup_success"))
@@ -2581,3 +2588,32 @@ class FormPagesHaveNoEmojiTest(TestCase):
             with self.subTest(page=name):
                 body = self.client.get(reverse(name)).content.decode()
                 self.assertIsNone(emoji.search(body))
+
+
+class GuestAdminSearchTest(TestCase):
+    """Staff search a guest by phone the way people say it, in either stored format."""
+
+    def setUp(self):
+        self.staff = User.objects.create_superuser("desk", "desk@example.com", "pass12345")
+        self.client.force_login(self.staff)
+        Tamu.objects.create(name="Tamu Lama", phone_number="081234567890", has_worked_out_before="belum")
+        Tamu.objects.create(name="Tamu Baru", phone_number="6281298765432", has_worked_out_before="belum")
+
+    def search(self, term):
+        return self.client.get("/admin/accounts/tamu/", {"q": term}).content.decode()
+
+    def test_a_number_typed_with_0_finds_a_guest_stored_with_62(self):
+        body = self.search("0812-9876-5432")
+
+        self.assertIn("Tamu Baru", body)
+        self.assertNotIn("Tamu Lama", body)
+
+    def test_a_number_typed_with_62_finds_a_guest_stored_as_typed(self):
+        body = self.search("+62 812 3456 7890")
+
+        self.assertIn("Tamu Lama", body)
+        self.assertNotIn("Tamu Baru", body)
+
+    def test_a_name_search_still_works(self):
+        self.assertIn("Tamu Lama", self.search("Lama"))
+

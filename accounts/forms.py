@@ -35,6 +35,25 @@ class MasukkanForm(forms.ModelForm):
         self.fields["topic"].required = False
 
 
+def member_style_phone(raw):
+    """Any way an Indonesian number gets typed, as digits starting 62.
+
+    That is how member numbers are stored, so a guest can be matched to the
+    membership they buy later. "0812", "812", "+62 812", "+62 0812" (country code
+    plus the trunk zero) and "0062 812" all come out as "62812...".
+    """
+    digits = "".join(ch for ch in raw or "" if ch.isdigit())
+    if digits.startswith("00"):
+        digits = digits[2:]
+    if digits.startswith("620"):
+        digits = "62" + digits[3:]
+    elif digits.startswith("0"):
+        digits = "62" + digits[1:]
+    elif digits.startswith("8"):
+        digits = "62" + digits
+    return digits
+
+
 class TamuForm(forms.ModelForm):
     class Meta:
         model = Tamu
@@ -68,11 +87,7 @@ class TamuForm(forms.ModelForm):
         "62812...", so a guest who later joined could not be matched to their
         membership without rewriting both sides first.
         """
-        digits = "".join(ch for ch in self.cleaned_data.get("phone_number", "") if ch.isdigit())
-        if digits.startswith("0"):
-            digits = "62" + digits[1:]
-        elif digits.startswith("8"):
-            digits = "62" + digits
+        digits = member_style_phone(self.cleaned_data.get("phone_number", ""))
         if len(digits) < 9:
             raise forms.ValidationError("Nomornya kayaknya kurang, coba cek lagi ya.")
         return digits

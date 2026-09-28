@@ -1067,7 +1067,8 @@ This provides consistent experience level classification across both members and
   - A short, warm form for somebody at the front desk ("Selamat datang di Mulai Gym!").
   - On submission, saves the data and shows a thank-you page with next steps: look at Panduan Alat, ask the admin (mentioning the one-visit option, never a price), follow Instagram.
   - Automatically calculates `is_pemula` based on form input.
-- **Phone numbers are saved the way member numbers are** (digits, starting `62`), by `TamuForm.clean_phone_number()`. Guests used to be saved as typed, mostly `0812...`, which is why matching guests to later memberships needs normalising older rows first. A number shorter than 9 digits is refused with a friendly message.
+- **Phone numbers are saved the way member numbers are** (digits, starting `62`), by `member_style_phone()` in `accounts/forms.py`, which also handles `+62 0812...` and `0062 812...`. Guests used to be saved as typed, mostly `0812...`, and those older rows are left as they are, so matching guests to later memberships means normalising the older side too. A number shorter than 9 digits is refused with a friendly message.
+- **Searching guests in the admin by phone works in either format**: `TamuAdmin.get_search_results()` also matches on the part after the `0` or `62`, so staff typing `0812...` find a guest stored as `62812...`, and the other way round.
 - **Why this page matters**: as of September 2026, 37 of 305 guests later became members (about 1 in 8), usually within 5 days of their visit.
 
 ---
