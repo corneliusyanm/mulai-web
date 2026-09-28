@@ -96,9 +96,8 @@ def equipment_list(request):
         "group_counts": {group["id"]: len(group["items"]) for group in groups},
         "starter": guide.starter(equipments),
         "total": len(equipments),
-        "all_have_video": bool(equipments) and all(e.video_link for e in equipments),
-        # Kept for anything still reading the old shape: {muscle_group: [...]}.
-        "grouped_equipments": {group["name"]: group["items"] for group in groups},
+        # a link that is not a YouTube video has no player, so it does not count
+        "all_have_video": bool(equipments) and all(e.get_youtube_embed_url() for e in equipments),
     }
     return render(request, "equipment/list.html", context)
 

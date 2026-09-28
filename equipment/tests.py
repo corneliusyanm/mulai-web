@@ -362,6 +362,7 @@ class EquipmentModelTest(TestCase):
 
 class EquipmentViewsTest(TestCase):
     def setUp(self):
+        cache.clear()
         self.equipment1 = Equipment.objects.create(
             name="Chest Press",
             muscle_group="Chest",
@@ -381,8 +382,7 @@ class EquipmentViewsTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Chest Press")
         self.assertContains(response, "Bicep Curl")
-        self.assertIn("grouped_equipments", response.context)
-        self.assertIn("Chest", response.context["grouped_equipments"])
+        self.assertIn("Chest", [group["name"] for group in response.context["groups"]])
 
     def test_equipment_detail_view(self):
         """
@@ -694,6 +694,7 @@ class YouTubeEmbedReferrerPolicyTest(TestCase):
     """YouTube shows Error 153 on an embed whose page sends no Referer."""
 
     def setUp(self):
+        cache.clear()
         self.equipment = Equipment.objects.create(
             name="Chest Press",
             muscle_group="Chest",
@@ -886,3 +887,27 @@ class PanduanAlatDetailPageTest(TestCase):
         response = self.get(self.press)
 
         self.assertEqual(response.context["targets"], ["Paha", "Pantat"])
+
+
+class NotEveryLinkIsAVideoTest(TestCase):
+    """A machine whose link is not a YouTube video has no player and no thumbnail."""
+
+    def setUp(self):
+        cache.clear()
+        Equipment.objects.create(name="Leg Press", muscle_group="Kaki", video_link="https://www.youtube.com/watch?v=abc")
+        Equipment.objects.create(name="Rowing", muscle_group="Kaki", video_link="https://www.instagram.com/reel/xyz/")
+
+    def tearDown(self):
+        cache.clear()
+
+    def test_the_list_does_not_claim_every_machine_has_a_video(self):
+        response = self.client.get(reverse("equipment:list"))
+
+        self.assertContains(response, "2 alat di Mulai Gym.")
+        self.assertNotContains(response, "semua ada video")
+
+    def test_no_broken_thumbnail_is_printed(self):
+        for url in (reverse("equipment:list"), reverse("equipment:detail", args=["leg-press"])):
+            with self.subTest(url=url):
+                self.assertNotContains(self.client.get(url), 'src="None"')
+

@@ -38,7 +38,7 @@ without JS the same links jump to each group's section instead.
                 <a class="alat-starter-item" href="{% url 'equipment:detail' step.equipment.slug %}">
                     <span class="alat-starter-num">{{ step.position }}</span>
                     <span class="alat-thumb alat-thumb-sm">
-                        <img src="{{ step.equipment.get_youtube_thumbnail_url }}" alt="" width="480" height="360" loading="lazy" decoding="async">
+                        {% with thumb=step.equipment.get_youtube_thumbnail_url %}{% if thumb %}<img src="{{ thumb }}" alt="" width="480" height="360" loading="lazy" decoding="async">{% endif %}{% endwith %}
                     </span>
                     <span class="alat-starter-text">
                         <span class="alat-starter-name">{{ step.equipment.name }}</span>
@@ -80,7 +80,7 @@ without JS the same links jump to each group's section instead.
                 <a class="alat-card" href="{% url 'equipment:detail' item.slug %}"
                    data-search="{{ item.name|lower }} {{ group.label|lower }} {{ item.detailed_muscle_group|lower }}">
                     <span class="alat-thumb">
-                        <img src="{{ item.get_youtube_thumbnail_url }}" alt="" width="480" height="360" loading="lazy" decoding="async">
+                        {% with thumb=item.get_youtube_thumbnail_url %}{% if thumb %}<img src="{{ thumb }}" alt="" width="480" height="360" loading="lazy" decoding="async">{% endif %}{% endwith %}
                         <span class="alat-play" aria-hidden="true"><i class="fas fa-play"></i></span>
                     </span>
                     <span class="alat-card-body">

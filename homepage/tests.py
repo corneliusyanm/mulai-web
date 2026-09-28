@@ -426,8 +426,9 @@ class HomepageStatsTest(FreshCacheMixin, TestCase):
         self.assertTrue(stats.homepage_stats()["equipment_all_have_video"])
 
         cache.clear()
-        Equipment.objects.create(name="Rowing", video_link="")
+        Equipment.objects.create(name="Rowing", video_link="https://www.instagram.com/reel/xyz/")
         result = stats.homepage_stats()
+        # a link that is not a YouTube video has no player, so it does not count
         self.assertFalse(result["equipment_all_have_video"])
         self.assertEqual(result["equipment_total"], 3)
 

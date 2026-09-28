@@ -1079,7 +1079,7 @@ Every machine has a QR sticker that opens its page, so most visits come from som
 
 ### The list page (`/alat/`)
 
-- **Hero**: how many machines there are, whether all of them have a video, and "scan the QR on the machine".
+- **Hero**: how many machines there are, whether all of them have a playable YouTube video (a link to anywhere else has no player, so it does not count; the homepage uses the same test), and "scan the QR on the machine".
 - **Mulai dari sini**: five machines for a first visit, in order: Treadmill (warm-up), Leg Press, Vertical Press, Lat Pulldown, Multi Press. All machines, so the movement is guided, and between them they cover the body. The set is `STARTER` in `equipment/guide.py`; it was proposed from the guide itself and the coaches have the final say. A slug that is missing from the database is skipped.
 - **Mau latih bagian mana?**: a body map (front and back, inline SVG in `templates/equipment/_body_map.html`). Tapping an area filters the grid to that group; an area is only a link when its group has machines. Chips for every group, including Kardio and Macam-macam, and a search box, filter the same grid. The filter is in the address (`/alat/#grp-dada`), so it can be shared.
 - **The grid**: grouped by muscle, in the order `GROUP_LABELS` sets (Kaki, Dada, Punggung, Bahu, Lengan, Kardio, Macam-macam, then anything else as typed). Each card is the video's thumbnail, cropped to the vertical video inside YouTube's 4:3 image, and links to the machine's page. No player loads on the list.

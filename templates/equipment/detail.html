@@ -44,7 +44,7 @@ JS their links open YouTube instead.
             <div class="alat-tips-row">
                 <a class="alat-tip is-active" href="{{ equipment.video_link }}" target="_blank" rel="noopener noreferrer"
                    data-embed="{{ equipment.get_youtube_embed_url }}">
-                    <span class="alat-thumb"><img src="{{ equipment.get_youtube_thumbnail_url }}" alt="" width="480" height="360" loading="lazy" decoding="async"></span>
+                    <span class="alat-thumb">{% with thumb=equipment.get_youtube_thumbnail_url %}{% if thumb %}<img src="{{ thumb }}" alt="" width="480" height="360" loading="lazy" decoding="async">{% endif %}{% endwith %}</span>
                     <span class="alat-tip-label">Tutorial utama</span>
                 </a>
                 {% for video in extras %}
@@ -79,7 +79,7 @@ JS their links open YouTube instead.
                 {% for item in related %}
                 <a class="alat-card" href="{% url 'equipment:detail' item.slug %}">
                     <span class="alat-thumb">
-                        <img src="{{ item.get_youtube_thumbnail_url }}" alt="" width="480" height="360" loading="lazy" decoding="async">
+                        {% with thumb=item.get_youtube_thumbnail_url %}{% if thumb %}<img src="{{ thumb }}" alt="" width="480" height="360" loading="lazy" decoding="async">{% endif %}{% endwith %}
                         <span class="alat-play" aria-hidden="true"><i class="fas fa-play"></i></span>
                     </span>
                     <span class="alat-card-body">

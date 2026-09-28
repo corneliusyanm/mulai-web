@@ -90,10 +90,10 @@ def _compute():
         if mantap_percent < MIN_MANTAP_PERCENT:
             mantap_percent = None
 
-    equipment = Equipment.objects.aggregate(
-        total=Count("id"),
-        with_video=Count("id", filter=Q(video_link__gt="")),
-    )
+    # A playable YouTube video, not just a filled-in link: the same test the
+    # Panduan Alat page uses before it says every machine has one.
+    videos = [e.get_youtube_embed_url() for e in Equipment.objects.only("video_link")]
+    equipment = {"total": len(videos), "with_video": sum(1 for v in videos if v)}
 
     return {
         "pemula_share": pemula_share,
