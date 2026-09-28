@@ -237,6 +237,10 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
+# Django's default "same-origin" sends no Referer to other sites, and YouTube
+# refuses an embed without one (Error 153). Cross-origin this sends only the
+# origin, never the path.
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 X_FRAME_OPTIONS = "DENY"  # Or 'SAMEORIGIN' if frames are needed
 SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = True

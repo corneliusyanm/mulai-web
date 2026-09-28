@@ -686,3 +686,26 @@ class EquipmentDetailViewAnalyticsTest(TestCase):
         self.assertEqual(self.equipment.total_views, 1)
         self.assertEqual(self.equipment.anonymous_views, 1)
         self.assertEqual(self.equipment.authenticated_views, 0)
+
+
+class YouTubeEmbedReferrerPolicyTest(TestCase):
+    """YouTube shows Error 153 on an embed whose page sends no Referer."""
+
+    def setUp(self):
+        self.equipment = Equipment.objects.create(
+            name="Chest Press",
+            muscle_group="Chest",
+            video_link="https://www.youtube.com/watch?v=chest",
+        )
+
+    def test_pages_with_embeds_send_the_origin_to_other_sites(self):
+        for url in (
+            reverse("equipment:list"),
+            reverse("equipment:detail", kwargs={"slug": self.equipment.slug}),
+        ):
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertEqual(
+                    response.headers["Referrer-Policy"],
+                    "strict-origin-when-cross-origin",
+                )
