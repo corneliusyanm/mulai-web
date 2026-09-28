@@ -5474,3 +5474,177 @@ section {
   .bm-zone, .alat-card, .alat-starter-item { transition: none; }
   .alat-card:active, .alat-starter-item:active { transform: none; }
 }
+
+/* ==========================================================================
+   Form pages: Kotak Masukkan, Buku Tamu, and their thank-you pages (fm-*).
+   Same .hp tokens as the homepage.
+   ========================================================================== */
+.fm { padding: 36px 0 80px; }
+.fm-wrap { max-width: 640px; }
+
+.fm-title {
+  margin: 0 0 10px;
+  font-size: clamp(1.9rem, 8vw, 2.8rem);
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+}
+
+.fm-title em { color: var(--hp-lime); font-style: italic; font-weight: 900; }
+
+.fm-card {
+  margin-top: 24px;
+  padding: 22px 20px;
+  border-radius: var(--hp-radius);
+  background: #fff;
+  color: var(--hp-ink);
+  box-shadow: 0 24px 60px rgba(10, 10, 60, 0.3);
+}
+
+.fm-field { min-width: 0; margin: 0 0 18px; padding: 0; border: 0; }
+.fm-label { display: block; margin: 0 0 8px; padding: 0; font-size: 0.95rem; font-weight: 700; }
+.fm-label span { color: var(--hp-muted); font-weight: 500; }
+
+.fm-input {
+  display: block;
+  width: 100%;
+  min-height: 50px;
+  padding: 12px 16px;
+  border: 2px solid #e2e2f5;
+  border-radius: 16px;
+  background: var(--hp-soft);
+  color: var(--hp-ink);
+  font-size: 1rem;
+}
+
+.fm-input::placeholder { color: #9a9ac0; }
+.fm-input:focus { outline: none; border-color: var(--primary); background: #fff; }
+.fm-textarea { min-height: 140px; resize: vertical; }
+
+.fm-error { margin: 6px 0 0; color: #d42b3a; font-size: 0.88rem; font-weight: 600; }
+.fm-help { margin: 6px 0 0; color: var(--hp-muted); font-size: 0.85rem; }
+
+/* Topic chips: real radio buttons, visually hidden, so keyboard and screen
+   readers get a normal radio group. */
+.fm-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.fm-chip { position: relative; margin: 0; cursor: pointer; }
+
+.fm-chip input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.fm-chip span {
+  display: inline-block;
+  padding: 9px 16px;
+  border: 2px solid #e2e2f5;
+  border-radius: 999px;
+  background: var(--hp-soft);
+  font-size: 0.92rem;
+  font-weight: 700;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.fm-chip input:checked + span { border-color: var(--primary); background: var(--primary); color: #fff; }
+.fm-chip input:focus-visible + span { outline: 3px solid var(--hp-lime); outline-offset: 2px; }
+
+.fm-row { display: grid; gap: 0 14px; }
+.fm-submit { width: 100%; margin-top: 4px; }
+.fm-note { margin: 12px 0 0; color: var(--hp-muted); font-size: 0.88rem; text-align: center; }
+
+/* Kamu bilang, kami lakukan */
+.fm-wins { margin-top: 40px; }
+.fm-h2 { margin: 0 0 6px; font-size: clamp(1.4rem, 5.5vw, 1.9rem); font-weight: 800; }
+.fm-h2 em { color: var(--hp-lime); font-style: italic; font-weight: 900; }
+.fm-wins-lede { margin: 0 0 16px; color: rgba(255, 255, 255, 0.85); }
+.fm-wins-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+
+.fm-win {
+  display: flex;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.fm-win-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background: var(--hp-lime);
+  color: var(--hp-ink);
+}
+
+.fm-win-said { margin: 0 0 4px; color: rgba(255, 255, 255, 0.75); font-size: 0.9rem; }
+.fm-win-done { margin: 0; font-weight: 700; line-height: 1.45; }
+.fm-win-done i { color: var(--hp-lime); }
+
+/* thank-you pages */
+.fm-done { text-align: center; }
+
+.fm-done-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  margin-bottom: 18px;
+  border-radius: 50%;
+  background: var(--hp-lime);
+  color: var(--hp-ink);
+  font-size: 1.8rem;
+  box-shadow: 0 16px 40px rgba(10, 10, 60, 0.35);
+}
+
+.mg-js .fm-done-icon { animation: mgRise 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+.fm-next { display: grid; gap: 10px; margin: 26px 0 0; padding: 0; list-style: none; text-align: left; }
+
+.fm-next li {
+  display: flex;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 20px;
+  background: #fff;
+  color: var(--hp-ink);
+}
+
+.fm-next-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background: var(--primary);
+  color: #fff;
+}
+
+.fm-next-title { margin: 0 0 2px; font-weight: 800; }
+.fm-next-text { margin: 0; color: var(--hp-muted); font-size: 0.92rem; line-height: 1.5; }
+.fm-next-text a { color: var(--primary); font-weight: 700; }
+
+.fm-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 26px; }
+
+@media (min-width: 640px) {
+  .fm-card { padding: 28px; }
+  .fm-row { grid-template-columns: 1fr 1fr; }
+}
+
+@media (min-width: 992px) {
+  .fm { padding-top: 56px; }
+  .fm-split { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: 48px; max-width: 1160px; align-items: start; }
+  .fm-split .fm-wins { margin-top: 118px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fm-chip span { transition: none; }
+}

@@ -2499,3 +2499,40 @@ class SharedMotionAssetTest(TestCase):
 
         self.assertIn("window.mgReady = true", source)
         self.assertIn("prefers-reduced-motion", source)
+
+
+class KotakMasukkanTest(TestCase):
+    def post(self, **data):
+        return self.client.post(reverse("masukkan"), {"feedback": "Tolong tambah handuk", **data})
+
+    def test_feedback_with_a_topic_is_saved(self):
+        response = self.post(topic="KEBERSIHAN", name="", contact="")
+
+        self.assertRedirects(response, reverse("masukkan_success"))
+        self.assertEqual(Masukkan.objects.get().topic, "KEBERSIHAN")
+
+    def test_the_topic_is_optional(self):
+        self.post()
+
+        self.assertEqual(Masukkan.objects.get().topic, "")
+
+    def test_an_unknown_topic_is_refused(self):
+        response = self.post(topic="HARGA")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Masukkan.objects.exists())
+
+    def test_the_chips_offer_no_empty_choice(self):
+        response = self.client.get(reverse("masukkan"))
+
+        self.assertNotContains(response, "---------")
+        self.assertContains(response, 'class="fm-chip"', count=len(Masukkan.TOPIC_CHOICES))
+
+    def test_the_page_shows_what_changed_because_of_feedback(self):
+        from .views import FEEDBACK_WINS
+
+        response = self.client.get(reverse("masukkan"))
+
+        self.assertContains(response, "Kamu bilang,")
+        self.assertContains(response, 'class="fm-win"', count=len(FEEDBACK_WINS))
+        self.assertContains(response, "Sekarang sudah ada musholla.")

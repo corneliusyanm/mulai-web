@@ -771,8 +771,8 @@ class TamuAdmin(WhatsAppLinkMixin, admin.ModelAdmin):
 
 
 class MasukkanAdmin(admin.ModelAdmin):
-    list_display = ("get_display_name", "contact", "feedback_snippet", "created_at")
-    list_filter = ("created_at",)
+    list_display = ("get_display_name", "topic", "contact", "feedback_snippet", "created_at")
+    list_filter = ("topic", "created_at")
     search_fields = ("name", "contact", "feedback")
     readonly_fields = ("created_at",)
     list_display_links = ("get_display_name",)

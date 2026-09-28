@@ -837,6 +837,38 @@ def tamu_signup_success_view(request):
     return render(request, "accounts/tamu_signup_success.html")
 
 
+# Kamu bilang, kami lakukan: things the gym changed because somebody wrote in.
+# Only real ones, confirmed by the owner; each "said" paraphrases an actual
+# Kotak Masukkan entry. Proof that the box is read is what makes people use it.
+FEEDBACK_WINS = [
+    {
+        "icon": "fa-mosque",
+        "said": "Belum ada musholla.",
+        "done": "Sekarang sudah ada musholla.",
+    },
+    {
+        "icon": "fa-clock",
+        "said": "Jadwal kelas jangan mepet waktu sholat.",
+        "done": "Jam kelas sudah disesuaikan.",
+    },
+    {
+        "icon": "fa-dumbbell",
+        "said": "Pengen dumbbell dan alat yang lebih lengkap.",
+        "done": "Dumbbell dan kettlebell sekarang lebih banyak, plus handle cable, T-bar row, dan trap bar.",
+    },
+    {
+        "icon": "fa-music",
+        "said": "Request lagu dong.",
+        "done": "Lagu request member sekarang masuk playlist gym.",
+    },
+    {
+        "icon": "fa-broom",
+        "said": "Perlu bersih-bersih besar secara rutin.",
+        "done": "Sekarang ada jadwal bersih-bersih rutin.",
+    },
+]
+
+
 def masukkan_view(request):
     if request.method == "POST":
         form = MasukkanForm(request.POST)
@@ -845,7 +877,9 @@ def masukkan_view(request):
             return redirect("masukkan_success")
     else:
         form = MasukkanForm()
-    return render(request, "accounts/masukkan.html", {"form": form})
+    return render(
+        request, "accounts/masukkan.html", {"form": form, "wins": FEEDBACK_WINS}
+    )
 
 
 def masukkan_success_view(request):

@@ -1374,13 +1374,19 @@ Details that matter:
 
 ### Model (`accounts/models.py`)
 - **`Masukkan`**: To collect feedback, critiques, and suggestions.
+  - `topic`: CharField, optional (Alat, Kebersihan, Kelas, Pelayanan, Jadwal, Lainnya)
   - `name`: CharField (Optional)
   - `contact`: CharField (Optional contact info)
   - `feedback`: TextField (The feedback content)
 
+### The page (`/masukkan/`)
+- **One tap first**: the topic chips come before the text box, since a blank box is the hard part; the open `Masukkan` form had collected 16 entries in the life of the gym. The name and contact say "boleh dikosongin".
+- **Kamu bilang, kami lakukan**: under the form, real changes made because somebody wrote in (`FEEDBACK_WINS` in `accounts/views.py`): the musholla, class times moved away from prayer times, more dumbbells and kettlebells plus cable handles, a T-bar row and a trap bar, members' song requests in the playlist, and a regular deep clean. Only ones the owner has confirmed; add to the list when another one lands.
+- **The thank-you page** says what happens next, with no emoji.
+
 ### Admin (`accounts/admin.py`)
 - **`MasukkanAdmin`**:
-  - Displays all submitted feedback.
+  - Displays all submitted feedback, with the topic as a column and a filter.
   - Provides a link to the details, even for anonymous submissions.
 
 ---

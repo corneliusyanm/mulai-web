@@ -11,8 +11,9 @@ TAHUN_VARIATIONS = ["tahun", "thn", "year"]
 class MasukkanForm(forms.ModelForm):
     class Meta:
         model = Masukkan
-        fields = ["name", "contact", "feedback"]
+        fields = ["topic", "name", "contact", "feedback"]
         widgets = {
+            "topic": forms.RadioSelect(),
             "name": forms.TextInput(),
             "contact": forms.TextInput(),
             "feedback": forms.Textarea(
@@ -20,10 +21,18 @@ class MasukkanForm(forms.ModelForm):
             ),
         }
         labels = {
-            "name": "Nama",
-            "contact": "Kontak (No. WA / Sosial Media, Opsional)",
-            "feedback": "Masukkan Anda",
+            "topic": "Soal apa?",
+            "name": "Nama (boleh dikosongin)",
+            "contact": "No. WA atau sosmed (boleh dikosongin)",
+            "feedback": "Masukanmu",
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # A RadioSelect on a blank=True field offers an empty "---------" choice;
+        # not choosing a chip already means that.
+        self.fields["topic"].choices = Masukkan.TOPIC_CHOICES
+        self.fields["topic"].required = False
 
 
 class TamuForm(forms.ModelForm):

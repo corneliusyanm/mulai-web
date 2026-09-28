@@ -191,6 +191,21 @@ class Tamu(models.Model):
 
 
 class Masukkan(models.Model):
+    # One tap before the text box: easier to start writing, and admins can sort
+    # the pile by what it is about. Optional, since a blank text box is already
+    # the hard part.
+    TOPIC_CHOICES = [
+        ("ALAT", "Alat"),
+        ("KEBERSIHAN", "Kebersihan"),
+        ("KELAS", "Kelas"),
+        ("PELAYANAN", "Pelayanan"),
+        ("JADWAL", "Jadwal"),
+        ("LAINNYA", "Lainnya"),
+    ]
+
+    topic = models.CharField(
+        "Topik", max_length=12, choices=TOPIC_CHOICES, blank=True, default=""
+    )
     name = models.CharField(max_length=100, blank=True, verbose_name="Nama")
     contact = models.CharField(
         max_length=100, blank=True, verbose_name="Kontak (no WA / sosial media)"
