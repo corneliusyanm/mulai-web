@@ -1,8 +1,7 @@
 from django.shortcuts import render, get_object_or_404
-from django.core.cache import cache
 from django.views.decorators.cache import cache_page
+from . import guide
 from .models import Equipment
-from collections import defaultdict
 import re
 
 # Create your views here.
@@ -90,23 +89,17 @@ def should_count_view(request, equipment_slug, cooldown_hours=24):
 
 @cache_page(60 * 60 * 4)  # Cache for 4 hours
 def equipment_list(request):
-    # Try to get cached data first
-    cache_key = "equipment_grouped_list"
-    grouped_equipments = cache.get(cache_key)
-
-    if grouped_equipments is None:
-        # Cache miss - fetch from database
-        equipments = Equipment.objects.order_by("muscle_group", "name")
-        grouped_equipments = defaultdict(list)
-        for equipment in equipments:
-            muscle_group = equipment.muscle_group or "Lainnya"
-            grouped_equipments[muscle_group].append(equipment)
-
-        # Convert to regular dict and cache for 12 hours
-        grouped_equipments = dict(grouped_equipments)
-        cache.set(cache_key, grouped_equipments, 60 * 60 * 12)
-
-    context = {"grouped_equipments": grouped_equipments}
+    equipments = list(Equipment.objects.order_by("name"))
+    groups = guide.grouped(equipments)
+    context = {
+        "groups": groups,
+        "group_counts": {group["id"]: len(group["items"]) for group in groups},
+        "starter": guide.starter(equipments),
+        "total": len(equipments),
+        "all_have_video": bool(equipments) and all(e.video_link for e in equipments),
+        # Kept for anything still reading the old shape: {muscle_group: [...]}.
+        "grouped_equipments": {group["name"]: group["items"] for group in groups},
+    }
     return render(request, "equipment/list.html", context)
 
 
@@ -124,4 +117,19 @@ def equipment_detail(request, slug):
         # Increment view count
         equipment.increment_view_count(is_authenticated=is_authenticated)
 
-    return render(request, "equipment/detail.html", {"equipment": equipment})
+    group = guide.group_name(equipment)
+    related = list(
+        Equipment.objects.filter(muscle_group=equipment.muscle_group)
+        .exclude(pk=equipment.pk)
+        .order_by("name")[: guide.RELATED_LIMIT]
+    )
+    context = {
+        "equipment": equipment,
+        "how_to": guide.steps(equipment.description),
+        "targets": guide.target_muscles(equipment),
+        "group_label": guide.group_label(group),
+        "group_id": guide.group_id(group),
+        "related": related,
+        "seo_description": guide.seo_description(equipment),
+    }
+    return render(request, "equipment/detail.html", context)

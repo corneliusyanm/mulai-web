@@ -1072,6 +1072,24 @@ This provides consistent experience level classification across both members and
 
 ## Equipment Guide (Panduan Alat)
 
+Every machine has a QR sticker that opens its page, so most visits come from somebody standing next to the machine. The list page is for browsing at home and for finding the next machine at the gym.
+
+### The list page (`/alat/`)
+
+- **Hero**: how many machines there are, whether all of them have a video, and "scan the QR on the machine".
+- **Mulai dari sini**: five machines for a first visit, in order: Treadmill (warm-up), Leg Press, Vertical Press, Lat Pulldown, Multi Press. All machines, so the movement is guided, and between them they cover the body. The set is `STARTER` in `equipment/guide.py`; it was proposed from the guide itself and the coaches have the final say. A slug that is missing from the database is skipped.
+- **Mau latih bagian mana?**: a body map (front and back, inline SVG in `templates/equipment/_body_map.html`). Tapping an area filters the grid to that group; an area is only a link when its group has machines. Chips for every group, including Kardio and Macam-macam, and a search box, filter the same grid. The filter is in the address (`/alat/#grp-dada`), so it can be shared.
+- **The grid**: grouped by muscle, in the order `GROUP_LABELS` sets (Kaki, Dada, Punggung, Bahu, Lengan, Kardio, Macam-macam, then anything else as typed). Each card is the video's thumbnail, cropped to the vertical video inside YouTube's 4:3 image, and links to the machine's page. No player loads on the list.
+- **Without JS**: the body map and chips are links to each group's section, and the search box is not shown.
+
+### The machine page (`/alat/<slug>/`)
+
+- **Laid out for somebody at the machine**: name, the target muscles as chips, then the video straight away (a vertical player as big as fits the screen), then "Cara pakai".
+- **Steps**: the description is written by admins as one paragraph. `guide.steps()` shows its first sentence as the intro when it says what the machine is or trains, and the rest as numbered steps. If the first sentence is already an instruction, it is step 1. Nothing is dropped; a test joins the pieces back and compares.
+- **Tip videos** are thumbnails that swap into the same player; without JS they open YouTube.
+- **"Alat lain untuk ..."**: up to six other machines from the same group.
+- **SEO**: the title is "Cara Pakai {name} untuk Pemula | Mulai Gym", which is how people search, and the description is the first sentence.
+
 ### Model (`equipment/models.py`)
 - **`Equipment`**: Represents a piece of gym equipment.
   - `name`: CharField (Name of the equipment)
@@ -1100,8 +1118,8 @@ This provides consistent experience level classification across both members and
 #### **User Experience**
 - **Horizontal Video Selection**: Row of clickable video thumbnails below main video
 - **Interactive Switching**: Click thumbnail → main video switches to that content + auto-plays
-- **Active State Indicators**: Green borders highlight currently selected video
-- **Smooth Animations**: Auto-scroll to video on switch, staggered loading animations
+- **Active State Indicators**: A lime border marks the video that is playing
+- **Scroll on switch**: the page scrolls to the player when a tip is chosen
 - **Mobile Responsive**: Optimized thumbnail sizes and touch interactions for mobile devices
 
 #### **Supported YouTube URL Formats**
@@ -1123,9 +1141,9 @@ All YouTube URL formats are automatically supported and converted to the optimal
 **Mixed URL support**: You can paste URLs with or without protocol - the system handles both seamlessly.
 
 ### Performance Optimizations
-- **Embedded YouTube Players**: Uses actual YouTube embeds for full functionality (titles, play buttons)
+- **One player per page**: the list shows thumbnails only; the machine page loads one YouTube player, and tips swap into it
 - **Auto-play on Switch**: Videos start immediately when selected for seamless experience
-- **Caching**: 4-hour page cache + 12-hour data cache to reduce database queries
+- **Caching**: 4-hour page cache on the list. The list is one query, so there is no separate data cache; an edit in admin shows within 4 hours
 - **Mobile Optimization**: Responsive video sizes and touch-friendly interactions
 
 ### Views (`equipment/views.py`)
@@ -1153,9 +1171,7 @@ All YouTube URL formats are automatically supported and converted to the optimal
   - **Data Validation**: Automatic filtering of invalid or non-YouTube URLs (includes Shorts URL validation)
   - **Structured Processing**: Converts URL arrays into rich data objects with IDs, embed URLs, and thumbnails
 - **Caching Strategy**:
-  - Page-level: 4-hour cache for entire equipment list page
-  - Data-level: 12-hour cache for equipment data
-  - Cache invalidation: Automatic when equipment is modified via admin
+  - Page-level: 4-hour cache for the equipment list page, so an admin edit can take up to 4 hours to show there. The machine pages are not cached.
 
 ### View Analytics & Insights
 

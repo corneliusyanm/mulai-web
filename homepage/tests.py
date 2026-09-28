@@ -219,13 +219,15 @@ class SiteSeoTest(FreshCacheMixin, TestCase):
         self.assertIn('<link rel="canonical" href="https://mulaigym.id/alat/">', body)
 
     def test_a_page_without_its_own_description_gets_the_default(self):
-        body = self._body(reverse("equipment:list"))
+        # the login page has no description of its own
+        body = self._body(reverse("member_login"))
 
         description = re.search(r'<meta name="description" content="([^"]+)"', body).group(1)
         self.assertIn("pemula di Bandung", description)
 
     def test_the_landmark_keeps_its_capitals_mid_sentence(self):
-        body = self._body(reverse("equipment:list"))
+        # the login page has no description of its own
+        body = self._body(reverse("member_login"))
 
         self.assertIn("seberang SMPK 5 BPK Penabur", body)
         self.assertNotIn("smpk", body)

@@ -1,282 +1,171 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
+{% load static %}
 
-{% block title %}Panduan Alat - Mulai Gym{% endblock %}
+{% block title %}Panduan Alat Gym untuk Pemula | Mulai Gym{% endblock %}
+{% block meta_description %}Cara pakai {{ total }} alat di Mulai Gym Bandung, lengkap dengan video. Cari alatnya, atau pilih bagian badan yang mau dilatih.{% endblock %}
+{% block og_title %}Panduan Alat Gym untuk Pemula | Mulai Gym{% endblock %}
+{% block og_description %}Cara pakai {{ total }} alat di Mulai Gym Bandung, lengkap dengan video.{% endblock %}
 
 {% block content %}
-<style>
-    .equipment-grid {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 0.75rem;
-        padding: 1rem;
-    }
-    .equipment-card-link {
-        display: block;
-        text-decoration: none;
-        color: inherit;
-        background-color: rgba(255,255,255,0.10);
-        border-radius: 10px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        overflow: hidden;
-        transition: transform 0.18s, box-shadow 0.18s;
-        backdrop-filter: blur(2px);
-    }
-    .equipment-card-link:hover, .equipment-card-link:focus {
-        transform: translateY(-4px) scale(1.03);
-        box-shadow: 0 4px 16px rgba(0,0,0,0.13);
-        text-decoration: none;
-    }
-    .video-container {
-        position: relative;
-        padding-bottom: 177.78%; /* 9:16 aspect ratio for portrait */
-        height: 0;
-        overflow: hidden;
-        border-radius: 7px;
-        margin-bottom: 0.5rem;
-        cursor: pointer;
-    }
-    .video-container iframe {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        border-radius: 7px;
-        pointer-events: none; /* Disable interaction to hide controls */
-    }
-    .video-thumbnail {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        border-radius: 7px;
-        transition: opacity 0.3s ease;
-    }
-    .video-thumbnail.loading {
-        opacity: 0.7;
-        filter: blur(1px);
-    }
-    .play-button-overlay {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 60px;
-        height: 60px;
-        background: rgba(0, 0, 0, 0.8);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.3s ease;
-        z-index: 2;
-    }
-    .play-button-overlay::after {
-        content: '▶';
-        color: white;
-        font-size: 20px;
-        margin-left: 3px;
-    }
-    .video-container:hover .play-button-overlay {
-        background: rgba(0, 0, 0, 0.9);
-        transform: translate(-50%, -50%) scale(1.1);
-    }
-    .loading-spinner {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 40px;
-        height: 40px;
-        border: 3px solid rgba(255, 255, 255, 0.3);
-        border-top: 3px solid #BEF006;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        z-index: 3;
-    }
-    @keyframes spin {
-        0% { transform: translate(-50%, -50%) rotate(0deg); }
-        100% { transform: translate(-50%, -50%) rotate(360deg); }
-    }
-    .card-content {
-        padding: 0rem;
-    }
-    .card-content h3 {
-        margin-top: 0;
-        margin-bottom: 0.3rem;
-        font-size: 1rem;
-        font-weight: 700;
-        color: #fff;
-        text-decoration: none;
-        line-height: 1.2;
-    }
-    .card-content h3 span {
-        color: #fff;
-        text-decoration: none;
-    }
-    .equipment-card-link:hover .card-content h3 span,
-    .equipment-card-link:focus .card-content h3 span {
-        color: #fff;
-        text-decoration: none;
-    }
-    .card-content p {
-        margin: 0;
-        color: #e0e0e0;
-        font-size: 0.85rem;
-    }
-    
-    @media (max-width: 576px) {
-        .equipment-grid {
-            gap: 0.5rem;
-            padding: 0.5rem;
-        }
-        .card-content {
-            padding: 0.5rem;
-        }
-        .card-content h3 {
-            font-size: 0.9rem;
-        }
-    }
-    .muscle-group-title {
-        color: #fff;
-        margin-top: 0rem;
-        margin-bottom: 0rem;
-        padding-left: 0.5rem;
-        border-left: 4px solid #BEF006; /* Mulai Gym yellow */
-        font-size: 1.5rem;
-    }
-</style>
+{% comment %}
+Built for two kinds of visit: somebody browsing at home, and somebody at the
+gym who scanned the QR on a machine and wants the next one. The grid is grouped
+by muscle; the body map, the chips and the search filter it in place (JS), and
+without JS the same links jump to each group's section instead.
+{% endcomment %}
+<div class="hp alat">
 
-<div class="container my-5">
-    <h1 class="text-center mb-4">Panduan Penggunaan Alat</h1>
-    
-    {% for muscle_group, equipment_list in grouped_equipments.items %}
-    <h2 class="muscle-group-title">{{ muscle_group }}</h2>
-    <div class="equipment-grid">
-        {% for item in equipment_list %}
-        <a href="{% url 'equipment:detail' item.slug %}" class="equipment-card-link">
-          <div class="card-content">
-            <h3><span>{{ item.name }}</span></h3>
-            {% if item.get_youtube_embed_url %}
-            <div class="video-container" 
-                 data-video-id="{{ item.get_youtube_video_id }}"
-                 data-embed-url="{{ item.get_youtube_embed_url }}?modestbranding=1&showinfo=0&controls=0&rel=0&iv_load_policy=3&cc_load_policy=0&disablekb=1&fs=0">
-              <img src="{{ item.get_youtube_thumbnail_url }}" 
-                   alt="{{ item.name }} video thumbnail" 
-                   class="video-thumbnail"
-                   loading="lazy">
-              <div class="play-button-overlay"></div>
-            </div>
-            {% endif %}
-          </div>
-        </a>
-        {% endfor %}
+    <section class="alat-hero">
+        <div class="hp-wrap">
+            <p class="hp-kicker">Panduan Alat</p>
+            <h1 class="alat-title">Cara pakai alat, <em>ada videonya.</em></h1>
+            <p class="hp-lede">
+                {{ total }} alat di Mulai Gym{% if all_have_video %}, semua ada video tutorialnya{% endif %}.
+                Lagi di gym? Scan QR yang nempel di alatnya.
+            </p>
+        </div>
+    </section>
+
+    {% if starter %}
+    <div class="hp-wrap alat-starter" role="region" aria-labelledby="alat-starter-title">
+        <div class="alat-starter-head">
+            <h2 class="alat-h2" id="alat-starter-title">Mulai dari sini</h2>
+            <p>Baru pertama kali? Coba {{ starter|length }} alat ini dulu, urut dari atas. Semuanya mesin, jadi gerakannya dituntun.</p>
+        </div>
+        <ol class="alat-starter-list">
+            {% for step in starter %}
+            <li>
+                <a class="alat-starter-item" href="{% url 'equipment:detail' step.equipment.slug %}">
+                    <span class="alat-starter-num">{{ step.position }}</span>
+                    <span class="alat-thumb alat-thumb-sm">
+                        <img src="{{ step.equipment.get_youtube_thumbnail_url }}" alt="" width="480" height="360" loading="lazy" decoding="async">
+                    </span>
+                    <span class="alat-starter-text">
+                        <span class="alat-starter-name">{{ step.equipment.name }}</span>
+                        <span class="alat-starter-note">{{ step.note }}</span>
+                    </span>
+                    <i class="fas fa-chevron-right alat-starter-go" aria-hidden="true"></i>
+                </a>
+            </li>
+            {% endfor %}
+        </ol>
     </div>
-    {% empty %}
-    <p class="text-center text-white">Belum ada panduan alat yang tersedia.</p>
-    {% endfor %}
+    {% endif %}
+
+    <div class="hp-wrap alat-finder" role="region" aria-labelledby="alat-finder-title">
+        <h2 class="alat-h2" id="alat-finder-title">Mau latih bagian mana?</h2>
+        <p class="alat-finder-hint">Ketuk bagian badannya, atau pilih di bawah.</p>
+        {% include "equipment/_body_map.html" %}
+        <p class="alat-map-caption" aria-live="polite"></p>
+
+        <div class="alat-search" hidden>
+            <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+            <input type="search" class="alat-search-input" placeholder="Cari alat, misal: leg press" aria-label="Cari alat" autocomplete="off">
+        </div>
+
+        <div class="alat-chips" role="group" aria-label="Pilih kelompok otot">
+            <a class="alat-chip is-active" href="#alat-daftar" data-group="" aria-pressed="true">Semua <span>{{ total }}</span></a>
+            {% for group in groups %}
+            <a class="alat-chip" href="#grp-{{ group.id }}" data-group="{{ group.id }}" aria-pressed="false">{{ group.label }} <span>{{ group.items|length }}</span></a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="hp-wrap alat-list" id="alat-daftar" role="region" aria-label="Daftar alat">
+        {% for group in groups %}
+        <div class="alat-group" id="grp-{{ group.id }}" data-group="{{ group.id }}" data-label="{{ group.label }}">
+            <h3 class="alat-group-title">{{ group.label }} <span>{{ group.items|length }} alat</span></h3>
+            <div class="alat-grid">
+                {% for item in group.items %}
+                <a class="alat-card" href="{% url 'equipment:detail' item.slug %}"
+                   data-search="{{ item.name|lower }} {{ group.label|lower }} {{ item.detailed_muscle_group|lower }}">
+                    <span class="alat-thumb">
+                        <img src="{{ item.get_youtube_thumbnail_url }}" alt="" width="480" height="360" loading="lazy" decoding="async">
+                        <span class="alat-play" aria-hidden="true"><i class="fas fa-play"></i></span>
+                    </span>
+                    <span class="alat-card-body">
+                        <span class="alat-card-name">{{ item.name }}</span>
+                        <span class="alat-card-muscle">{{ item.detailed_muscle_group|default:group.label }}</span>
+                    </span>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+        <p class="alat-empty" hidden>Belum ada alat yang cocok. Coba kata lain, atau pilih "Semua".</p>
+    </div>
+
+    <div class="hp-wrap alat-help">
+        <p><i class="fas fa-circle-question" aria-hidden="true"></i> Masih bingung? Tanya coach atau admin yang lagi jaga, mereka seneng bantu.</p>
+    </div>
 </div>
 
 <script>
-// Video loading functionality
-function loadVideo(container) {
-    // Add loading spinner
-    const spinner = document.createElement('div');
-    spinner.className = 'loading-spinner';
-    container.appendChild(spinner);
-    
-    // Get video data
-    const embedUrl = container.dataset.embedUrl;
-    
-    // Create iframe
-    const iframe = document.createElement('iframe');
-    iframe.src = embedUrl;
-    iframe.frameBorder = '0';
-    iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
-    iframe.allowFullscreen = true;
-    iframe.style.position = 'absolute';
-    iframe.style.top = '0';
-    iframe.style.left = '0';
-    iframe.style.width = '100%';
-    iframe.style.height = '100%';
-    iframe.style.borderRadius = '7px';
-    
-    // Replace thumbnail with iframe when it loads
-    iframe.onload = function() {
-        const thumbnail = container.querySelector('.video-thumbnail');
-        const playButton = container.querySelector('.play-button-overlay');
-        
-        if (thumbnail) thumbnail.style.display = 'none';
-        if (playButton) playButton.style.display = 'none';
-        if (spinner) spinner.remove();
-        
-        container.style.pointerEvents = 'auto';
-    };
-    
-    container.appendChild(iframe);
-    
-    // Mark as loaded to prevent double loading
-    container.classList.add('video-loaded');
-}
+(function () {
+    var list = document.getElementById('alat-daftar');
+    if (!list) return;
+    var groups = [].slice.call(list.querySelectorAll('.alat-group'));
+    var chips = [].slice.call(document.querySelectorAll('.alat-chip'));
+    var zones = [].slice.call(document.querySelectorAll('.bm-link'));
+    var searchBox = document.querySelector('.alat-search');
+    var input = document.querySelector('.alat-search-input');
+    var empty = list.querySelector('.alat-empty');
+    var caption = document.querySelector('.alat-map-caption');
+    var calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var state = { group: '', q: '' };
 
-// Intersection Observer for automatic lazy loading when videos come into viewport
-// (Optional - only loads if user scrolls to see the video)
-const observerOptions = {
-    root: null,
-    rootMargin: '50px',
-    threshold: 0.25
-};
+    // Search only means something with this script, so it only appears with it.
+    searchBox.hidden = false;
 
-const videoObserver = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-        if (entry.isIntersecting) {
-            const container = entry.target;
-            if (!container.classList.contains('video-loaded')) {
-                // Small delay to ensure smooth scrolling
-                setTimeout(() => {
-                    if (container.getBoundingClientRect().top < window.innerHeight) {
-                        loadVideo(container);
-                        videoObserver.unobserve(container);
-                    }
-                }, 200);
-            }
-        }
-    });
-}, observerOptions);
-
-// Observe all video containers when page loads
-document.addEventListener('DOMContentLoaded', function() {
-    const videoContainers = document.querySelectorAll('.video-container');
-    
-    // Progressive loading: Load first 2 videos immediately for better UX
-    videoContainers.forEach((container, index) => {
-        if (index < 2) {
-            // Load first 2 videos immediately
-            setTimeout(() => loadVideo(container), index * 300);
-        } else {
-            // Observe remaining videos for lazy loading
-            videoObserver.observe(container);
-        }
-    });
-});
-
-// Preload thumbnails for better perceived performance
-document.addEventListener('DOMContentLoaded', function() {
-    const thumbnails = document.querySelectorAll('.video-thumbnail');
-    thumbnails.forEach(img => {
-        if (img.loading === 'lazy') {
-            img.addEventListener('load', function() {
-                this.style.opacity = '1';
-                this.classList.remove('loading');
+    function apply() {
+        var shown = 0;
+        groups.forEach(function (g) {
+            var inGroup = !state.group || g.dataset.group === state.group;
+            var visible = 0;
+            g.querySelectorAll('.alat-card').forEach(function (card) {
+                var ok = inGroup && (!state.q || card.dataset.search.indexOf(state.q) !== -1);
+                card.hidden = !ok;
+                if (ok) visible++;
             });
-            img.addEventListener('error', function() {
-                console.warn('Failed to load thumbnail for:', this.alt);
-                this.style.opacity = '0.5';
-            });
-        }
+            g.hidden = visible === 0;
+            shown += visible;
+        });
+        empty.hidden = shown > 0;
+        chips.forEach(function (c) {
+            var on = c.dataset.group === state.group;
+            c.classList.toggle('is-active', on);
+            c.setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
+        zones.forEach(function (z) { z.classList.toggle('is-active', z.dataset.group === state.group); });
+        var active = groups.filter(function (g) { return g.dataset.group === state.group; })[0];
+        caption.textContent = active ? active.dataset.label + ': ' + shown + ' alat' : '';
+    }
+
+    function choose(group, scroll) {
+        state.group = (group && state.group === group) ? '' : group;
+        try {
+            history.replaceState(null, '', state.group ? '#grp-' + state.group : location.pathname);
+        } catch (e) {}
+        apply();
+        if (scroll) list.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' });
+    }
+
+    chips.forEach(function (c) {
+        c.addEventListener('click', function (e) { e.preventDefault(); choose(c.dataset.group, false); });
     });
-});
+    zones.forEach(function (z) {
+        z.addEventListener('click', function (e) { e.preventDefault(); choose(z.dataset.group, true); });
+    });
+    input.addEventListener('input', function () {
+        state.q = input.value.trim().toLowerCase();
+        apply();
+    });
+
+    var fromHash = (location.hash.match(/^#grp-(.+)$/) || [])[1];
+    if (fromHash && groups.some(function (g) { return g.dataset.group === fromHash; })) {
+        state.group = fromHash;
+        apply();
+    }
+})();
 </script>
-{% endblock %} 
+{% endblock %}

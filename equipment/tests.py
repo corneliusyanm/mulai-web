@@ -1,6 +1,8 @@
+from django.core.cache import cache
 from django.test import TestCase, RequestFactory
 from django.urls import reverse
 from django.contrib.sessions.middleware import SessionMiddleware
+from . import guide
 from .models import Equipment
 from .views import is_likely_bot, should_count_view
 import time
@@ -709,3 +711,178 @@ class YouTubeEmbedReferrerPolicyTest(TestCase):
                     response.headers["Referrer-Policy"],
                     "strict-origin-when-cross-origin",
                 )
+
+
+class GuideStepsTest(TestCase):
+    """A description becomes an intro and numbered steps, losing nothing."""
+
+    def test_an_intro_sentence_then_numbered_steps(self):
+        split = guide.steps(
+            "Mesin ini melatih paha. Duduk dulu. Dorong platformnya. Turunkan pelan-pelan."
+        )
+
+        self.assertEqual(split["intro"], "Mesin ini melatih paha.")
+        self.assertEqual(split["steps"], ["Duduk dulu.", "Dorong platformnya.", "Turunkan pelan-pelan."])
+
+    def test_an_instruction_first_is_step_one(self):
+        split = guide.steps("Posisikan kaki di pijakan. Tarik handle. Kembali pelan.")
+
+        self.assertEqual(split["intro"], "")
+        self.assertEqual(len(split["steps"]), 3)
+
+    def test_nothing_is_dropped(self):
+        texts = [
+            "Platform ini untuk squat, front squat, dll. Atur rack. Gunakan beban ringan.",
+            "Alat ini\xa0melatih dada.  Duduk tegak.\nDorong ke depan! Tahan (2 detik). Lepas.",
+        ]
+        for text in texts:
+            split = guide.steps(text)
+            joined = " ".join(filter(None, [split["intro"]] + split["steps"]))
+            self.assertEqual(joined, " ".join(text.replace("\xa0", " ").split()))
+
+    def test_two_sentences_stay_a_paragraph(self):
+        split = guide.steps("Alat ini melatih bahu. Duduk dan dorong ke atas.")
+
+        self.assertEqual(split["steps"], [])
+        self.assertEqual(split["intro"], "Alat ini melatih bahu. Duduk dan dorong ke atas.")
+
+    def test_an_empty_description_has_nothing(self):
+        self.assertEqual(guide.steps(""), {"intro": "", "steps": []})
+
+
+class GuideGroupingTest(TestCase):
+    def make(self, name, group, detail=""):
+        return Equipment.objects.create(
+            name=name, muscle_group=group, detailed_muscle_group=detail,
+            video_link="https://www.youtube.com/watch?v=" + name.replace(" ", ""),
+        )
+
+    def test_groups_follow_the_page_order_and_skip_empty_ones(self):
+        machines = [self.make("Lat Pulldown", "Punggung"), self.make("Leg Press", "Kaki")]
+
+        groups = guide.grouped(machines)
+
+        self.assertEqual([g["label"] for g in groups], ["Kaki", "Punggung"])
+        self.assertEqual(groups[0]["id"], "kaki")
+
+    def test_an_unknown_group_goes_last_as_typed_and_no_group_is_lainnya(self):
+        machines = [self.make("Mat", "Perut"), self.make("Rope", ""), self.make("Leg Press", "Kaki")]
+
+        labels = [g["label"] for g in guide.grouped(machines)]
+
+        self.assertEqual(labels, ["Kaki", "Perut", "Lainnya"])
+
+    def test_kardio_gets_a_short_label_and_a_stable_id(self):
+        groups = guide.grouped([self.make("Treadmill", "Kardio (Jantung)")])
+
+        self.assertEqual((groups[0]["label"], groups[0]["id"]), ("Kardio", "kardio-jantung"))
+
+    def test_starter_keeps_its_order_and_skips_machines_that_are_missing(self):
+        machines = [self.make("Leg Press", "Kaki"), self.make("Treadmill", "Kardio (Jantung)")]
+
+        starter = guide.starter(machines)
+
+        self.assertEqual([s["equipment"].slug for s in starter], ["treadmill", "leg-press"])
+        self.assertEqual([s["position"] for s in starter], [1, 2])
+
+    def test_target_muscles_are_split_and_a_repeat_of_the_group_is_dropped(self):
+        press = self.make("Multi Press", "Bahu", "Bahu Depan, Dada Atas")
+        bike = self.make("Sepeda Statis", "Kardio (Jantung)", "Kardio (Jantung)")
+
+        self.assertEqual(guide.target_muscles(press), ["Bahu Depan", "Dada Atas"])
+        self.assertEqual(guide.target_muscles(bike), [])
+
+
+class PanduanAlatListPageTest(TestCase):
+    def setUp(self):
+        # the list is behind cache_page, and LocMemCache outlives a test
+        cache.clear()
+        self.press = Equipment.objects.create(
+            name="Leg Press", muscle_group="Kaki", detailed_muscle_group="Seluruh kaki",
+            video_link="https://www.youtube.com/watch?v=legpress",
+        )
+        self.run = Equipment.objects.create(
+            name="Treadmill", muscle_group="Kardio (Jantung)",
+            video_link="https://www.youtube.com/watch?v=tread",
+        )
+
+    def tearDown(self):
+        cache.clear()
+
+    def test_every_machine_is_a_card_linking_to_its_page(self):
+        response = self.client.get(reverse("equipment:list"))
+
+        for machine in (self.press, self.run):
+            self.assertContains(response, f'href="{reverse("equipment:detail", args=[machine.slug])}"')
+
+    def test_the_list_loads_no_video_player(self):
+        response = self.client.get(reverse("equipment:list"))
+
+        self.assertNotContains(response, "<iframe")
+
+    def test_the_starter_set_shows_what_exists_in_order(self):
+        response = self.client.get(reverse("equipment:list"))
+
+        self.assertContains(response, "Mulai dari sini")
+        starter = response.context["starter"]
+        self.assertEqual([s["equipment"].slug for s in starter], ["treadmill", "leg-press"])
+
+    def test_the_body_map_only_links_groups_that_have_machines(self):
+        response = self.client.get(reverse("equipment:list"))
+
+        self.assertContains(response, 'href="#grp-kaki" data-group="kaki" aria-label="Kaki, 1 alat"', count=2)
+        self.assertNotContains(response, 'href="#grp-punggung"')
+
+    def test_it_says_how_many_machines_there_are(self):
+        response = self.client.get(reverse("equipment:list"))
+
+        self.assertContains(response, "2 alat di Mulai Gym, semua ada video tutorialnya")
+        self.assertContains(response, "<title>Panduan Alat Gym untuk Pemula | Mulai Gym</title>")
+
+
+class PanduanAlatDetailPageTest(TestCase):
+    def setUp(self):
+        self.press = Equipment.objects.create(
+            name="Leg Press", muscle_group="Kaki", detailed_muscle_group="Paha, Pantat",
+            description="Mesin ini melatih paha. Duduk dulu. Dorong platformnya. Turunkan pelan-pelan.",
+            video_link="https://www.youtube.com/watch?v=legpress",
+            additional_videos=["https://youtu.be/tip1"],
+        )
+        self.curl = Equipment.objects.create(
+            name="Leg Curl", muscle_group="Kaki", video_link="https://www.youtube.com/watch?v=curl"
+        )
+        self.row = Equipment.objects.create(
+            name="Cable Row", muscle_group="Punggung", video_link="https://www.youtube.com/watch?v=row"
+        )
+
+    def get(self, machine):
+        return self.client.get(reverse("equipment:detail", args=[machine.slug]))
+
+    def test_the_title_is_what_people_search_for(self):
+        response = self.get(self.press)
+
+        self.assertContains(response, "<title>Cara Pakai Leg Press untuk Pemula | Mulai Gym</title>")
+        self.assertContains(response, '<meta name="description" content="Mesin ini melatih paha.">')
+
+    def test_the_steps_are_a_numbered_list(self):
+        response = self.get(self.press)
+
+        self.assertContains(response, '<ol class="alat-steps">')
+        self.assertContains(response, "<li>Dorong platformnya.</li>")
+
+    def test_one_player_and_the_tips_as_thumbnails(self):
+        response = self.get(self.press)
+
+        self.assertContains(response, "<iframe", count=1)
+        self.assertContains(response, 'data-embed="https://www.youtube.com/embed/tip1"')
+        self.assertContains(response, "Tips 1")
+
+    def test_related_machines_share_the_group_and_leave_this_one_out(self):
+        related = self.get(self.press).context["related"]
+
+        self.assertEqual(related, [self.curl])
+
+    def test_the_target_muscles_are_chips(self):
+        response = self.get(self.press)
+
+        self.assertEqual(response.context["targets"], ["Paha", "Pantat"])

@@ -1,5 +1,4 @@
 from django.contrib import admin
-from django.core.cache import cache
 from django import forms
 from django.db.models import Sum
 from .models import Equipment
@@ -140,21 +139,6 @@ class EquipmentAdmin(admin.ModelAdmin):
 
     engagement_rate.short_description = "Member Engagement"
     engagement_rate.admin_order_field = "authenticated_views"
-
-    def save_model(self, request, obj, form, change):
-        super().save_model(request, obj, form, change)
-        # Clear equipment list cache when equipment is modified
-        cache.delete("equipment_grouped_list")
-
-    def delete_model(self, request, obj):
-        super().delete_model(request, obj)
-        # Clear equipment list cache when equipment is deleted
-        cache.delete("equipment_grouped_list")
-
-    def delete_queryset(self, request, queryset):
-        super().delete_queryset(request, queryset)
-        # Clear equipment list cache when multiple equipment are deleted
-        cache.delete("equipment_grouped_list")
 
     def changelist_view(self, request, extra_context=None):
         extra_context = extra_context or {}

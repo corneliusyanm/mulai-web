@@ -1,0 +1,83 @@
+{% comment %}
+Two figures, front and back. Each muscle area is a link to its group's section
+(#grp-kaki), so without JS a tap jumps to the list; the page script turns the
+same tap into a filter. An area only links when its group has machines.
+Group ids come from equipment.guide.group_id(): kaki, dada, punggung, bahu, lengan.
+{% endcomment %}
+<div class="bm">
+    <figure class="bm-figure">
+        <svg viewBox="0 0 160 330" role="group" aria-label="Badan tampak depan">
+            <ellipse class="bm-part" cx="80" cy="30" rx="17" ry="20"/>
+            <rect class="bm-part" x="72" y="47" width="16" height="12" rx="5"/>
+            <rect class="bm-part" x="62" y="100" width="36" height="50" rx="10"/>
+            <rect class="bm-part" x="59" y="152" width="42" height="22" rx="10"/>
+            <circle class="bm-part" cx="25" cy="183" r="7"/>
+            <circle class="bm-part" cx="135" cy="183" r="7"/>
+            <ellipse class="bm-part" cx="68" cy="311" rx="10" ry="6"/>
+            <ellipse class="bm-part" cx="92" cy="311" rx="10" ry="6"/>
+
+            {% if group_counts.bahu %}<a class="bm-link" href="#grp-bahu" data-group="bahu" aria-label="Bahu, {{ group_counts.bahu }} alat">{% endif %}
+                <ellipse class="bm-zone" cx="50" cy="72" rx="16" ry="13"/>
+                <ellipse class="bm-zone" cx="110" cy="72" rx="16" ry="13"/>
+            {% if group_counts.bahu %}</a>{% endif %}
+
+            {% if group_counts.dada %}<a class="bm-link" href="#grp-dada" data-group="dada" aria-label="Dada, {{ group_counts.dada }} alat">{% endif %}
+                <rect class="bm-zone" x="59" y="63" width="20" height="34" rx="9"/>
+                <rect class="bm-zone" x="81" y="63" width="20" height="34" rx="9"/>
+            {% if group_counts.dada %}</a>{% endif %}
+
+            {% if group_counts.lengan %}<a class="bm-link" href="#grp-lengan" data-group="lengan" aria-label="Lengan, {{ group_counts.lengan }} alat">{% endif %}
+                <rect class="bm-zone" x="28" y="85" width="17" height="44" rx="8.5"/>
+                <rect class="bm-zone" x="115" y="85" width="17" height="44" rx="8.5"/>
+                <rect class="bm-zone" x="21" y="132" width="15" height="42" rx="7.5" transform="rotate(6 28 153)"/>
+                <rect class="bm-zone" x="124" y="132" width="15" height="42" rx="7.5" transform="rotate(-6 132 153)"/>
+            {% if group_counts.lengan %}</a>{% endif %}
+
+            {% if group_counts.kaki %}<a class="bm-link" href="#grp-kaki" data-group="kaki" aria-label="Kaki, {{ group_counts.kaki }} alat">{% endif %}
+                <rect class="bm-zone" x="58" y="176" width="21" height="66" rx="10"/>
+                <rect class="bm-zone" x="81" y="176" width="21" height="66" rx="10"/>
+                <rect class="bm-zone" x="60" y="246" width="17" height="56" rx="8.5"/>
+                <rect class="bm-zone" x="83" y="246" width="17" height="56" rx="8.5"/>
+            {% if group_counts.kaki %}</a>{% endif %}
+        </svg>
+        <figcaption>Depan</figcaption>
+    </figure>
+
+    <figure class="bm-figure">
+        <svg viewBox="0 0 160 330" role="group" aria-label="Badan tampak belakang">
+            <ellipse class="bm-part" cx="80" cy="30" rx="17" ry="20"/>
+            <rect class="bm-part" x="72" y="47" width="16" height="12" rx="5"/>
+            <circle class="bm-part" cx="25" cy="183" r="7"/>
+            <circle class="bm-part" cx="135" cy="183" r="7"/>
+            <ellipse class="bm-part" cx="68" cy="311" rx="10" ry="6"/>
+            <ellipse class="bm-part" cx="92" cy="311" rx="10" ry="6"/>
+
+            {% if group_counts.bahu %}<a class="bm-link" href="#grp-bahu" data-group="bahu" aria-label="Bahu, {{ group_counts.bahu }} alat">{% endif %}
+                <ellipse class="bm-zone" cx="50" cy="72" rx="16" ry="13"/>
+                <ellipse class="bm-zone" cx="110" cy="72" rx="16" ry="13"/>
+            {% if group_counts.bahu %}</a>{% endif %}
+
+            {% if group_counts.punggung %}<a class="bm-link" href="#grp-punggung" data-group="punggung" aria-label="Punggung, {{ group_counts.punggung }} alat">{% endif %}
+                <path class="bm-zone" d="M60 62 H100 Q106 84 97 108 H63 Q54 84 60 62 Z"/>
+                <rect class="bm-zone" x="63" y="111" width="34" height="40" rx="10"/>
+            {% if group_counts.punggung %}</a>{% endif %}
+
+            {% if group_counts.lengan %}<a class="bm-link" href="#grp-lengan" data-group="lengan" aria-label="Lengan, {{ group_counts.lengan }} alat">{% endif %}
+                <rect class="bm-zone" x="28" y="85" width="17" height="44" rx="8.5"/>
+                <rect class="bm-zone" x="115" y="85" width="17" height="44" rx="8.5"/>
+                <rect class="bm-zone" x="21" y="132" width="15" height="42" rx="7.5" transform="rotate(6 28 153)"/>
+                <rect class="bm-zone" x="124" y="132" width="15" height="42" rx="7.5" transform="rotate(-6 132 153)"/>
+            {% if group_counts.lengan %}</a>{% endif %}
+
+            {% if group_counts.kaki %}<a class="bm-link" href="#grp-kaki" data-group="kaki" aria-label="Kaki, {{ group_counts.kaki }} alat">{% endif %}
+                <ellipse class="bm-zone" cx="69" cy="166" rx="12" ry="13"/>
+                <ellipse class="bm-zone" cx="91" cy="166" rx="12" ry="13"/>
+                <rect class="bm-zone" x="58" y="182" width="21" height="60" rx="10"/>
+                <rect class="bm-zone" x="81" y="182" width="21" height="60" rx="10"/>
+                <rect class="bm-zone" x="60" y="246" width="17" height="56" rx="8.5"/>
+                <rect class="bm-zone" x="83" y="246" width="17" height="56" rx="8.5"/>
+            {% if group_counts.kaki %}</a>{% endif %}
+        </svg>
+        <figcaption>Belakang</figcaption>
+    </figure>
+</div>

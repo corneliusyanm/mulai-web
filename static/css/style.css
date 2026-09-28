@@ -5035,3 +5035,442 @@ section {
   .hp-btn, .hp-float-wa, .hp-faq-item summary i { transition: none; }
   .hp-btn:active { transform: none; }
 }
+
+/* ==========================================================================
+   Panduan Alat (templates/equipment/list.html, detail.html)
+
+   Reuses the homepage's .hp tokens and primitives (hp-wrap, hp-kicker,
+   hp-lede); everything specific is alat-*. The body map is bm-*.
+   ========================================================================== */
+.alat { padding-bottom: 72px; }
+
+.alat-hero { padding: 36px 0 8px; }
+
+.alat-title {
+  margin: 0 0 10px;
+  font-size: clamp(2rem, 8.5vw, 3.2rem);
+  font-weight: 800;
+  line-height: 1.06;
+  letter-spacing: -0.02em;
+}
+
+.alat-title em { color: var(--hp-lime); font-style: italic; font-weight: 900; }
+
+.alat-h2 {
+  margin: 0 0 6px;
+  font-size: clamp(1.35rem, 5vw, 1.8rem);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+/* ---- thumbnails: the videos are vertical, framed in 16:9 with blurred sides,
+   and YouTube's 4:3 thumbnail adds bars above and below. scale(1.34) crops the
+   bars; the portrait box keeps the middle, which is the video itself. ---- */
+.alat-thumb {
+  position: relative;
+  display: block;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  background: var(--hp-deep);
+}
+
+.alat-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.34);
+}
+
+.alat-play {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--hp-lime);
+  color: var(--hp-ink);
+  font-size: 0.8rem;
+  box-shadow: 0 6px 16px rgba(10, 10, 60, 0.35);
+}
+
+/* ---- Mulai dari sini ---- */
+.alat-starter {
+  margin-top: 26px;
+  padding-top: 22px;
+  padding-bottom: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--hp-radius);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.alat-starter-head p { margin: 0 0 16px; color: rgba(255, 255, 255, 0.86); line-height: 1.55; }
+
+.alat-starter-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.alat-starter-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px 8px 8px;
+  border-radius: 18px;
+  background: #fff;
+  color: var(--hp-ink);
+  text-decoration: none;
+  transition: transform 0.15s ease;
+}
+
+.alat-starter-item:hover { color: var(--hp-ink); }
+.alat-starter-item:active { transform: scale(0.98); }
+
+.alat-starter-num {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--hp-lime);
+  font-style: italic;
+  font-weight: 900;
+}
+
+.alat-thumb-sm { flex-shrink: 0; width: 46px; border-radius: 12px; }
+
+.alat-starter-text { display: flex; flex: 1; flex-direction: column; min-width: 0; }
+.alat-starter-name { font-weight: 700; line-height: 1.25; }
+.alat-starter-note { color: var(--hp-muted); font-size: 0.85rem; }
+.alat-starter-go { color: var(--primary); }
+
+/* ---- finder: body map, search, chips ---- */
+.alat-finder { margin-top: 34px; }
+.alat-finder-hint { margin: 0 0 14px; color: rgba(255, 255, 255, 0.8); }
+
+.bm {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  padding: 18px 12px 8px;
+  border-radius: var(--hp-radius);
+  background:
+    radial-gradient(rgba(255, 255, 255, 0.1) 2px, transparent 2.5px) 0 0 / 22px 22px,
+    var(--hp-deep);
+}
+
+.bm-figure { margin: 0; text-align: center; }
+.bm svg { display: block; width: 146px; height: auto; }
+
+.bm figcaption {
+  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* Parts and areas with no machines are the quiet purple; areas you can tap are
+   the light one; the chosen one is lime. */
+.bm-part, .bm svg > .bm-zone { fill: #4a4ad8; }
+.bm-zone { fill: #9090f7; transition: fill 0.2s ease; }
+.bm-link { cursor: pointer; outline: none; }
+.bm-link:hover .bm-zone, .bm-link:focus-visible .bm-zone { fill: #d4f55c; }
+.bm-link.is-active .bm-zone { fill: var(--hp-lime); }
+
+.alat-map-caption {
+  min-height: 1.4em;
+  margin: 8px 0 0;
+  color: var(--hp-lime);
+  font-weight: 700;
+  text-align: center;
+}
+
+.alat-search {
+  position: relative;
+  margin: 14px 0 12px;
+}
+
+.alat-search i {
+  position: absolute;
+  left: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--primary);
+}
+
+.alat-search-input {
+  width: 100%;
+  min-height: 50px;
+  padding: 0 18px 0 46px;
+  border: 0;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--hp-ink);
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.alat-search-input:focus { outline: 3px solid var(--hp-lime); }
+
+.alat-chips {
+  display: flex;
+  gap: 8px;
+  margin: 0 -20px;
+  padding: 2px 20px 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.alat-chips::-webkit-scrollbar { display: none; }
+
+.alat-chip {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 999px;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.alat-chip span {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  font-size: 0.75rem;
+}
+
+.alat-chip:hover { color: #fff; background: rgba(255, 255, 255, 0.1); }
+.alat-chip.is-active { border-color: var(--hp-lime); background: var(--hp-lime); color: var(--hp-ink); }
+.alat-chip.is-active span { background: rgba(30, 30, 90, 0.12); }
+
+/* ---- the grid ---- */
+.alat-list { margin-top: 18px; scroll-margin-top: calc(7.5vh + 12px); }
+.alat-group { margin-top: 22px; scroll-margin-top: calc(7.5vh + 12px); }
+
+.alat-group-title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 12px;
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.alat-group-title span { color: rgba(255, 255, 255, 0.65); font-size: 0.85rem; font-weight: 600; }
+
+.alat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.alat-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 20px;
+  background: #fff;
+  color: var(--hp-ink);
+  text-decoration: none;
+  box-shadow: 0 12px 28px rgba(10, 10, 60, 0.22);
+  transition: transform 0.15s ease;
+}
+
+.alat-card:hover { color: var(--hp-ink); }
+.alat-card:active { transform: scale(0.98); }
+.alat-card[hidden], .alat-group[hidden] { display: none; }
+
+.alat-card-body { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px 12px; }
+.alat-card-name { font-weight: 700; line-height: 1.25; }
+
+.alat-card-muscle {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--hp-muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.alat-empty { margin: 24px 0 0; color: rgba(255, 255, 255, 0.85); text-align: center; }
+
+.alat-help p, .alat-ask {
+  display: flex;
+  gap: 10px;
+  margin: 32px 0 0;
+  color: rgba(255, 255, 255, 0.88);
+  line-height: 1.5;
+}
+
+.alat-help i, .alat-ask i { margin-top: 3px; color: var(--hp-lime); }
+
+/* ---- detail ---- */
+.alat-detail-wrap { max-width: 760px; padding-top: 20px; }
+
+.alat-crumbs {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.alat-crumbs a { color: #fff; font-weight: 600; text-decoration: none; }
+.alat-crumbs a:hover { color: var(--hp-lime); }
+
+.alat-crumb-group {
+  padding: 5px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 999px;
+  font-size: 0.85rem;
+}
+
+.alat-detail-title { margin-bottom: 10px; }
+
+.alat-targets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 18px;
+  padding: 0;
+  list-style: none;
+}
+
+.alat-targets li {
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--hp-lime);
+  color: var(--hp-ink);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+/* Vertical video, as big as fits on a phone held next to the machine. */
+.alat-player {
+  width: min(100%, calc(72vh * 9 / 16));
+  aspect-ratio: 9 / 16;
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: 24px;
+  background: #000;
+  box-shadow: 0 24px 60px rgba(10, 10, 60, 0.45);
+}
+
+.alat-player iframe { display: block; width: 100%; height: 100%; border: 0; }
+
+.alat-tips { margin-top: 16px; }
+.alat-tips-title { margin: 0 0 8px; font-weight: 700; }
+
+.alat-tips-row {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+
+.alat-tips-row::-webkit-scrollbar { display: none; }
+
+.alat-tip {
+  display: flex;
+  flex: 0 0 84px;
+  flex-direction: column;
+  gap: 6px;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+}
+
+.alat-tip .alat-thumb { border: 3px solid transparent; border-radius: 14px; }
+.alat-tip.is-active .alat-thumb { border-color: var(--hp-lime); }
+.alat-tip:hover { color: var(--hp-lime); }
+
+.alat-howto {
+  margin-top: 26px;
+  padding: 22px 20px;
+  border-radius: var(--hp-radius);
+  background: #fff;
+  color: var(--hp-ink);
+}
+
+.alat-intro { margin: 8px 0 14px; color: var(--hp-muted); line-height: 1.6; }
+
+.alat-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: alat-step;
+}
+
+.alat-steps li {
+  position: relative;
+  padding: 10px 0 10px 44px;
+  border-top: 1px dashed #e0e0f5;
+  line-height: 1.55;
+  counter-increment: alat-step;
+}
+
+.alat-steps li:first-child { border-top: 0; }
+
+.alat-steps li::before {
+  content: counter(alat-step);
+  position: absolute;
+  left: 0;
+  top: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.alat-related { margin-top: 34px; }
+.alat-related .alat-h2 { margin-bottom: 14px; }
+
+@media (min-width: 640px) {
+  .alat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .alat-starter { padding-left: 26px; padding-right: 26px; }
+  .bm svg { width: 160px; }
+  .alat-chips { flex-wrap: wrap; margin: 0; padding: 2px 0 6px; overflow: visible; }
+}
+
+@media (min-width: 992px) {
+  .alat-hero { padding-top: 56px; }
+  .alat-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .alat-starter-list { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .alat-starter-item { flex-direction: column; align-items: flex-start; padding: 10px; }
+  .alat-starter-item .alat-thumb-sm { width: 100%; }
+  .alat-starter-go { display: none; }
+  .alat-finder { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 0 40px; align-items: start; }
+  .alat-finder > .alat-h2, .alat-finder > .alat-finder-hint { grid-column: 1 / -1; }
+  .alat-finder > .bm { grid-row: span 3; }
+  .alat-detail .alat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bm-zone, .alat-card, .alat-starter-item { transition: none; }
+  .alat-card:active, .alat-starter-item:active { transform: none; }
+}
