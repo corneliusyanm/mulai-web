@@ -67,7 +67,9 @@ attended as (
     from classes_classinstance_booked_members bm
     join classes_classinstance ci on ci.id = bm.classinstance_id
     where ci.status <> 'CANCELLED'
-      and ci.date <= current_date
+      -- today in Jakarta, passed in: current_date is the UTC date, which is
+      -- yesterday from 00:00 to 07:00 WIB (the session runs in UTC under USE_TZ)
+      and ci.date <= %(today)s::date
       and (%(start)s::date is null or ci.date >= %(start)s::date)
       and (%(end)s::date is null or ci.date <= %(end)s::date)
       and exists (
@@ -214,7 +216,10 @@ def compute(period):
     the next one down skips a number.
     """
     with connection.cursor() as cursor:
-        cursor.execute(BOARD_SQL, {"start": period["start"], "end": period["end"]})
+        cursor.execute(
+            BOARD_SQL,
+            {"start": period["start"], "end": period["end"], "today": timezone.localdate()},
+        )
         raw = cursor.fetchall()
 
     rows = []

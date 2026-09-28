@@ -3,7 +3,8 @@
 Needs Postgres: the board is one raw statement using DISTINCT ON and AT TIME ZONE.
 """
 
-from datetime import date, time, timedelta
+from datetime import date, datetime, time, timedelta
+from unittest.mock import patch
 
 from django.core.cache import cache
 from django.test import TestCase
@@ -20,6 +21,17 @@ from . import board as B
 
 class BoardTestCase(TestCase):
     def setUp(self):
+        # Pinned to the middle of this month. The fixtures put things "yesterday"
+        # and "earlier this month", which on the 1st is last month and falls off
+        # this month's board: those tests failed on the first of every month.
+        real_today = timezone.localdate()
+        mid_month = timezone.make_aware(
+            datetime.combine(real_today.replace(day=15), time(12, 0))
+        )
+        clock = patch("django.utils.timezone.now", return_value=mid_month)
+        clock.start()
+        self.addCleanup(clock.stop)
+
         cache.clear()
         self.today = timezone.localdate()
         self.this_month = B.month_period(self.today.year, self.today.month)
@@ -549,3 +561,13 @@ class ShareTest(BoardTestCase):
         rows = B.compute(self.this_month)
 
         self.assertEqual(rows[0]["share"], 0)
+
+
+class BoardTimezoneTest(TestCase):
+    def test_the_board_never_asks_postgres_for_today(self):
+        # Under USE_TZ the database session runs in UTC, so current_date is
+        # yesterday from 00:00 to 07:00 in Jakarta. "Today" is passed in instead.
+        code = "\n".join(line.split("--")[0] for line in B.BOARD_SQL.lower().splitlines())
+
+        self.assertNotIn("current_date", code)
+        self.assertIn("%(today)s", code)
