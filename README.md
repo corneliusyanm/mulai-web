@@ -1064,9 +1064,11 @@ This provides consistent experience level classification across both members and
 
 ### Views (`accounts/views.py`)
 - **`tamu_signup_view`** (`/tamu`):
-  - Renders a simple form for guests to fill out.
-  - On submission, saves the data and shows a success page.
+  - A short, warm form for somebody at the front desk ("Selamat datang di Mulai Gym!").
+  - On submission, saves the data and shows a thank-you page with next steps: look at Panduan Alat, ask the admin (mentioning the one-visit option, never a price), follow Instagram.
   - Automatically calculates `is_pemula` based on form input.
+- **Phone numbers are saved the way member numbers are** (digits, starting `62`), by `TamuForm.clean_phone_number()`. Guests used to be saved as typed, mostly `0812...`, which is why matching guests to later memberships needs normalising older rows first. A number shorter than 9 digits is refused with a friendly message.
+- **Why this page matters**: as of September 2026, 37 of 305 guests later became members (about 1 in 8), usually within 5 days of their visit.
 
 ---
 

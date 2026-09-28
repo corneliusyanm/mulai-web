@@ -1,21 +1,46 @@
 {% extends 'base.html' %}
 
-{% block title %}Terima Kasih - Mulai Gym{% endblock %}
+{% block title %}Makasih udah mampir | Mulai Gym{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6 mx-auto" style="margin: 1rem 6rem 7rem 6rem;">
-        <div class="bg-transparent p-4">
-            <h2 class="mb-5 text-white fw-bold text-center">Terima Kasih telah mengunjungi Mulai Gym!</h2>
-            <div class="bg-transparent text-white text-center">
-                <p class="mb-5" style="font-size: 1.2rem;">
-                    Semoga kamu bisa Mulai Hidup Lebih Sehat bareng Mulai Gym yaa 😊
-                </p>
-                <div class="text-center mt-5">
-                    <a href="{% url 'home' %}" class="btn btn-secondary">Beranda</a>
+{% comment %}
+What a guest can do next, while they are still standing in the gym. No price:
+first-timers hear it in person from the admin (see README, Business facts).
+{% endcomment %}
+<div class="hp fm">
+    <div class="hp-wrap fm-wrap fm-done">
+        <span class="fm-done-icon"><i class="fas fa-hand" aria-hidden="true"></i></span>
+        <h1 class="fm-title">Makasih udah <em>mampir!</em></h1>
+        <p class="hp-lede">Silakan lihat-lihat dulu. Ada yang mau ditanyain, langsung aja ke admin yang lagi jaga.</p>
+
+        <ol class="fm-next">
+            <li>
+                <span class="fm-next-icon"><i class="fas fa-dumbbell" aria-hidden="true"></i></span>
+                <div>
+                    <p class="fm-next-title">Kenalan sama alatnya</p>
+                    <p class="fm-next-text">Tiap alat ada video cara pakainya. Scan QR di alatnya, atau buka Panduan Alat.</p>
                 </div>
-            </div>
+            </li>
+            <li>
+                <span class="fm-next-icon"><i class="fas fa-comments" aria-hidden="true"></i></span>
+                <div>
+                    <p class="fm-next-title">Tanya-tanya ke admin</p>
+                    <p class="fm-next-text">Soal program, jadwal kelas, apa aja. Kalau mau coba latihan, ada pilihan sekali datang.</p>
+                </div>
+            </li>
+            <li>
+                <span class="fm-next-icon"><i class="fab fa-instagram" aria-hidden="true"></i></span>
+                <div>
+                    <p class="fm-next-title">Follow Instagram kami</p>
+                    <p class="fm-next-text"><a href="{{ gym.INSTAGRAM_URL }}" target="_blank" rel="noopener noreferrer">@mulaigym.id</a>, biar nggak ketinggalan info.</p>
+                </div>
+            </li>
+        </ol>
+
+        <div class="fm-actions">
+            <a class="hp-btn hp-btn-lime" href="{% url 'equipment:list' %}">Buka Panduan Alat</a>
+            <a class="hp-btn hp-btn-ghost" href="{% url 'home' %}">Ke beranda</a>
         </div>
     </div>
 </div>
-{% endblock %} 
+{% endblock %}

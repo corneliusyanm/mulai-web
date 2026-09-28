@@ -834,7 +834,7 @@ def tamu_signup_view(request):
 
 
 def tamu_signup_success_view(request):
-    return render(request, "accounts/tamu_signup_success.html")
+    return render(request, "accounts/tamu_signup_success.html", {"gym": business})
 
 
 # Kamu bilang, kami lakukan: things the gym changed because somebody wrote in.

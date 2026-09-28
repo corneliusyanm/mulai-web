@@ -45,19 +45,37 @@ class TamuForm(forms.ModelForm):
             "social_media_username",
         ]
         widgets = {
-            "name": forms.TextInput(),
-            "phone_number": forms.TextInput(),
+            "name": forms.TextInput(attrs={"autocomplete": "name"}),
+            "phone_number": forms.TextInput(
+                attrs={"inputmode": "tel", "autocomplete": "tel", "placeholder": "0812..."}
+            ),
             "has_worked_out_before": forms.TextInput(
                 attrs={"placeholder": "misal: belum pernah, 3 bulan, 1 tahun, ..."}
             ),
-            "social_media_username": forms.TextInput(),
+            "social_media_username": forms.TextInput(attrs={"placeholder": "@username"}),
         }
         labels = {
             "name": "Nama",
-            "phone_number": "No. HP",
+            "phone_number": "No. HP (WhatsApp)",
             "has_worked_out_before": "Sudah pernah rutin nge-Gym? Kalau sudah, berapa lama?",
             "social_media_username": "Username akun Instagram/TikTok/Facebook (Opsional)",
         }
+
+    def clean_phone_number(self):
+        """Saved the way member numbers are (digits, starting 62), not as typed.
+
+        Guests used to be saved as typed, mostly "0812...", while members are
+        "62812...", so a guest who later joined could not be matched to their
+        membership without rewriting both sides first.
+        """
+        digits = "".join(ch for ch in self.cleaned_data.get("phone_number", "") if ch.isdigit())
+        if digits.startswith("0"):
+            digits = "62" + digits[1:]
+        elif digits.startswith("8"):
+            digits = "62" + digits
+        if len(digits) < 9:
+            raise forms.ValidationError("Nomornya kayaknya kurang, coba cek lagi ya.")
+        return digits
 
     def save(self, commit=True):
         instance = super().save(commit=False)

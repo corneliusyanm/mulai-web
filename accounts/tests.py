@@ -1,3 +1,4 @@
+import re
 import json
 from datetime import date, datetime, time, timedelta, timezone as dt_timezone
 from urllib.parse import quote
@@ -2536,3 +2537,47 @@ class KotakMasukkanTest(TestCase):
         self.assertContains(response, "Kamu bilang,")
         self.assertContains(response, 'class="fm-win"', count=len(FEEDBACK_WINS))
         self.assertContains(response, "Sekarang sudah ada musholla.")
+
+
+class BukuTamuTest(TestCase):
+    def post(self, phone):
+        return self.client.post(
+            reverse("tamu_signup"),
+            {"name": "Rina", "phone_number": phone, "has_worked_out_before": "belum pernah"},
+        )
+
+    def test_the_number_is_saved_the_way_member_numbers_are(self):
+        for typed in ("0812-3456-7890", "+62 812 3456 7890", "81234567890", "6281234567890"):
+            with self.subTest(typed=typed):
+                Tamu.objects.all().delete()
+                self.assertRedirects(self.post(typed), reverse("tamu_signup_success"))
+                self.assertEqual(Tamu.objects.get().phone_number, "6281234567890")
+
+    def test_a_number_that_is_too_short_is_refused_kindly(self):
+        response = self.post("0812")
+
+        self.assertContains(response, "Nomornya kayaknya kurang")
+        self.assertFalse(Tamu.objects.exists())
+
+    def test_a_first_timer_is_still_marked_as_pemula(self):
+        self.post("081234567890")
+
+        self.assertTrue(Tamu.objects.get().is_pemula)
+
+    def test_the_thank_you_page_says_what_to_do_next(self):
+        response = self.client.get(reverse("tamu_signup_success"))
+
+        self.assertContains(response, reverse("equipment:list"))
+        self.assertContains(response, "instagram.com/mulaigym.id")
+        self.assertNotContains(response, "Rp")
+
+
+class FormPagesHaveNoEmojiTest(TestCase):
+    """No emoji in body copy (CLAUDE.md); the old guest thank-you page had one."""
+
+    def test_no_emoji_on_the_form_and_thank_you_pages(self):
+        emoji = re.compile("[\U0001F300-\U0001FAFF☀-➿]")
+        for name in ("masukkan", "masukkan_success", "tamu_signup", "tamu_signup_success"):
+            with self.subTest(page=name):
+                body = self.client.get(reverse(name)).content.decode()
+                self.assertIsNone(emoji.search(body))
