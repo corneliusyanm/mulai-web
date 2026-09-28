@@ -1608,9 +1608,12 @@ class VisitHabitStatsTest(TestCase):
         self.assertEqual(streak, 4)
 
     def test_streak_survives_a_quiet_current_week(self):
-        # Last visit was last week, this week has none yet
-        self.visit_days_ago(8)
-        self.visit_days_ago(15)
+        # Last visit was last week, this week has none yet. Counted from this
+        # week's Monday, not as "8 days ago": on a Monday, 8 days ago is the week
+        # before last, so the streak really was 0 and the test failed every Monday.
+        since_monday = timezone.localdate().weekday()
+        self.visit_days_ago(since_monday + 3)  # Friday of last week
+        self.visit_days_ago(since_monday + 10)  # Friday of the week before
         self.login()
 
         _, (_, streak) = self.stats()
