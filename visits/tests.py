@@ -426,7 +426,7 @@ class AnalyticsViewsTest(TestCase):
 
     def test_members_by_date_ajax_view(self):
         """Test the AJAX endpoint for getting members by date"""
-        today = timezone.now().date().strftime("%Y-%m-%d")
+        today = timezone.localdate().strftime("%Y-%m-%d")
 
         response = self.client.get(
             reverse("admin:members-by-date"), {"date": today, "type": "active"}
@@ -451,7 +451,7 @@ class AnalyticsViewsTest(TestCase):
 
     def test_members_by_date_different_types(self):
         """Test member lookup for different membership types"""
-        today = timezone.now().date().strftime("%Y-%m-%d")
+        today = timezone.localdate().strftime("%Y-%m-%d")
 
         # Test active members
         response = self.client.get(
@@ -510,7 +510,7 @@ class AnalyticsViewsTest(TestCase):
 
     def test_export_members_csv(self):
         """Test CSV export functionality"""
-        today = timezone.now().date().strftime("%Y-%m-%d")
+        today = timezone.localdate().strftime("%Y-%m-%d")
 
         response = self.client.get(
             reverse("admin:export-members"), {"date": today, "type": "active"}
@@ -1443,7 +1443,7 @@ class WeeklyMetricsViewTest(TestCase):
         context = response.context
 
         # Should default to last 7 days
-        today = timezone.now().date()
+        today = timezone.localdate()
         expected_start = today - timedelta(days=6)
         expected_end = today
 

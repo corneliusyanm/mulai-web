@@ -36,7 +36,7 @@ class ReminderModelTest(TestCase):
             member=self.member,
             reminder_type="NO_VISIT",
             reason="Test reminder",
-            due_date=date.today(),
+            due_date=timezone.localdate(),
         )
 
         self.assertEqual(reminder.member, self.member)
@@ -51,7 +51,7 @@ class ReminderModelTest(TestCase):
             member=self.member,
             reminder_type="NO_VISIT",
             reason="Test reminder",
-            due_date=date.today(),
+            due_date=timezone.localdate(),
         )
 
         self.assertFalse(reminder.is_resolved)
@@ -68,7 +68,7 @@ class ReminderModelTest(TestCase):
             member=self.member,
             reminder_type="PAYMENT_DUE",
             reason="Test payment reminder",
-            due_date=date.today(),
+            due_date=timezone.localdate(),
         )
 
         expected = f"{self.member.name} - Bayar Cicilan - Active"
@@ -87,7 +87,7 @@ class ReminderModelTest(TestCase):
                 member=self.member,
                 reminder_type=reminder_type,
                 reason=f"Test {reminder_type} reminder",
-                due_date=date.today(),
+                due_date=timezone.localdate(),
             )
             self.assertEqual(reminder.reminder_type, reminder_type)
 
@@ -280,7 +280,7 @@ class GenerateRemindersCommandTest(TestCase):
             member=self.old_member,
             reminder_type="PAYMENT_DUE",
             reason="Payment due",
-            due_date=date.today(),
+            due_date=timezone.localdate(),
             created_date=timezone.now() - timedelta(days=1),
         )
 
@@ -308,7 +308,7 @@ class GenerateRemindersCommandTest(TestCase):
             member=self.old_member,
             reminder_type="NO_VISIT",
             reason="No visit for 14 days",
-            due_date=date.today(),
+            due_date=timezone.localdate(),
             created_date=timezone.now() - timedelta(days=1),
         )
 
@@ -329,7 +329,7 @@ class GenerateRemindersCommandTest(TestCase):
             member=self.old_member,
             reminder_type="MEMBERSHIP_EXPIRING",
             reason="Membership expiring",
-            due_date=date.today(),
+            due_date=timezone.localdate(),
             created_date=timezone.now() - timedelta(days=1),
         )
 
@@ -347,7 +347,7 @@ class GenerateRemindersCommandTest(TestCase):
 
     def test_membership_expiry_reminder_all_phases(self):
         """Test that all three phases of membership expiry reminders can be created"""
-        today = timezone.now().date()
+        today = timezone.localdate()
         old_created_date = timezone.now() - timedelta(days=30)
 
         # Create members for each phase
@@ -435,7 +435,7 @@ class GenerateRemindersCommandTest(TestCase):
         member.created_at = old_created_date
         member.save()
 
-        today = timezone.now().date()
+        today = timezone.localdate()
 
         # Create a resolved reminder for today (should not block)
         Reminder.objects.create(
@@ -487,7 +487,7 @@ class ReminderAdminTest(TestCase):
             member=self.member,
             reminder_type="NO_VISIT",
             reason="Test reminder",
-            due_date=date.today(),
+            due_date=timezone.localdate(),
         )
 
         self.client = Client()

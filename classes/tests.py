@@ -61,7 +61,7 @@ class ClassModelTest(TestCase):
     def test_class_instance_creation(self):
         instance = ClassInstance.objects.create(
             class_schedule=self.schedule,
-            date=date.today(),
+            date=timezone.localdate(),
             start_time=self.schedule.start_time,
             end_time=self.schedule.end_time,
         )
@@ -71,7 +71,7 @@ class ClassModelTest(TestCase):
     def test_booking_and_waitlist(self):
         instance = ClassInstance.objects.create(
             class_schedule=self.schedule,
-            date=date.today(),
+            date=timezone.localdate(),
             start_time=self.schedule.start_time,
             end_time=self.schedule.end_time,
         )
@@ -128,7 +128,7 @@ class GenerateClassInstancesCommandTest(TestCase):
         )
 
         # Create schedules for different days
-        today = timezone.now().date()
+        today = timezone.localdate()
         today_weekday = today.weekday()
 
         # Schedule for today
@@ -158,7 +158,7 @@ class GenerateClassInstancesCommandTest(TestCase):
         self.assertIn("Class instance generation completed successfully", output)
 
         # Should create instances for today and tomorrow based on schedules
-        today = timezone.now().date()
+        today = timezone.localdate()
         instances_today = ClassInstance.objects.filter(date=today)
         instances_tomorrow = ClassInstance.objects.filter(
             date=today + timedelta(days=1)
@@ -178,7 +178,7 @@ class GenerateClassInstancesCommandTest(TestCase):
     def test_command_marks_past_instances_completed(self):
         """Test that command marks past instances as COMPLETED"""
         # Create an instance for 2 days ago to ensure it's marked as past
-        two_days_ago = timezone.now().date() - timedelta(days=2)
+        two_days_ago = timezone.localdate() - timedelta(days=2)
         past_instance = ClassInstance.objects.create(
             class_schedule=self.today_schedule,
             date=two_days_ago,
@@ -199,7 +199,7 @@ class GenerateClassInstancesCommandTest(TestCase):
     def test_command_marks_yesterday_instances_completed(self):
         """Test that command specifically marks yesterday's instances as COMPLETED (bug fix test)"""
         # Create an instance for yesterday - this was the specific bug we fixed
-        yesterday = timezone.now().date() - timedelta(days=1)
+        yesterday = timezone.localdate() - timedelta(days=1)
         yesterday_instance = ClassInstance.objects.create(
             class_schedule=self.today_schedule,
             date=yesterday,
@@ -235,7 +235,7 @@ class GenerateClassInstancesCommandTest(TestCase):
 
     def test_command_doesnt_mark_today_instances_completed(self):
         """Test that command does NOT mark today's instances as COMPLETED"""
-        today = timezone.now().date()
+        today = timezone.localdate()
 
         # Create instances for today
         today_open_instance = ClassInstance.objects.create(
@@ -269,7 +269,7 @@ class GenerateClassInstancesCommandTest(TestCase):
 
     def test_command_only_completes_open_and_full_instances(self):
         """Test that command only marks OPEN and FULL instances as COMPLETED, not already COMPLETED/CANCELLED ones"""
-        yesterday = timezone.now().date() - timedelta(days=1)
+        yesterday = timezone.localdate() - timedelta(days=1)
 
         # Create instances with different statuses
         open_instance = ClassInstance.objects.create(
@@ -329,7 +329,7 @@ class GenerateClassInstancesCommandTest(TestCase):
 
     def test_command_doesnt_create_duplicates(self):
         """Test that command doesn't create duplicate instances"""
-        today = timezone.now().date()
+        today = timezone.localdate()
 
         # Create an instance manually
         existing_instance = ClassInstance.objects.create(
@@ -386,7 +386,7 @@ class ClassInstanceAdminTest(TestCase):
         )
 
         # Create instances with different statuses
-        today = timezone.now().date()
+        today = timezone.localdate()
         self.open_instance = ClassInstance.objects.create(
             class_schedule=self.schedule,
             date=today,
@@ -501,7 +501,7 @@ class ClassInstanceAdminTest(TestCase):
 
     def test_other_filters_dont_affect_status_filtering(self):
         """Test that other filters (like date) don't interfere with status logic"""
-        today = timezone.now().date()
+        today = timezone.localdate()
         request = self.factory.get(f"/admin/classes/classinstance/?date__exact={today}")
 
         # Test the default filter behavior when other filters are applied but no status filter
@@ -565,7 +565,7 @@ class ClassListViewTest(TestCase):
         )
 
         now = timezone.now()
-        today = now.date()
+        today = timezone.localdate(now)
 
         # Create class instances with different timing
         self.past_instance = ClassInstance.objects.create(
@@ -633,7 +633,7 @@ class ClassListViewTest(TestCase):
         from django.http import HttpRequest
 
         # Create a COMPLETED instance for tomorrow (should not appear)
-        tomorrow = timezone.now().date() + timedelta(days=1)
+        tomorrow = timezone.localdate() + timedelta(days=1)
         # Create a new schedule for this test to avoid unique constraint
         completed_schedule = ClassSchedule.objects.create(
             class_obj=self.pilates_class,
@@ -929,7 +929,7 @@ class BookingValidationTest(TestCase):
         )
         future_instance = ClassInstance.objects.create(
             class_schedule=future_schedule,
-            date=timezone.now().date() + timedelta(days=5),
+            date=timezone.localdate() + timedelta(days=5),
             start_time=future_schedule.start_time,
             end_time=future_schedule.end_time,
             status="OPEN",
@@ -971,7 +971,7 @@ class BookingValidationTest(TestCase):
         )
         future_instance = ClassInstance.objects.create(
             class_schedule=future_schedule,
-            date=timezone.now().date() + timedelta(days=5),
+            date=timezone.localdate() + timedelta(days=5),
             start_time=future_schedule.start_time,
             end_time=future_schedule.end_time,
             status="OPEN",
@@ -1013,7 +1013,7 @@ class BookingValidationTest(TestCase):
         )
         future_instance = ClassInstance.objects.create(
             class_schedule=future_schedule,
-            date=timezone.now().date() + timedelta(days=5),
+            date=timezone.localdate() + timedelta(days=5),
             start_time=future_schedule.start_time,
             end_time=future_schedule.end_time,
             status="OPEN",
@@ -1053,7 +1053,7 @@ class CancelledInstanceStatusGuardTest(TestCase):
         # A future-dated instance the admin has cancelled.
         self.instance = ClassInstance.objects.create(
             class_schedule=self.schedule,
-            date=timezone.now().date() + timedelta(days=2),
+            date=timezone.localdate() + timedelta(days=2),
             start_time=self.schedule.start_time,
             end_time=self.schedule.end_time,
             status="CANCELLED",
@@ -1154,7 +1154,7 @@ class CancelledInstanceStatusGuardTest(TestCase):
         """Regression guard: OPEN/FULL toggling still works for live classes."""
         live = ClassInstance.objects.create(
             class_schedule=self.schedule,
-            date=timezone.now().date() + timedelta(days=3),
+            date=timezone.localdate() + timedelta(days=3),
             start_time=self.schedule.start_time,
             end_time=self.schedule.end_time,
             status="OPEN",
@@ -1544,8 +1544,8 @@ class ListPageBookingTest(TestCase):
             pemula_active_until=timezone.now() + timedelta(days=30),
             semi_private_active_until=timezone.now() + timedelta(days=30),
         )
-        self.tomorrow = timezone.now().date() + timedelta(days=1)
-        self.day_after = timezone.now().date() + timedelta(days=2)
+        self.tomorrow = timezone.localdate() + timedelta(days=1)
+        self.day_after = timezone.localdate() + timedelta(days=2)
 
     def make_instance(self, class_obj, hour, on_date=None, status="OPEN"):
         on_date = on_date or self.tomorrow
@@ -1763,7 +1763,7 @@ class WaitlistPositionTest(TestCase):
         self.semi_private = Class.objects.create(
             name="Semi Private", description="Semi private", max_members=1
         )
-        self.tomorrow = timezone.now().date() + timedelta(days=1)
+        self.tomorrow = timezone.localdate() + timedelta(days=1)
         schedule = ClassSchedule.objects.create(
             class_obj=self.semi_private,
             day_of_week=self.tomorrow.weekday(),
@@ -1855,7 +1855,7 @@ class ClassCapacityDisplayTest(TestCase):
         self.pemula = Class.objects.create(
             name="Kelas Pemula", description="Beginner", max_members=10
         )
-        self.tomorrow = timezone.now().date() + timedelta(days=1)
+        self.tomorrow = timezone.localdate() + timedelta(days=1)
         schedule = ClassSchedule.objects.create(
             class_obj=self.pemula,
             day_of_week=self.tomorrow.weekday(),
@@ -1956,7 +1956,7 @@ class ClassCalendarExportTest(TestCase):
         self.pemula = Class.objects.create(
             name="Kelas Pemula", description="Beginner", max_members=10
         )
-        self.tomorrow = timezone.now().date() + timedelta(days=1)
+        self.tomorrow = timezone.localdate() + timedelta(days=1)
         schedule = ClassSchedule.objects.create(
             class_obj=self.pemula,
             day_of_week=self.tomorrow.weekday(),

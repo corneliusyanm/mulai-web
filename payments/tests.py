@@ -96,7 +96,7 @@ class PaymentModelTest(TestCase):
         # No package = no auto-update, admin handles manually
         self.assertIsNone(self.member.active_until)
         # Payment should have membership_end_date set for tracking
-        self.assertEqual(payment.membership_end_date.date(), payment_date.date())
+        self.assertEqual(timezone.localdate(payment.membership_end_date), timezone.localdate(payment_date))
 
     def test_payment_apakah_nyicil_default_false(self):
         """
@@ -435,8 +435,8 @@ class PackageBasedPaymentTest(TestCase):
         )
 
         self.member.refresh_from_db()
-        expected_end_date = payment_date.date()
-        self.assertEqual(self.member.active_until.date(), expected_end_date)
+        expected_end_date = timezone.localdate(payment_date)
+        self.assertEqual(timezone.localdate(self.member.active_until), expected_end_date)
 
     def test_skip_membership_update_field(self):
         """Test that skip_membership_update prevents automatic updates"""
@@ -491,13 +491,13 @@ class PackageBasedPaymentTest(TestCase):
         self.member.refresh_from_db()
 
         # Both active_until and pemula_active_until should be extended from the same initial end date
-        expected_start_date = initial_end_date.date() + timedelta(days=1)
+        expected_start_date = timezone.localdate(initial_end_date) + timedelta(days=1)
         expected_end_date = (
             expected_start_date + relativedelta(months=3) - timedelta(days=1)
         )
 
-        self.assertEqual(self.member.active_until.date(), expected_end_date)
-        self.assertEqual(self.member.pemula_active_until.date(), expected_end_date)
+        self.assertEqual(timezone.localdate(self.member.active_until), expected_end_date)
+        self.assertEqual(timezone.localdate(self.member.pemula_active_until), expected_end_date)
 
     def test_skip_membership_update_default_false(self):
         """Test that skip_membership_update defaults to False"""

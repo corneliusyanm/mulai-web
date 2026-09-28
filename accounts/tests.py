@@ -315,7 +315,7 @@ class MemberViewsTest(TestCase):
             end_time=time(11, 0),
         )
 
-        today = timezone.now().date()
+        today = timezone.localdate()
         yesterday = today - timedelta(days=1)
         tomorrow = today + timedelta(days=1)
 
@@ -381,7 +381,7 @@ class MemberViewsTest(TestCase):
             end_time=time(15, 0),
         )
 
-        today = timezone.now().date()
+        today = timezone.localdate()
         yesterday = today - timedelta(days=1)
         tomorrow = today + timedelta(days=1)
 
@@ -1291,7 +1291,7 @@ class MemberHistoryViewTest(TestCase):
         )
         instance = ClassInstance.objects.create(
             class_schedule=schedule,
-            date=timezone.now().date() - timedelta(days=days_ago),
+            date=timezone.localdate() - timedelta(days=days_ago),
             start_time=time(8, 0),
             end_time=time(9, 0),
             status="COMPLETED",
@@ -1366,7 +1366,7 @@ class MemberHistoryViewTest(TestCase):
         schedule = ClassSchedule.objects.filter(class_obj=class_obj).first()
         upcoming = ClassInstance.objects.create(
             class_schedule=schedule,
-            date=timezone.now().date() + timedelta(days=2),
+            date=timezone.localdate() + timedelta(days=2),
             start_time=time(8, 0),
             end_time=time(9, 0),
         )
