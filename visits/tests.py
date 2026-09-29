@@ -192,8 +192,8 @@ class VisitViewsTest(TestCase):
         session.save()
         response = self.client.get(reverse("check_in_success"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "CHECK-IN")
-        self.assertContains(response, "BERHASIL")
+        self.assertContains(response, ">Check-in</p>")
+        self.assertContains(response, ">Berhasil</h1>")
 
     def test_check_in_success_view_checked_out_visit(self):
         """
@@ -1857,3 +1857,112 @@ class CheckInLoginBoxTest(TestCase):
 
         self.assertContains(response, 'name="identifier"')
         self.assertNotIn("member_email", self.client.session)
+
+
+# Tuesday 15 September 2026, 10:00 in Jakarta: midday, mid-month, mid-week.
+PINNED_NOW = timezone.make_aware(datetime(2026, 9, 15, 10, 0))
+
+
+class CheckInScreenTest(TestCase):
+    """What the success screen says under BERHASIL."""
+
+    def setUp(self):
+        from unittest.mock import patch
+
+        patcher = patch("django.utils.timezone.now", return_value=PINNED_NOW)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.budi = _gym_member()
+        session = self.client.session
+        session["member_email"] = self.budi.email
+        session.save()
+
+    def past_visits(self, count):
+        for days_ago in range(count, 0, -1):
+            visit = Visit.objects.create(member=self.budi, check_out_time=PINNED_NOW)
+            Visit.objects.filter(pk=visit.pk).update(
+                check_in_time=PINNED_NOW - timedelta(days=days_ago),
+                check_out_time=PINNED_NOW - timedelta(days=days_ago) + timedelta(hours=1),
+            )
+
+    def screen(self):
+        self.client.get(reverse("check_in_page"))
+        return self.client.get(reverse("check_in_success")).content.decode()
+
+    def test_the_first_visit_is_welcomed(self):
+        body = self.screen()
+
+        self.assertIn("Kunjungan pertamamu!", body)
+
+    def test_a_badge_number_is_celebrated(self):
+        self.past_visits(9)
+
+        body = self.screen()
+
+        self.assertIn("Kunjungan ke-10!", body)
+        self.assertIn("Badge 10 kunjungan", body)
+
+    def test_any_other_visit_says_how_far_to_the_next_badge(self):
+        self.past_visits(6)
+
+        body = self.screen()
+
+        self.assertIn("Kunjungan ke-7", body)
+        self.assertIn("3 lagi ke badge 10 kunjungan", body)
+
+    def test_a_later_visit_does_not_change_the_number_of_this_one(self):
+        self.past_visits(6)
+        self.client.get(reverse("check_in_page"))
+        shown = Visit.objects.latest("check_in_time")
+        Visit.objects.filter(pk=shown.pk).update(check_out_time=PINNED_NOW)
+        Visit.objects.filter(pk=Visit.objects.create(member=self.budi).pk).update(
+            check_in_time=PINNED_NOW + timedelta(days=1)
+        )
+        from .moments import visit_moment
+
+        self.assertEqual(visit_moment(self.budi, shown)["number"], 7)
+
+    def test_the_date_is_in_indonesian(self):
+        body = self.screen()
+
+        self.assertIn("Selasa, 15 September 2026", body)
+        self.assertNotIn("Tuesday", body)
+        self.assertIn(">10.00<", body)
+
+    def test_it_moves_on_to_the_account_page_and_says_so(self):
+        body = self.screen()
+
+        self.assertIn('data-ci-countdown="8"', body)
+        self.assertIn(f'data-ci-next="{reverse("member_details")}"', body)
+        self.assertNotIn("beranda", body)
+
+    def test_a_membership_ending_this_week_shows_its_date(self):
+        # 23:59 on Friday 18 September, Jakarta
+        Member.objects.filter(pk=self.budi.pk).update(
+            active_until=timezone.make_aware(datetime(2026, 9, 18, 23, 59))
+        )
+
+        body = self.screen()
+
+        self.assertIn("Membership kamu habis 3 hari lagi", body)
+        self.assertIn("Aktif sampai Jumat, 18 Sep", body)
+        self.assertNotIn("Rp", body)
+
+    def test_a_membership_ending_today_says_today(self):
+        Member.objects.filter(pk=self.budi.pk).update(
+            active_until=timezone.make_aware(datetime(2026, 9, 15, 23, 59))
+        )
+
+        self.assertIn("Membership kamu habis hari ini", self.screen())
+
+    def test_a_membership_with_weeks_left_says_nothing_about_it(self):
+        Member.objects.filter(pk=self.budi.pk).update(active_until=PINNED_NOW + timedelta(days=20))
+
+        self.assertNotIn("Membership kamu habis", self.screen())
+
+    def test_members_the_admins_handle_by_hand_get_no_end_date(self):
+        Member.objects.filter(pk=self.budi.pk).update(
+            active_until=PINNED_NOW + timedelta(days=2), skip_auto_reminder=True
+        )
+
+        self.assertNotIn("Membership kamu habis", self.screen())

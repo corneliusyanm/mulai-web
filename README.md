@@ -464,6 +464,9 @@ The banner is fetched via a tiny JSON endpoint instead of a context processor so
   - This view is purely for displaying the result of a check-in.
   - It fetches the member's most recent visit, regardless of whether they are still checked in or have already checked out.
   - This prevents redirect loops where a user with a completed visit would be sent away from the success page. It will only redirect to the main check-in page if the user is not logged in or has no visit history at all.
+  - **What the screen says** (`visits/moments.py`). The big part is for the admin glancing over: BERHASIL, the clock time, the date in Indonesian. Under it, one or two cards for the member, since the screen is up about 32 times a day:
+    - **Which visit this is** (`visit_moment()`): "Kunjungan pertamamu!" on the first, "Kunjungan ke-25!" with its badge on any `VISIT_MILESTONES` number (the same badges as `/akun`), otherwise "Kunjungan ke-24" with "1 lagi ke badge 25 kunjungan" and a bar. In production (90 days) that was about 110 badge moments and 50 first visits. Counted up to the visit shown, so a later visit cannot change it.
+    - **Membership ending this week** (`membership_ending()`): only within `NUDGE_DAYS_BEFORE` (7) days, same rules as the `/akun` nudge, so nothing for `skip_auto_reminder` members. "Membership kamu habis 5 hari lagi. Aktif sampai Minggu, 4 Okt. Mau lanjut? Bilang aja ke admin." No price and no WhatsApp link: they are standing at the desk.
 - **`check_out_page`** (`/check-out`)
   1. Checks session for `member_email` (renders fail if not logged in).
   2. Tries to find an active `Visit` for the member.
@@ -509,11 +512,11 @@ graph TD
 ```
 
 ### Auto-Redirect After Success
-After a successful check-in or check-out, the success page automatically redirects to `/akun` (member account page) after 5 seconds. This prevents:
+After a successful check-in or check-out, the success page automatically redirects to `/akun` (member account page) after `SUCCESS_SECONDS` (8, was 5 before the screens had anything to read). This prevents:
 - Users leaving the success page open on their phone
 - Accidental duplicate visits when reopening the browser the next day
 
-A countdown timer is displayed: "Kembali ke beranda dalam X detik..."
+A "Ke Akun Saya" button, and under it "Pindah sendiri dalam X detik". It used to say "Kembali ke beranda", which was never where it went. The move uses `location.replace`, so Back from `/akun` does not land on the success screen again.
 
 ### Development Mode Features
 When `DJANGO_DEBUG=True` (local development), the navbar displays additional links:

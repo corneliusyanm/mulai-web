@@ -8,6 +8,12 @@ from accounts.views import log_member_in
 from classes.reviews import FACES as REVIEW_FACES, pending_reviews
 
 from .models import Visit
+from .moments import membership_ending, visit_moment
+
+# How long the check-in and check-out screens stay up before moving on to /akun.
+# Long enough to read a line, and the move matters: a tab left open on
+# /check-out and reopened tomorrow would check the member out again.
+SUCCESS_SECONDS = 8
 
 
 def _session_member(request):
@@ -53,23 +59,30 @@ def check_in_page(request):
 
 
 def check_in_success(request):
-    member_email = request.session.get("member_email")
-    if not member_email:
+    """The screen a member shows at the desk, plus one or two lines worth reading.
+
+    Shows the latest visit, open or not, so reloading it later never bounces
+    anyone back into a check-in they did not ask for.
+    """
+    member = _session_member(request)
+    if member is None:
+        return redirect("check_in_page")
+    visit = Visit.objects.filter(member=member).order_by("-check_in_time").first()
+    if visit is None:
         return redirect("check_in_page")
 
-    try:
-        member = Member.objects.get(email=member_email)
-        # Show the most recent visit, active or not.
-        visit = Visit.objects.filter(member=member).latest("check_in_time")
-        # The success page is shown, but its state depends on the visit.
-        return render(
-            request,
-            "visits/quick_check_in.html",
-            {"member": member, "visit": visit, "success": True},
-        )
-    except (Member.DoesNotExist, Visit.DoesNotExist):
-        # Only redirect if member has no session or has never visited.
-        return redirect("check_in_page")
+    return render(
+        request,
+        "visits/quick_check_in.html",
+        {
+            "member": member,
+            "visit": visit,
+            "visit_day": timezone.localdate(visit.check_in_time),
+            "moment": visit_moment(member, visit),
+            "ending": membership_ending(member, timezone.localdate()),
+            "success_seconds": SUCCESS_SECONDS,
+        },
+    )
 
 
 def check_out_page(request):
