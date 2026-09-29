@@ -466,17 +466,17 @@ The banner is fetched via a tiny JSON endpoint instead of a context processor so
   - This prevents redirect loops where a user with a completed visit would be sent away from the success page. It will only redirect to the main check-in page if the user is not logged in or has no visit history at all.
   - **What the screen says** (`visits/moments.py`). The big part is for the admin glancing over: BERHASIL, the clock time, the date in Indonesian. Under it, one or two cards for the member, since the screen is up about 32 times a day:
     - **Which visit this is** (`visit_moment()`): "Kunjungan pertamamu!" on the first, "Kunjungan ke-25!" with its badge on any `VISIT_MILESTONES` number (the same badges as `/akun`), otherwise "Kunjungan ke-24" with "1 lagi ke badge 25 kunjungan" and a bar. In production (90 days) that was about 110 badge moments and 50 first visits. Counted up to the visit shown, so a later visit cannot change it.
-    - **Membership ending this week** (`membership_ending()`): only within `NUDGE_DAYS_BEFORE` (7) days, same rules as the `/akun` nudge, so nothing for `skip_auto_reminder` members. "Membership kamu habis 5 hari lagi. Aktif sampai Minggu, 4 Okt. Mau lanjut? Bilang aja ke admin." No price and no WhatsApp link: they are standing at the desk.
+    - **Membership ending this week** (`membership_ending()`): only within `NUDGE_DAYS_BEFORE` (7) days, built on the same `membership_days_left()` as the `/akun` nudge, so nothing for `skip_auto_reminder` members and the two can never disagree. "Membership kamu habis 5 hari lagi. Aktif sampai Minggu, 4 Okt. Mau lanjut? Bilang aja ke admin." No price and no WhatsApp link: they are standing at the desk.
 - **`check_out_page`** (`/check-out`)
   1. A phone that does not know the member gets the login box (`check_out.html`, the same `_login_box.html`), and checks out as soon as it matches someone. It used to be a "Belum Login" error pointing at `/masuk`.
-  2. Finds the latest open `Visit`, sets `check_out_time`, and renders `quick_check_out.html`:
+  2. Finds the latest open `Visit`, sets `check_out_time`, and redirects to `/check-out/success/` (`check_out_success`), which only reads, so reloading that tab the next day cannot check out again. It renders `quick_check_out.html` for the latest finished visit:
      - **Workout length** under the time, "Kamu latihan 1 jam 22 menit" (`workout_length()`), only between 15 minutes and 4 hours (`WORKOUT_MINUTES_SHOWN`). In production (180 days) 43 visits were under 5 minutes (a check-in and check-out in one go) and 25 over 4 hours (a forgotten check-out); the other 5,200 sit in between, median 82 minutes.
      - **The class question** (Penilaian Kelas) when there is one, with the countdown off.
      - **Next class** (`next_class()`): the next booked class that has not started, within `NEXT_CLASS_DAYS` (14), skipping cancelled ones: "Sampai ketemu nanti jam 19:00" (later today), "besok jam 07:15", or "Kamis, 1 Okt jam 17:00", with the class name. With nothing booked, a link to the class schedule.
-     - The pantun stays. The Django message shown on `/akun` afterwards is "Check-out berhasil. Sampai ketemu lagi, {nama}!" (it was "Selamat tinggal", which reads as goodbye for good).
-  3. No open visit renders `check_out_failed.html`, which is one of two things. Already checked out today (scanned twice on the way out): "Udah check-out jam 12.18. Nggak perlu check-out lagi." Never checked in today: "Kalau tadi lupa check-in, bilang ke admin ya, biar kunjungan dan kelasmu hari ini tetap kecatat", since a class booked today with no check-in that day counts as missed (see No-Show Penalty).
+     - The pantun stays. No Django message: the screen already says it worked, and the old "Selamat tinggal, {nama}!" waited for the next page that renders messages, which after "Ganti akun" was the login box, greeting the next person with the previous member's name.
+  3. No open visit renders `check_out_failed.html`, which is one of two things. Already checked out today (scanned twice on the way out): "Udah check-out jam 12:18. Nggak perlu check-out lagi." Never checked in today: "Kalau tadi lupa check-in, bilang ke admin ya, biar kunjungan dan kelasmu hari ini tetap kecatat", since a class booked today with no check-in that day counts as missed (see No-Show Penalty).
 - **`forget_member`** (`/forget-member`)
-  - Clears `member_email` from session, then goes back to `/check-in`, or to `/check-out` with `?next=check_out` (`FORGET_NEXT`, a fixed list, never a URL from the request). The failure screens link it as "Bukan {nama}? Ganti akun"; from check-out it has to go back to check-out, because logging in on `/check-in` would check the other account in on its way out.
+  - Clears `member_email` from session and drops any queued messages (they were for the member who just left), then goes back to `/check-in`, or to `/check-out` with `?next=check_out` (`FORGET_NEXT`, a fixed list, never a URL from the request). The failure screens link it as "Bukan {nama}? Ganti akun"; from check-out it has to go back to check-out, because logging in on `/check-in` would check the other account in on its way out.
 
 ### Check-in/Out Flow Diagram
 ```mermaid
@@ -509,7 +509,7 @@ graph TD
         Q -->|Yes| S{Has Active Visit?}
         S -->|No| T[Already checked out today,<br>or never checked in today]
         S -->|Yes| U[Auto Check-out]
-        U --> U2[Show Success Page]
+        U --> U2[Redirect to /check-out/success]
         U2 --> U3[Auto-redirect to /akun<br>after 8 seconds,<br>unless a class question is showing]
     end
 ```
@@ -517,7 +517,7 @@ graph TD
 ### Auto-Redirect After Success
 After a successful check-in or check-out, the success page automatically redirects to `/akun` (member account page) after `SUCCESS_SECONDS` (8, was 5 before the screens had anything to read). This prevents:
 - Users leaving the success page open on their phone
-- Accidental duplicate visits when reopening the browser the next day
+- Accidental duplicate visits when reopening the browser the next day (both success screens are also their own read-only URLs now, so a reload changes nothing)
 
 A "Ke Akun Saya" button, and under it "Pindah sendiri dalam X detik". It used to say "Kembali ke beranda", which was never where it went. The move uses `location.replace`, so Back from `/akun` does not land on the success screen again.
 
@@ -552,11 +552,12 @@ The account-related pages are accessible at the following URLs:
 ### Forms (`accounts/forms.py`)
 - **`MemberSignUpForm`, `MemberEditForm`**: Include `country_code` (default +62) and `phone_number_display` fields. The `clean` method standardizes the phone number (e.g., removes +, strips leading 0) and stores it in the `phone_number` model field (digits only). Performs uniqueness validation.
 - **`MemberLoginForm`**: one `identifier` box, "Email atau nomor HP", used by `/masuk`, `/check-in` and `/check-out` through `templates/accounts/_login_box.html`, so the three never drift. The matched member is `form.member`. It replaced an email box, the word "ATAU", and a separate `+62` box; the labels on that card were white on white, so members saw two unlabelled boxes.
-- **`find_member(identifier)`**: the one lookup behind that box. Anything with an `@` is an email: the exact spelling first, then case-insensitive (24 members signed up with capitals), and two rows that differ only in case find nobody rather than guess between them. Anything else is a number, normalised with `member_style_phone()` (0812, 812, +62 812, 0062 812), under `MIN_PHONE_DIGITS` (9) finds nobody, and matches every way numbers have been stored: `62812...` (almost everyone), `0812...` and `ID812...` (a handful of older rows, whose owners could never log in by phone before).
+- **`find_member(identifier)`**: the one lookup behind that box. Anything with an `@` is an email: the exact spelling first, then case-insensitive (24 members signed up with capitals), and two rows that differ only in case find nobody rather than guess between them. Anything else is a number, normalised with `member_style_phone()` (0812, 812, +62 812, 0062 812), under `MIN_PHONE_DIGITS` (9) finds nobody, and matches every way numbers have been stored (`phone_candidates()`): `62812...` (almost everyone), `0812...` and `ID812...` (a handful of older rows, whose owners could never log in by phone before). One number stored two ways finds nobody, like the email case.
+- **"Udah terdaftar" uses the same matching.** `/daftar` refuses an email that exists in any case (`email_taken()`), and `/daftar` and `/akun/ubah` refuse a number that exists in any stored format (`phone_candidates()`). With the old exact-only checks, a new account could register `Budi@...` or `62812...` next to an existing `budi@...` or `0812...` and from then on open whenever the older member logged in.
 
 ### Views (`accounts/views.py`)
 - **`member_login`** (`/masuk/`): Accepts POST data from `MemberLoginForm`. On success, `log_member_in()` and redirect to `/akun`; otherwise the box re-renders with the error under it.
-- **`log_member_in(request, member)`**: the one way a member gets logged in (login, check-in, check-out, signup). It cycles the session key before storing `member_email`, so a session key planted before the login does not carry over (session fixation).
+- **`log_member_in(request, member)`**: the one way a member gets logged in (login, check-in, check-out, signup). It cycles the session key and rotates the CSRF token before storing `member_email`, as Django's own `login()` does, so a session key or token planted before the login does not carry over.
 - **`member_logout`** (`/keluar/`): Logs the member out by clearing the session.
 - **`MemberSignUpView`** (`/daftar/`): After successful signup, logs the new member in with `log_member_in()`.
 - **`MemberDetailView`** (`/akun/`): Member's own page. Each history section is trimmed (5 visits, 5 payments, 10 past classes, see the `*_LIMIT` constants in `accounts/views.py`). When there is more than that, a "Lihat Semua ..." button with the total count links to the full history page.
