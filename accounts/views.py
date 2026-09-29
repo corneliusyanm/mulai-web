@@ -7,6 +7,7 @@ from django.contrib import messages
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.core.exceptions import PermissionDenied
 from django.db import OperationalError, ProgrammingError
+from django.middleware.csrf import rotate_token
 from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
@@ -64,7 +65,7 @@ HISTORY_TABS = [
 VISIT_MILESTONES = (5, 10, 25, 50, 100, 200, 300)
 
 
-def _visit_milestone(total_visits):
+def visit_milestone(total_visits):
     """Badge earned and the next one to chase, or None for a member with no visits.
 
     `percent` is progress inside the current step, not overall, so the bar moves
@@ -97,6 +98,20 @@ NUDGE_DAYS_AFTER = 30  # past this, an expired membership stops being nagged abo
 GYM_WHATSAPP_NUMBER = "628996940908"
 
 
+def membership_days_left(member, today):
+    """{"on": the local end date, "days": days from today}, or None.
+
+    None when there is nothing to remind about: no membership date at all, or
+    a member the admins handle by hand (`skip_auto_reminder`). Negative days
+    mean it has ended. The /akun nudge and the check-in screen both start
+    from this, so the two can never disagree about a membership.
+    """
+    if not member.active_until or member.skip_auto_reminder:
+        return None
+    ends_on = localtime(member.active_until).date()
+    return {"on": ends_on, "days": (ends_on - today).days}
+
+
 def _membership_nudge(member, today):
     """A renew / come-back-please strip for the account page, or None.
 
@@ -109,11 +124,10 @@ def _membership_nudge(member, today):
     (admin handles those by hand, so an automated nudge could contradict a
     private arrangement), and for memberships that lapsed long ago.
     """
-    if not member.active_until or member.skip_auto_reminder:
+    ends = membership_days_left(member, today)
+    if ends is None:
         return None
-
-    expires_on = localtime(member.active_until).date()
-    days = (expires_on - today).days
+    expires_on, days = ends["on"], ends["days"]
 
     if days > NUDGE_DAYS_BEFORE or days < -NUDGE_DAYS_AFTER:
         return None
@@ -147,7 +161,7 @@ def _membership_nudge(member, today):
 
     message = (
         f"Halo Mulai Gym, saya {member.name} ({member.phone_number}). "
-        f"Membership saya {wa_status} (tanggal {expires_on.strftime('%d %b %Y')}), "
+        f"Membership saya {wa_status} (tanggal {day_month_year(expires_on)}), "
         f"mau perpanjang ya."
     )
     return {
@@ -298,9 +312,11 @@ def log_member_in(request, member):
     """Remember this member on this phone, under a fresh session key.
 
     The new key is what stops session fixation: a key somebody planted before
-    the login does not carry over into the logged-in session.
+    the login does not carry over into the logged-in session. The CSRF token
+    is rotated for the same reason, as Django's own login() does.
     """
     request.session.cycle_key()
+    rotate_token(request)
     request.session["member_email"] = member.email
 
 
@@ -410,7 +426,7 @@ class MemberDetailView(MemberRequiredMixin, DetailView):
             1 for day in visit_dates if (day.year, day.month) == (today.year, today.month)
         )
         context["visit_streak_weeks"] = _visit_streak_weeks(visit_dates, today)
-        context["visit_milestone"] = _visit_milestone(total_visits)
+        context["visit_milestone"] = visit_milestone(total_visits)
 
         context["membership_nudge"] = _membership_nudge(member, today)
 

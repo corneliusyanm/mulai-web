@@ -14,7 +14,7 @@ from .models import Member, ActiveMember, Tamu, Masukkan, Prospect
 from .admin import ProspectAdmin, MemberAdmin, ActiveMemberAdmin, SaleInline
 from .models import User
 from .dates import MONTHS_ID
-from .views import VISIT_MILESTONES, _visit_milestone
+from .views import VISIT_MILESTONES, visit_milestone
 from visits.admin import admin_site
 from visits.models import Visit
 from payments.models import Package, Payment
@@ -2095,10 +2095,10 @@ class VisitMilestoneTest(TestCase):
             Visit.objects.create(member=self.member)
 
     def test_member_with_no_visits_gets_no_milestone(self):
-        self.assertIsNone(_visit_milestone(0))
+        self.assertIsNone(visit_milestone(0))
 
     def test_before_the_first_badge_it_counts_down_to_it(self):
-        milestone = _visit_milestone(3)
+        milestone = visit_milestone(3)
 
         self.assertIsNone(milestone["reached"])
         self.assertEqual(milestone["next"], 5)
@@ -2107,7 +2107,7 @@ class VisitMilestoneTest(TestCase):
 
     def test_progress_is_measured_inside_the_current_step(self):
         # 60 visits: past 50, chasing 100, so 10 of the 50-visit step is done.
-        milestone = _visit_milestone(60)
+        milestone = visit_milestone(60)
 
         self.assertEqual(milestone["reached"], 50)
         self.assertEqual(milestone["next"], 100)
@@ -2115,14 +2115,14 @@ class VisitMilestoneTest(TestCase):
         self.assertEqual(milestone["percent"], 20)
 
     def test_landing_exactly_on_a_badge_keeps_a_sliver_of_bar(self):
-        milestone = _visit_milestone(50)
+        milestone = visit_milestone(50)
 
         self.assertEqual(milestone["reached"], 50)
         self.assertEqual(milestone["next"], 100)
         self.assertEqual(milestone["percent"], 4)
 
     def test_past_the_last_badge_there_is_nothing_left_to_chase(self):
-        milestone = _visit_milestone(VISIT_MILESTONES[-1] + 12)
+        milestone = visit_milestone(VISIT_MILESTONES[-1] + 12)
 
         self.assertEqual(milestone["reached"], VISIT_MILESTONES[-1])
         self.assertIsNone(milestone["next"])
@@ -2780,3 +2780,91 @@ class SignupPageTest(TestCase):
         self.assertEqual(Member.objects.get(email="sari@example.com").phone_number, "6281299990000")
         self.assertEqual(self.client.session["member_email"], "sari@example.com")
         self.assertNotEqual(self.client.session.session_key, before)
+
+
+class RegisteringCannotShadowALoginTest(TestCase):
+    """A new account must not take over the email or number an old one logs in with."""
+
+    def setUp(self):
+        self.old = _member("tes.lama@example.com", "081277776666")
+
+    def signup(self, **changes):
+        data = {
+            "name": "Baru",
+            "email": "baru@example.com",
+            "country_code": "+62",
+            "phone_number_display": "81299990000",
+            "gender": "F",
+            "age": 24,
+            "height": 158,
+            "weight": 52,
+            "years_of_working_out": "belum pernah",
+            "goals": "sehat",
+            "know_mulai_gym_from": "instagram",
+        }
+        data.update(changes)
+        return self.client.post(reverse("signup"), data)
+
+    def test_the_same_email_in_other_capitals_is_taken(self):
+        response = self.signup(email="Tes.Lama@Example.com")
+
+        self.assertContains(response, "Email ini udah terdaftar")
+        self.assertFalse(Member.objects.filter(email="Tes.Lama@Example.com").exists())
+
+    def test_a_number_stored_the_old_way_is_taken(self):
+        response = self.signup(phone_number_display="81277776666")
+
+        self.assertContains(response, "Nomor ini udah terdaftar")
+        self.assertEqual(Member.objects.count(), 1)
+
+    def test_editing_a_profile_to_someone_elses_old_style_number_is_refused(self):
+        other = _member("lain@example.com", "6281200001111")
+        session = self.client.session
+        session["member_email"] = other.email
+        session.save()
+
+        response = self.client.post(
+            reverse("member_edit"),
+            {
+                "name": other.name,
+                "gender": other.gender,
+                "age": other.age,
+                "height": other.height,
+                "weight": other.weight,
+                "country_code": "+62",
+                "phone_number_display": "81277776666",
+                "years_of_working_out": other.years_of_working_out,
+                "goals": other.goals,
+            },
+        )
+
+        self.assertContains(response, "Nomor ini udah terdaftar")
+        other.refresh_from_db()
+        self.assertEqual(other.phone_number, "6281200001111")
+
+    def test_one_number_stored_two_ways_finds_nobody_rather_than_guess(self):
+        from .forms import find_member
+
+        _member("kembar@example.com", "6281277776666")
+
+        self.assertIsNone(find_member("081277776666"))
+
+    def test_logging_in_rotates_the_csrf_token(self):
+        self.client.get(reverse("member_login"))
+        before = self.client.cookies["csrftoken"].value
+
+        response = self.client.post(reverse("member_login"), {"identifier": "081277776666"})
+
+        self.assertNotEqual(response.cookies["csrftoken"].value, before)
+
+    def test_the_renewal_message_carries_an_indonesian_date(self):
+        from .views import _membership_nudge
+
+        member = _member(
+            "habis@example.com",
+            "6281233334444",
+            active_until=timezone.make_aware(datetime(2026, 10, 3, 23, 59)),
+        )
+        nudge = _membership_nudge(member, date(2026, 9, 29))
+
+        self.assertIn(quote("03 Okt 2026"), nudge["whatsapp_url"])

@@ -10,7 +10,12 @@ from datetime import datetime, timedelta
 
 from django.utils import timezone
 
-from accounts.views import NUDGE_DAYS_BEFORE, VISIT_MILESTONES, _visit_milestone
+from accounts.views import (
+    NUDGE_DAYS_BEFORE,
+    VISIT_MILESTONES,
+    membership_days_left,
+    visit_milestone,
+)
 
 from .models import Visit
 
@@ -40,7 +45,7 @@ def visit_moment(member, visit):
         kind = "milestone"
     else:
         kind = "count"
-    progress = _visit_milestone(number) or {}
+    progress = visit_milestone(number) or {}
     return {
         "kind": kind,
         "number": number,
@@ -53,16 +58,13 @@ def visit_moment(member, visit):
 def membership_ending(member, today):
     """{"days", "on"} when the membership ends within the /akun nudge window.
 
-    Same rules as the /akun nudge: nothing for members the admins handle by
-    hand (`skip_auto_reminder`), and nothing once it has already ended, since
-    an expired member never reaches the success screen.
+    From the same `membership_days_left` as the /akun nudge, so the rules
+    cannot drift. Nothing once it has already ended: an expired member never
+    reaches the success screen.
     """
-    if not member.active_until or member.skip_auto_reminder:
-        return None
-    ends_on = timezone.localdate(member.active_until)
-    days = (ends_on - today).days
-    if 0 <= days <= NUDGE_DAYS_BEFORE:
-        return {"days": days, "on": ends_on}
+    ends = membership_days_left(member, today)
+    if ends and 0 <= ends["days"] <= NUDGE_DAYS_BEFORE:
+        return ends
     return None
 
 

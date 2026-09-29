@@ -11,6 +11,9 @@ TAHUN_VARIATIONS = ["tahun", "thn", "year"]
 # typo, and matching it could only find the wrong person.
 MIN_PHONE_DIGITS = 9
 
+EMAIL_TAKEN = "Email ini udah terdaftar. Coba masuk aja, atau tanya admin."
+PHONE_TAKEN = "Nomor ini udah terdaftar. Coba masuk aja, atau tanya admin."
+
 
 class MasukkanForm(forms.ModelForm):
     class Meta:
@@ -213,9 +216,7 @@ class MemberSignUpForm(forms.ModelForm):
             "know_mulai_gym_from": "Kenal Mulai Gym dari mana?",
             "why_choose_mulai": "Kenapa pilih Mulai Gym?",
         }
-        error_messages = {
-            "email": {"unique": "Email ini udah terdaftar. Coba masuk aja, atau tanya admin."},
-        }
+        error_messages = {"email": {"unique": EMAIL_TAKEN}}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -233,6 +234,11 @@ class MemberSignUpForm(forms.ModelForm):
             {"inputmode": "tel", "autocomplete": "tel-national", "placeholder": "0812..."}
         )
         self.fields["age"].widget.attrs.update({"inputmode": "numeric"})
+        # Three boxes share one row on a phone; the unit is in the label, and
+        # "tinggi dalam cm" was cut to "tingg".
+        for name in ("height", "weight"):
+            self.fields[name].widget.attrs.pop("placeholder", None)
+            self.fields[name].widget.attrs["inputmode"] = "decimal"
         self.fields["social_media_username"].widget.attrs.update({"placeholder": "@username"})
         # Django's own messages are English; a member signing up reads these.
         for field in self.fields.values():
@@ -259,6 +265,13 @@ class MemberSignUpForm(forms.ModelForm):
                 # If format is unknown, just use as-is
                 self.initial["country_code"] = "+62"
                 self.initial["phone_number_display"] = phone
+
+    def clean_email(self):
+        # The model's unique check is case-sensitive; the login box is not.
+        email = self.cleaned_data["email"]
+        if email_taken(email, self.instance):
+            raise ValidationError(EMAIL_TAKEN)
+        return email
 
     def clean(self):
         cleaned_data = super().clean()
@@ -306,17 +319,13 @@ class MemberSignUpForm(forms.ModelForm):
         # Create the standardized phone number, removing the '+' from country code
         final_phone = country_code.replace("+", "") + phone_number
 
-        # Check if this phone number is already in use
+        # Taken in any stored format, the same matching the login box uses
         if (
-            Member.objects.filter(phone_number=final_phone)
+            Member.objects.filter(phone_number__in=phone_candidates(final_phone))
             .exclude(pk=self.instance.pk if self.instance.pk else None)
             .exists()
         ):
-            raise ValidationError(
-                {
-                    "phone_number_display": "Nomor ini udah terdaftar. Coba masuk aja, atau tanya admin."
-                }
-            )
+            raise ValidationError({"phone_number_display": PHONE_TAKEN})
 
         # Set the cleaned phone_number field
         cleaned_data["phone_number"] = final_phone
@@ -370,13 +379,36 @@ def find_member(identifier):
         matches = list(Member.objects.filter(email__iexact=raw)[:2])
         return matches[0] if len(matches) == 1 else None
 
-    digits = member_style_phone(raw)
-    if len(digits) < MIN_PHONE_DIGITS:
+    if len(member_style_phone(raw)) < MIN_PHONE_DIGITS:
         return None
+    # Same rule as the email case: one number stored two ways is two people
+    # as far as this box can tell, so it finds nobody rather than pick one.
+    matches = list(Member.objects.filter(phone_number__in=phone_candidates(raw))[:2])
+    return matches[0] if len(matches) == 1 else None
+
+
+def phone_candidates(raw):
+    """Every way the number in `raw` may already be stored, as a list.
+
+    The login box and the "udah terdaftar" checks on /daftar and /akun/ubah
+    all use this, so a number cannot be free to register while it already
+    logs somebody else in.
+    """
+    digits = member_style_phone(raw)
+    if not digits:
+        return []
     local = digits[2:] if digits.startswith("62") else digits
-    candidates = [digits, "0" + local, "ID" + local, local]
-    found = {m.phone_number: m for m in Member.objects.filter(phone_number__in=candidates)}
-    return next((found[c] for c in candidates if c in found), None)
+    return list(dict.fromkeys([digits, "0" + local, "ID" + local, local]))
+
+
+def email_taken(email, instance=None):
+    """True when another member already has this email, whatever its case."""
+    others = Member.objects.filter(email__iexact=email)
+    if instance is not None and instance.pk:
+        others = others.exclude(pk=instance.pk)
+    return others.exists()
+
+
 
 
 class MemberLoginForm(forms.Form):
@@ -548,17 +580,13 @@ class MemberEditForm(forms.ModelForm):
         # Create the standardized phone number, removing the '+' from country code
         final_phone = country_code.replace("+", "") + phone_number
 
-        # Check if this phone number is already in use
+        # Taken in any stored format, the same matching the login box uses
         if (
-            Member.objects.filter(phone_number=final_phone)
+            Member.objects.filter(phone_number__in=phone_candidates(final_phone))
             .exclude(pk=self.instance.pk if self.instance.pk else None)
             .exists()
         ):
-            raise ValidationError(
-                {
-                    "phone_number_display": "Nomor ini udah terdaftar. Coba masuk aja, atau tanya admin."
-                }
-            )
+            raise ValidationError({"phone_number_display": PHONE_TAKEN})
 
         # Set the cleaned phone_number field
         cleaned_data["phone_number"] = final_phone
