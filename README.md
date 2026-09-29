@@ -429,7 +429,7 @@ The banner is fetched via a tiny JSON endpoint instead of a context processor so
   - `check_in_time`: DateTimeField
   - `check_out_time`: DateTimeField (nullable)
 - **`Member` (`accounts/models.py`)**
-  - `phone_number`: CharField (Unique, stores digits only, e.g., 628123...)
+  - `phone_number`: CharField (Unique, stores digits only, e.g., 628123...). Migration `accounts/0024` rewrote the 18 production rows stored as "0812...", "ID812..." or "8210..." (typed that way into the admin) to "62..."; a row whose new form would clash with another member's number, or be too short, is left for a human. **The member admin still saves a number exactly as typed**, so new rows in the old formats can appear; the login box finds them either way (`phone_candidates()`).
   - `active_until`: DateTimeField (nullable)
   - `is_active_member` property: Checks if `active_until >= start_of_local_day()`, i.e. the membership counts through the whole of its last day **in Jakarta**. Same for `is_pemula_active_member` and `is_semi_private_active_member`, the Active Members admin list and the Weekly Metrics count. It used to compare against `timezone.now().replace(hour=0)`, which is UTC midnight (07:00 WIB), so a membership that ended yesterday could still check in until 07:00 today.
   - **Admin Tracking Flags** (boolean fields for admin operations):

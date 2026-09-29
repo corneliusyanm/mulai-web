@@ -2922,3 +2922,55 @@ class MembershipEndsAtJakartaMidnightTest(TestCase):
             self.assertFalse(admin.get_queryset(request).filter(pk=self.member.pk).exists())
         with self.at(2026, 9, 14, 23, 30):
             self.assertTrue(admin.get_queryset(request).filter(pk=self.member.pk).exists())
+
+
+class PhoneNumbersAs62MigrationTest(TestCase):
+    """accounts/migrations/0024: every member number stored as 62812..."""
+
+    def run_migration(self):
+        import importlib
+
+        from django.apps import apps
+
+        migration = importlib.import_module("accounts.migrations.0024_member_phone_numbers_as_62")
+        migration.forwards(apps, None)
+
+    def stored(self, email):
+        return Member.objects.get(email=email).phone_number
+
+    def test_the_old_spellings_become_62(self):
+        _member("nol@example.com", "081234567890")
+        _member("id@example.com", "ID81277776666")
+        _member("delapan@example.com", "82100001111")
+        _member("biasa@example.com", "6281299990000")
+
+        self.run_migration()
+
+        self.assertEqual(self.stored("nol@example.com"), "6281234567890")
+        self.assertEqual(self.stored("id@example.com"), "6281277776666")
+        self.assertEqual(self.stored("delapan@example.com"), "6282100001111")
+        self.assertEqual(self.stored("biasa@example.com"), "6281299990000")
+
+    def test_a_row_that_would_clash_or_is_too_short_is_left_for_a_human(self):
+        _member("sudah@example.com", "6281255556666")
+        _member("bentrok@example.com", "081255556666")
+        _member("kembar1@example.com", "081244443333")
+        _member("kembar2@example.com", "ID81244443333")
+        _member("pendek@example.com", "12312")
+
+        self.run_migration()
+
+        self.assertEqual(self.stored("bentrok@example.com"), "081255556666")
+        self.assertEqual(self.stored("kembar1@example.com"), "081244443333")
+        self.assertEqual(self.stored("kembar2@example.com"), "ID81244443333")
+        self.assertEqual(self.stored("pendek@example.com"), "12312")
+
+    def test_the_frozen_copy_matches_the_live_normaliser(self):
+        import importlib
+
+        from .forms import member_style_phone
+
+        migration = importlib.import_module("accounts.migrations.0024_member_phone_numbers_as_62")
+        for typed in ("081234567890", "ID81277776666", "+62 812-3456-7890", "0062 812 3456", "6208123", "12312"):
+            with self.subTest(typed=typed):
+                self.assertEqual(migration._as_62(typed), member_style_phone(typed))
