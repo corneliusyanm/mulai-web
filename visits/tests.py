@@ -2200,3 +2200,75 @@ class LapsedAtDawnTest(TestCase):
         self.assertTemplateUsed(response, "visits/check_in_failed.html")
         self.assertContains(response, "Habis kemarin")
         self.assertFalse(Visit.objects.exists())
+
+
+class ForgottenCheckOutTest(TestCase):
+    """A visit nobody checked out of is closed at 23:59 of its own day."""
+
+    def setUp(self):
+        from unittest.mock import patch
+
+        patcher = patch("django.utils.timezone.now", return_value=PINNED_NOW)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.budi = _gym_member()
+        session = self.client.session
+        session["member_email"] = self.budi.email
+        session.save()
+
+    def open_visit_at(self, moment):
+        visit = Visit.objects.create(member=self.budi)
+        Visit.objects.filter(pk=visit.pk).update(check_in_time=moment)
+        return visit
+
+    def jakarta(self, day, hour, minute):
+        return timezone.make_aware(datetime(2026, 9, day, hour, minute))
+
+    def test_checking_in_closes_yesterdays_visit_and_starts_todays(self):
+        yesterday = self.open_visit_at(self.jakarta(14, 18, 0))
+
+        self.client.get(reverse("check_in_page"))
+
+        yesterday.refresh_from_db()
+        self.assertEqual(yesterday.check_out_time, self.jakarta(14, 23, 59))
+        today = Visit.objects.get(member=self.budi, check_out_time__isnull=True)
+        self.assertEqual(today.check_in_time, PINNED_NOW)
+        self.assertContains(self.client.get(reverse("check_in_success")), ">10:00<")
+
+    def test_todays_check_in_counts_for_a_class_booked_today(self):
+        from classes.attendance import visit_days_by_member
+
+        self.open_visit_at(self.jakarta(14, 18, 0))
+
+        self.client.get(reverse("check_in_page"))
+
+        self.assertIn(PINNED_TODAY, visit_days_by_member(PINNED_TODAY, PINNED_TODAY)[self.budi.id])
+
+    def test_every_visit_left_open_on_an_earlier_day_is_closed(self):
+        older = self.open_visit_at(self.jakarta(10, 7, 30))
+        newer = self.open_visit_at(self.jakarta(13, 19, 0))
+
+        self.client.get(reverse("check_in_page"))
+
+        older.refresh_from_db()
+        newer.refresh_from_db()
+        self.assertEqual(older.check_out_time, self.jakarta(10, 23, 59))
+        self.assertEqual(newer.check_out_time, self.jakarta(13, 23, 59))
+
+    def test_a_visit_open_since_this_morning_is_reused(self):
+        morning = self.open_visit_at(self.jakarta(15, 7, 0))
+
+        self.client.get(reverse("check_in_page"))
+
+        self.assertEqual(Visit.objects.filter(member=self.budi).count(), 1)
+        morning.refresh_from_db()
+        self.assertIsNone(morning.check_out_time)
+
+    def test_checking_out_with_only_yesterdays_visit_open_says_no_check_in_today(self):
+        yesterday = self.open_visit_at(self.jakarta(14, 18, 0))
+
+        body = self.client.get(reverse("check_out_page"), follow=True).content.decode()
+
+        yesterday.refresh_from_db()
+        self.assertEqual(yesterday.check_out_time, self.jakarta(14, 23, 59))
+        self.assertIn("check-in hari ini.", body)

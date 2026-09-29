@@ -7,7 +7,7 @@ from accounts.models import Member
 from accounts.views import log_member_in
 from classes.reviews import FACES as REVIEW_FACES, pending_reviews
 
-from .models import Visit
+from .models import Visit, close_forgotten_visits
 from .moments import (
     membership_ending,
     membership_lapsed,
@@ -41,7 +41,7 @@ def check_in_page(request):
     """Check in straight away when this phone knows the member.
 
     Otherwise show the login box, and check in as soon as it matches someone.
-    Checking in twice is harmless: an open visit is reused, not duplicated.
+    Checking in twice the same day is harmless: today's open visit is reused.
     """
     form = MemberLoginForm(request.POST) if request.method == "POST" else None
     if form is not None:
@@ -64,11 +64,11 @@ def check_in_page(request):
             },
         )
 
-    Visit.objects.get_or_create(
-        member=member,
-        check_out_time__isnull=True,
-        defaults={"check_in_time": timezone.now()},
-    )
+    # Only today's open visit is reused; one left open on an earlier day is
+    # closed first, so today still records a check-in.
+    close_forgotten_visits(member)
+    if not Visit.objects.filter(member=member, check_out_time__isnull=True).exists():
+        Visit.objects.create(member=member)
     return redirect("check_in_success")
 
 
@@ -116,6 +116,7 @@ def check_out_page(request):
         return render(request, "visits/check_out.html", {"form": MemberLoginForm()})
 
     now = timezone.now()
+    close_forgotten_visits(member, timezone.localdate(now))
     visit = (
         Visit.objects.filter(member=member, check_out_time__isnull=True)
         .order_by("-check_in_time")
