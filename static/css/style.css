@@ -5569,6 +5569,16 @@ section {
   font-weight: 600;
 }
 
+.fm-notice {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--hp-soft);
+  color: var(--hp-ink);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
 /* Kamu bilang, kami lakukan */
 .fm-wins { margin-top: 40px; }
 .fm-h2 { margin: 0 0 6px; font-size: clamp(1.4rem, 5.5vw, 1.9rem); font-weight: 800; }
@@ -5824,10 +5834,10 @@ section {
 
 .fm-card .fm-section:first-of-type { margin-top: 0; padding-top: 0; border-top: 0; }
 
-.fm-row-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 10px; }
+.fm-row-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 10px; align-items: end; }
 
 .fm-phone { display: flex; gap: 8px; }
 .fm-phone .fm-input { min-width: 0; }
 .fm-phone .fm-phone-code { flex: 0 0 76px; text-align: center; }
 
-textarea.fm-input { min-height: 84px; resize: vertical; }
+textarea.fm-input:not(.fm-textarea) { min-height: 84px; resize: vertical; }

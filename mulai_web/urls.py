@@ -49,6 +49,11 @@ urlpatterns = [
         name="check_in_success",
     ),
     path("check-out/", visit_views.check_out_page, name="check_out_page"),
+    path(
+        "check-out/success/",
+        visit_views.check_out_success,
+        name="check_out_success",
+    ),
     path("tamu/", tamu_signup_view, name="tamu_signup"),
     path("forget-member/", visit_views.forget_member, name="forget_member"),
     path("", home, name="home"),

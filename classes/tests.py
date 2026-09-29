@@ -3004,7 +3004,7 @@ class ClassReviewPromptTest(TestCase):
         older.booked_members.add(self.member)
         Visit.objects.create(member=self.member)
 
-        response = self.client.get(reverse("check_out_page"))
+        response = self.client.get(reverse("check_out_page"), follow=True)
 
         self.assertContains(response, "Gimana kelasnya?")
         self.assertEqual(len(response.context["pending_reviews"]), 1)
@@ -3019,6 +3019,6 @@ class ClassReviewPromptTest(TestCase):
         )
         Visit.objects.create(member=self.member)
 
-        response = self.client.get(reverse("check_out_page"))
+        response = self.client.get(reverse("check_out_page"), follow=True)
 
         self.assertContains(response, "data-ci-countdown")

@@ -13,7 +13,7 @@ today with no check-in counts as missed, so it says to tell the admin.
     <div class="hp-wrap fm-wrap fm-narrow fm-done">
         {% if done_today %}
             <span class="fm-done-icon"><i class="fas fa-check" aria-hidden="true"></i></span>
-            <h1 class="fm-title">Udah check-out <em>jam {{ done_today.check_out_time|time:"H.i" }}.</em></h1>
+            <h1 class="fm-title">Udah check-out <em>jam {{ done_today.check_out_time|time:"H:i" }}.</em></h1>
             <p class="hp-lede">Nggak perlu check-out lagi. Sampai ketemu lagi ya!</p>
         {% else %}
             <span class="fm-done-icon"><i class="fas fa-circle-question" aria-hidden="true"></i></span>

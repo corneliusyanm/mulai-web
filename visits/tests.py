@@ -2,7 +2,7 @@ from django.core.cache import cache
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
-from datetime import timedelta, datetime, date, time
+from datetime import timedelta, datetime, date, time, timezone as dt_timezone
 from django.contrib.auth import get_user_model
 from django.template import Template, Context
 import json
@@ -207,7 +207,7 @@ class VisitViewsTest(TestCase):
         session.save()
         response = self.client.get(reverse("check_in_success"))
         self.assertEqual(response.status_code, 200)
-        expected_time = Template("{{ visit.check_in_time|time:'H.i' }}").render(
+        expected_time = Template("{{ visit.check_in_time|time:'H:i' }}").render(
             Context({"visit": visit})
         )
         self.assertContains(response, expected_time)
@@ -229,7 +229,7 @@ class VisitViewsTest(TestCase):
         session.save()
 
         response = self.client.get(reverse("check_out_page"))
-        self.assertEqual(response.status_code, 200)
+        self.assertRedirects(response, reverse("check_out_success"))
         self.assertFalse(
             Visit.objects.filter(
                 member=self.active_member, check_out_time__isnull=True
@@ -1860,7 +1860,10 @@ class CheckInLoginBoxTest(TestCase):
 
 
 # Tuesday 15 September 2026, 10:00 in Jakarta: midday, mid-month, mid-week.
-PINNED_NOW = timezone.make_aware(datetime(2026, 9, 15, 10, 0))
+# Held in UTC, the shape the real timezone.now() returns: a Jakarta-aware pin
+# would make `.replace(hour=0)` mean Jakarta midnight and hide UTC bugs.
+PINNED_NOW = timezone.make_aware(datetime(2026, 9, 15, 10, 0)).astimezone(dt_timezone.utc)
+PINNED_TODAY = date(2026, 9, 15)
 
 
 class CheckInScreenTest(TestCase):
@@ -1927,7 +1930,7 @@ class CheckInScreenTest(TestCase):
 
         self.assertIn("Selasa, 15 September 2026", body)
         self.assertNotIn("Tuesday", body)
-        self.assertIn(">10.00<", body)
+        self.assertIn(">10:00<", body)
 
     def test_it_moves_on_to_the_account_page_and_says_so(self):
         body = self.screen()
@@ -2003,7 +2006,7 @@ class CheckOutScreenTest(TestCase):
         return instance
 
     def screen(self):
-        return self.client.get(reverse("check_out_page")).content.decode()
+        return self.client.get(reverse("check_out_page"), follow=True).content.decode()
 
     def test_a_real_workout_says_how_long_it_was(self):
         self.checked_in(minutes_ago=82)
@@ -2022,7 +2025,7 @@ class CheckOutScreenTest(TestCase):
 
     def test_a_class_later_today_is_the_next_one(self):
         self.checked_in(minutes_ago=60)
-        self.booked(PINNED_NOW.date(), time(17, 0))
+        self.booked(PINNED_TODAY, time(17, 0))
 
         body = self.screen()
 
@@ -2031,15 +2034,15 @@ class CheckOutScreenTest(TestCase):
 
     def test_a_class_that_already_started_or_was_cancelled_is_skipped(self):
         self.checked_in(minutes_ago=60)
-        self.booked(PINNED_NOW.date(), time(9, 0))
-        self.booked(PINNED_NOW.date() + timedelta(days=1), time(7, 0), status="CANCELLED")
-        self.booked(PINNED_NOW.date() + timedelta(days=1), time(16, 0))
+        self.booked(PINNED_TODAY, time(9, 0))
+        self.booked(PINNED_TODAY + timedelta(days=1), time(7, 0), status="CANCELLED")
+        self.booked(PINNED_TODAY + timedelta(days=1), time(16, 0))
 
         self.assertIn("Sampai ketemu besok jam 16:00", self.screen())
 
     def test_a_class_later_in_the_week_prints_its_day(self):
         self.checked_in(minutes_ago=60)
-        self.booked(PINNED_NOW.date() + timedelta(days=2), time(17, 0))
+        self.booked(PINNED_TODAY + timedelta(days=2), time(17, 0))
 
         self.assertIn("Sampai ketemu Kamis, 17 Sep jam 17:00", self.screen())
 
@@ -2059,14 +2062,34 @@ class CheckOutScreenTest(TestCase):
         self.assertIn('data-ci-countdown="8"', body)
         self.assertNotIn("beranda", body)
 
-    def test_the_account_page_says_see_you_not_goodbye(self):
+    def test_checking_out_leaves_no_message_for_the_next_page(self):
+        # A queued message waits for the next page that renders messages. On a
+        # shared phone that was the login box, greeting the next person with
+        # the last member's name.
         self.checked_in(minutes_ago=60)
         self.screen()
+        self.client.get(reverse("forget_member") + "?next=check_out")
 
-        body = self.client.get(reverse("member_details")).content.decode()
+        body = self.client.get(reverse("check_out_page")).content.decode()
 
-        self.assertIn("Sampai ketemu lagi, Budi Santoso!", body)
-        self.assertNotIn("Selamat tinggal", body)
+        self.assertNotIn("Budi", body)
+        self.assertNotIn("Check-out berhasil", body)
+
+    def test_the_success_screen_has_its_own_url_so_a_reload_changes_nothing(self):
+        self.checked_in(minutes_ago=60)
+        response = self.client.get(reverse("check_out_page"))
+        self.assertRedirects(response, reverse("check_out_success"))
+
+        # tomorrow: a fresh check-in, then the old tab is reloaded
+        self.client.get(reverse("check_in_page"))
+        self.client.get(reverse("check_out_success"))
+
+        self.assertTrue(Visit.objects.filter(member=self.budi, check_out_time__isnull=True).exists())
+
+    def test_the_success_screen_without_a_finished_visit_goes_to_check_out(self):
+        response = self.client.get(reverse("check_out_success"))
+
+        self.assertRedirects(response, reverse("check_out_page"))
 
     def test_a_second_scan_says_when_they_checked_out(self):
         self.checked_in(minutes_ago=60)
@@ -2074,7 +2097,7 @@ class CheckOutScreenTest(TestCase):
 
         body = self.screen()
 
-        self.assertIn("Udah check-out <em>jam 10.00.</em>", body)
+        self.assertIn("Udah check-out <em>jam 10:00.</em>", body)
         self.assertNotIn("Gagal", body)
 
     def test_no_check_in_today_says_to_tell_the_admin(self):
@@ -2097,7 +2120,9 @@ class CheckOutScreenTest(TestCase):
         body = self.client.get(reverse("check_out_page")).content.decode()
         self.assertIn('name="identifier"', body)
 
-        response = self.client.post(reverse("check_out_page"), {"identifier": "081234567890"})
+        response = self.client.post(
+            reverse("check_out_page"), {"identifier": "081234567890"}, follow=True
+        )
 
         self.assertContains(response, "Kamu latihan 1 jam")
         self.assertFalse(Visit.objects.filter(check_out_time__isnull=True).exists())

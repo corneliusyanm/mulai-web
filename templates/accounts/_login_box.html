@@ -6,11 +6,13 @@ Needs `form` (MemberLoginForm) and `button` (the submit label).
 {% endcomment %}
 <form method="post" class="fm-card" novalidate>
     {% csrf_token %}
-    {% if messages %}
-        {% for message in messages %}
+    {% for message in messages %}
+        {% if message.level_tag == "error" %}
             <p class="fm-alert" role="alert">{{ message }}</p>
-        {% endfor %}
-    {% endif %}
+        {% else %}
+            <p class="fm-notice" role="status">{{ message }}</p>
+        {% endif %}
+    {% endfor %}
     <div class="fm-field">
         <label class="fm-label" for="{{ form.identifier.id_for_label }}">{{ form.identifier.label }}</label>
         {% if form.identifier.errors %}

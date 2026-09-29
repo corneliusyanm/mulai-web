@@ -17,8 +17,8 @@ from .moments import (
 )
 
 # How long the check-in and check-out screens stay up before moving on to /akun.
-# Long enough to read a line, and the move matters: a tab left open on
-# /check-out and reopened tomorrow would check the member out again.
+# Long enough to read a line. Both screens are their own URLs, so reloading one
+# changes nothing; the move just takes the member on to their own page.
 SUCCESS_SECONDS = 8
 
 
@@ -142,8 +142,29 @@ def check_out_page(request):
 
     visit.check_out_time = now
     visit.save()
+    # Its own URL, like check-in: a tab left on /check-out and reloaded
+    # tomorrow, after a fresh check-in, would otherwise check out again.
+    return redirect("check_out_success")
 
-    messages.success(request, f"Check-out berhasil. Sampai ketemu lagi, {member.name}!")
+
+def check_out_success(request):
+    """The check-out screen for the latest finished visit.
+
+    No Django message on the way out: this screen already says it worked, and
+    a queued message waits for the next page that renders messages, which on a
+    shared phone can be the login box in front of somebody else.
+    """
+    member = _session_member(request)
+    if member is None:
+        return redirect("check_out_page")
+    visit = (
+        Visit.objects.filter(member=member, check_out_time__isnull=False)
+        .order_by("-check_out_time")
+        .first()
+    )
+    if visit is None:
+        return redirect("check_out_page")
+
     # The best moment to ask how the class was is the one where they are
     # still standing in the room it happened in. Only the newest class
     # here, though: this screen is somebody on their way out of the door,
@@ -156,7 +177,7 @@ def check_out_page(request):
             "visit": visit,
             "visit_day": timezone.localdate(visit.check_out_time),
             "workout": workout_length(visit),
-            "next_class": next_class(member, now),
+            "next_class": next_class(member, timezone.now()),
             "pending_reviews": pending_reviews(member)[:1],
             "review_faces": REVIEW_FACES,
             "review_next": "akun",
@@ -173,4 +194,7 @@ FORGET_NEXT = {"check_out": "check_out_page"}
 
 def forget_member(request):
     request.session.pop("member_email", None)
+    # Anything still queued was for the member who just left this phone.
+    for _ in messages.get_messages(request):
+        pass
     return redirect(FORGET_NEXT.get(request.GET.get("next"), "check_in_page"))

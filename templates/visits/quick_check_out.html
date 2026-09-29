@@ -14,7 +14,7 @@ moment the site has, see README, Penilaian Kelas), then when the next class is.
     <div class="ci-head">
         <p class="ci-kind">Check-out</p>
         <h1 class="ci-status">Berhasil</h1>
-        <p class="ci-clock">{{ visit.check_out_time|time:"H.i" }}</p>
+        <p class="ci-clock">{{ visit.check_out_time|time:"H:i" }}</p>
         <p class="ci-date">{{ visit_day|indonesian_day }}</p>
         {% if workout %}<p class="ci-workout"><i class="fas fa-stopwatch" aria-hidden="true"></i> Kamu latihan {{ workout }}</p>{% endif %}
     </div>
@@ -78,7 +78,7 @@ moment the site has, see README, Penilaian Kelas), then when the next class is.
         num.textContent = Math.max(left, 0);
         if (left <= 0) {
             clearInterval(timer);
-            // replace, so reopening this tab tomorrow cannot check out again
+            // replace, so Back from /akun does not land on this screen again
             window.location.replace(next);
         }
     }, 1000);
