@@ -6,4 +6,5 @@ app_name = "equipment"
 urlpatterns = [
     path("", views.equipment_list, name="list"),
     path("<slug:slug>/", views.equipment_detail, name="detail"),
+    path("<slug:slug>/dilihat/", views.equipment_seen, name="seen"),
 ]

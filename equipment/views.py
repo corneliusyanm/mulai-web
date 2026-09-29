@@ -1,10 +1,10 @@
+from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404
 from django.views.decorators.cache import cache_page
+from django.views.decorators.http import require_POST
 from . import guide
 from .models import Equipment
 import re
-
-# Create your views here.
 
 
 def is_likely_bot(request):
@@ -87,6 +87,26 @@ def should_count_view(request, equipment_slug, cooldown_hours=24):
     return True
 
 
+@require_POST
+def equipment_seen(request, slug):
+    """Count one view of a machine page, reported by the page itself.
+
+    Counting on the GET counted anything that fetched the URL: scrapers with a
+    browser user agent, link previews, prefetches. Since those keep no cookies,
+    every fetch was a new session and the 24-hour dedupe never caught them.
+    Now the page's script reports the view once it has been on screen for a few
+    seconds. That needs JavaScript, a visible page, and the CSRF cookie and
+    token from a real page load, which rules out almost everything automated.
+    The user agent check and the per-session dedupe still apply on top.
+    """
+    equipment = get_object_or_404(Equipment, slug=slug)
+    if should_count_view(request, slug):
+        equipment.increment_view_count(
+            is_authenticated=request.session.get("member_email") is not None
+        )
+    return HttpResponse(status=204)
+
+
 @cache_page(60 * 60 * 4)  # Cache for 4 hours
 def equipment_list(request):
     equipments = list(Equipment.objects.order_by("name"))
@@ -103,19 +123,8 @@ def equipment_list(request):
 
 
 def equipment_detail(request, slug):
+    # Not counted here: see equipment_seen.
     equipment = get_object_or_404(Equipment, slug=slug)
-
-    # Track view if it should be counted
-    if should_count_view(request, slug):
-        # Check if user is authenticated (logged in members)
-        is_authenticated = (
-            hasattr(request, "session")
-            and request.session.get("member_email") is not None
-        )
-
-        # Increment view count
-        equipment.increment_view_count(is_authenticated=is_authenticated)
-
     group = guide.group_name(equipment)
     related = list(
         Equipment.objects.filter(muscle_group=equipment.muscle_group)

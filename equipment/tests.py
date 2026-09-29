@@ -603,91 +603,102 @@ class ViewCountingLogicTest(TestCase):
 
 
 class EquipmentDetailViewAnalyticsTest(TestCase):
+    """A view counts when the page reports it, not when the URL is fetched."""
+
+    BROWSER = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1"
+
     def setUp(self):
         self.equipment = Equipment.objects.create(
             name="Bench Press",
             muscle_group="Chest",
             video_link="https://www.youtube.com/watch?v=bench123",
         )
+        self.detail = reverse("equipment:detail", kwargs={"slug": self.equipment.slug})
+        self.seen = reverse("equipment:seen", kwargs={"slug": self.equipment.slug})
 
-    def test_equipment_detail_view_increments_anonymous_count(self):
-        """Test that visiting equipment detail increments anonymous view count."""
-        # Simulate anonymous user
-        response = self.client.get(
-            reverse("equipment:detail", kwargs={"slug": self.equipment.slug}),
-            HTTP_USER_AGENT="Mozilla/5.0 (Chrome/91.0) Normal Browser",
+    def counts(self):
+        self.equipment.refresh_from_db()
+        return (
+            self.equipment.total_views,
+            self.equipment.authenticated_views,
+            self.equipment.anonymous_views,
         )
 
+    def test_fetching_the_page_alone_counts_nothing(self):
+        response = self.client.get(self.detail, HTTP_USER_AGENT=self.BROWSER)
+
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.counts(), (0, 0, 0))
 
-        # Refresh from database
-        self.equipment.refresh_from_db()
+    def test_the_page_carries_the_counter_and_skips_automated_browsers(self):
+        body = self.client.get(self.detail, HTTP_USER_AGENT=self.BROWSER).content.decode()
 
-        self.assertEqual(self.equipment.total_views, 1)
-        self.assertEqual(self.equipment.anonymous_views, 1)
-        self.assertEqual(self.equipment.authenticated_views, 0)
+        self.assertIn(f'data-seen-url="{self.seen}"', body)
+        self.assertIn("data-csrf=", body)
+        self.assertIn("navigator.webdriver", body)
+        self.assertIn("visibilityState === 'visible'", body)
 
-    def test_equipment_detail_view_increments_authenticated_count(self):
-        """Test that visiting equipment detail increments authenticated view count."""
-        # Simulate authenticated member by setting session
+    def test_a_reported_view_counts_as_anonymous(self):
+        response = self.client.post(self.seen, HTTP_USER_AGENT=self.BROWSER)
+
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(self.counts(), (1, 0, 1))
+
+    def test_a_reported_view_from_a_member_counts_as_theirs(self):
         session = self.client.session
         session["member_email"] = "test@example.com"
         session.save()
 
-        response = self.client.get(
-            reverse("equipment:detail", kwargs={"slug": self.equipment.slug}),
-            HTTP_USER_AGENT="Mozilla/5.0 (Chrome/91.0) Normal Browser",
+        self.client.post(self.seen, HTTP_USER_AGENT=self.BROWSER)
+
+        self.assertEqual(self.counts(), (1, 1, 0))
+
+    def test_the_same_phone_counts_once_a_day(self):
+        self.client.post(self.seen, HTTP_USER_AGENT=self.BROWSER)
+        self.client.post(self.seen, HTTP_USER_AGENT=self.BROWSER)
+
+        self.assertEqual(self.counts(), (1, 0, 1))
+
+    def test_a_bot_user_agent_is_still_not_counted(self):
+        response = self.client.post(self.seen, HTTP_USER_AGENT="Googlebot/2.1")
+
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(self.counts(), (0, 0, 0))
+
+    def test_a_report_without_the_page_token_is_refused(self):
+        from django.test import Client
+
+        strict = Client(enforce_csrf_checks=True)
+        response = strict.post(self.seen, HTTP_USER_AGENT=self.BROWSER)
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(self.counts(), (0, 0, 0))
+
+    def test_a_report_with_the_page_token_is_accepted(self):
+        import re as regex
+        from django.test import Client
+
+        strict = Client(enforce_csrf_checks=True)
+        body = strict.get(self.detail, HTTP_USER_AGENT=self.BROWSER).content.decode()
+        token = regex.search(r'data-csrf="([^"]+)"', body).group(1)
+
+        response = strict.post(self.seen, HTTP_USER_AGENT=self.BROWSER, HTTP_X_CSRFTOKEN=token)
+
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(self.counts(), (1, 0, 1))
+
+    def test_a_get_on_the_counter_is_not_allowed(self):
+        response = self.client.get(self.seen, HTTP_USER_AGENT=self.BROWSER)
+
+        self.assertEqual(response.status_code, 405)
+        self.assertEqual(self.counts(), (0, 0, 0))
+
+    def test_an_unknown_machine_is_a_404(self):
+        response = self.client.post(
+            reverse("equipment:seen", kwargs={"slug": "tidak-ada"}), HTTP_USER_AGENT=self.BROWSER
         )
 
-        self.assertEqual(response.status_code, 200)
-
-        # Refresh from database
-        self.equipment.refresh_from_db()
-
-        self.assertEqual(self.equipment.total_views, 1)
-        self.assertEqual(self.equipment.authenticated_views, 1)
-        self.assertEqual(self.equipment.anonymous_views, 0)
-
-    def test_equipment_detail_view_bot_not_counted(self):
-        """Test that bot visits are not counted."""
-        response = self.client.get(
-            reverse("equipment:detail", kwargs={"slug": self.equipment.slug}),
-            HTTP_USER_AGENT="Googlebot/2.1",
-        )
-
-        self.assertEqual(response.status_code, 200)
-
-        # Refresh from database
-        self.equipment.refresh_from_db()
-
-        # Should remain at 0 since bot visit was not counted
-        self.assertEqual(self.equipment.total_views, 0)
-        self.assertEqual(self.equipment.authenticated_views, 0)
-        self.assertEqual(self.equipment.anonymous_views, 0)
-
-    def test_equipment_detail_view_duplicate_not_counted(self):
-        """Test that duplicate visits within cooldown are not counted."""
-        # First visit
-        response1 = self.client.get(
-            reverse("equipment:detail", kwargs={"slug": self.equipment.slug}),
-            HTTP_USER_AGENT="Mozilla/5.0 (Chrome/91.0) Normal Browser",
-        )
-        self.assertEqual(response1.status_code, 200)
-
-        # Second visit (should not be counted due to session tracking)
-        response2 = self.client.get(
-            reverse("equipment:detail", kwargs={"slug": self.equipment.slug}),
-            HTTP_USER_AGENT="Mozilla/5.0 (Chrome/91.0) Normal Browser",
-        )
-        self.assertEqual(response2.status_code, 200)
-
-        # Refresh from database
-        self.equipment.refresh_from_db()
-
-        # Should only count once
-        self.assertEqual(self.equipment.total_views, 1)
-        self.assertEqual(self.equipment.anonymous_views, 1)
-        self.assertEqual(self.equipment.authenticated_views, 0)
+        self.assertEqual(response.status_code, 404)
 
 
 class YouTubeEmbedReferrerPolicyTest(TestCase):

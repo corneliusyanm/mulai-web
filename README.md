@@ -1187,7 +1187,9 @@ To understand which equipment guides are most popular, a view tracking system ha
   - `authenticated_views`: Views from logged-in members.
   - `anonymous_views`: Views from anonymous visitors.
 
-- **Smart Bot Detection**: A robust bot detection mechanism is in place to ensure data accuracy. It filters out traffic from over 25 common patterns associated with bots, crawlers, and scrapers (e.g., `Googlebot`, `curl`, `python-requests`, `scrapy`).
+- **Counted by the page, not by the URL** (`equipment_seen`, `POST /alat/<slug>/dilihat/`). Opening the machine page counts nothing. A small script on the page reports the view once the page has been on screen for `SEEN_AFTER_MS` (3 seconds); it stops the clock while the tab is hidden and does not run on a prerendered page or in an automated browser (`navigator.webdriver`). The report needs the CSRF cookie and token from a real page load, so a cookie-less fetch gets a 403. Until 29 Sep 2026 the view was counted on the GET, which counted anything that fetched the URL: scrapers with a normal browser user agent, link previews, prefetches. Those keep no cookies, so each fetch was a new session and the 24-hour dedupe never caught them (production had 4,799 views on 23 machines, 82% not logged in). **The totals before that date still include that noise**; the admin shows old and new together.
+
+- **Smart Bot Detection**: on top of the above, the report is ignored for over 25 user agent patterns associated with bots, crawlers, and scrapers (e.g., `Googlebot`, `curl`, `python-requests`, `scrapy`).
 
 - **24-Hour Cooldown**: To provide meaningful analytics on unique daily views, a 24-hour cooldown is applied. A user's repeat view of the same equipment guide is only counted once every 24 hours, preventing spam from rapid page reloads.
 

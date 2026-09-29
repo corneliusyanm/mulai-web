@@ -94,6 +94,42 @@ JS their links open YouTube instead.
     </div>
 </div>
 
+<script data-seen-url="{% url 'equipment:seen' equipment.slug %}" data-csrf="{{ csrf_token }}">
+(function (me) {
+    // The view counter. Only a page that has been on screen for a few seconds
+    // counts, reported from here rather than on the page load, so scrapers,
+    // link previews and prefetches never do (equipment_seen in views.py).
+    var SEEN_AFTER_MS = 3000;
+    var url = me.dataset.seenUrl;
+    var token = me.dataset.csrf;
+    var timer = null;
+    var sent = false;
+    if (navigator.webdriver || !window.fetch) return;
+
+    function send() {
+        sent = true;
+        fetch(url, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': token },
+            credentials: 'same-origin',
+            keepalive: true
+        }).catch(function () {});
+    }
+    function watch() {
+        if (sent) return;
+        if (document.visibilityState === 'visible' && !document.prerendering) {
+            if (!timer) timer = setTimeout(send, SEEN_AFTER_MS);
+        } else if (timer) {
+            clearTimeout(timer);
+            timer = null;
+        }
+    }
+    document.addEventListener('visibilitychange', watch);
+    document.addEventListener('prerenderingchange', watch);
+    watch();
+})(document.currentScript);
+</script>
+
 <script>
 (function () {
     var frame = document.getElementById('mainVideoFrame');
