@@ -5809,3 +5809,25 @@ section {
 
 .fm-switch { margin: 18px 0 0; color: rgba(255, 255, 255, 0.8); font-size: 0.9rem; }
 .fm-switch a { color: var(--hp-lime); font-weight: 700; }
+
+/* /daftar: three short groups, a +62 box joined to the number */
+.fm-section {
+  margin: 26px 0 14px;
+  padding-top: 20px;
+  border-top: 1px solid #ececfa;
+  color: var(--primary);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.fm-card .fm-section:first-of-type { margin-top: 0; padding-top: 0; border-top: 0; }
+
+.fm-row-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 10px; }
+
+.fm-phone { display: flex; gap: 8px; }
+.fm-phone .fm-input { min-width: 0; }
+.fm-phone .fm-phone-code { flex: 0 0 76px; text-align: center; }
+
+textarea.fm-input { min-height: 84px; resize: vertical; }

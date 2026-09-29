@@ -602,7 +602,9 @@ Members open `/akun` constantly, so the site can live on their home screen inste
 
 ### Templates
 - `login.html`, `visits/check_in.html`: a heading plus `_login_box.html`, on the `fm-*` form styles (Kotak Masukkan, Buku Tamu). Both `noindex`.
-- `signup.html`, `member_edit.html`: Include country code and phone number fields.
+- `signup.html` (`/daftar/`): the same fields as always, on the `fm-*` styles, in three short groups (Kenalan dulu, Buat catatan progresmu, Terakhir) so it does not read as one long exam. Each field goes through `_fm_field.html`, which marks it "(opsional)" when the form does not require it (address, Instagram/TikTok, why Mulai Gym), so the template keeps no list of its own. Gender is two chips instead of a dropdown opening on "---------". Labels live in `MemberSignUpForm`, not in an if/elif chain in the template, and Django's English errors are replaced (`SIGNUP_ERRORS`, plus "Email/Nomor ini udah terdaftar. Coba masuk aja, atau tanya admin."). `noindex`; `SignupPageTest` checks every form field is on the page.
+- `signup_success.html`: "Akunmu udah jadi!", to `/akun` or the homepage.
+- `member_edit.html`: country code and phone number fields. Its duplicate-number and missing-country-code errors are in Indonesian now too.
 - `member_history.html`: Full history page. Segmented tab bar, summary tiles, a calendar section, month groups, and a floating back-to-top button for long lists. Below `576px` the tab bar drops its icons: three labels plus three counts plus three icons clear each other by a couple of pixels on a phone, which reads as the tabs being glued together.
 
 ### Automatic `is_pemula` Calculation

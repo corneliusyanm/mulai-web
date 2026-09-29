@@ -1,21 +1,18 @@
 {% extends 'base.html' %}
 
-{% block title %}Pendaftaran Berhasil - Mulai Gym{% endblock %}
+{% block title %}Akunmu udah jadi | Mulai Gym{% endblock %}
+{% block extra_head %}<meta name="robots" content="noindex">{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6 mx-auto" style="margin: 1rem 6rem 7rem 6rem;">
-        <div class="bg-transparent p-4">
-            <h2 class="mb-5 text-white fw-bold text-center">Pendaftaran Berhasil!</h2>
-            <div class="bg-transparent text-white text-center">
-                <p class="mb-5">Terima kasih ya udah daftar.</p>
-                <h3 class="text-white mb-5" style="font-size: 1.8rem; text-shadow: 0.5px 0.5px 0px #9393ee">Yuk <strong>Mulai</strong> biasain <br> nge-<strong>Gym</strong> biar sehat!</h3>
-                <div class="text-center mt-5">
-                    <a href="{% url 'member_details' %}" class="btn btn-secondary me-2">Akun Saya</a>
-                    <a href="/" class="btn btn-outline-secondary">Beranda</a>
-                </div>
-            </div>
+<div class="hp fm">
+    <div class="hp-wrap fm-wrap fm-narrow fm-done">
+        <span class="fm-done-icon"><i class="fas fa-check" aria-hidden="true"></i></span>
+        <h1 class="fm-title">Akunmu <em>udah jadi!</em></h1>
+        <p class="hp-lede">Makasih ya udah daftar. Yuk mulai biasain nge-gym biar sehat!</p>
+        <div class="fm-actions">
+            <a class="hp-btn hp-btn-lime" href="{% url 'member_details' %}">Ke Akun Saya</a>
+            <a class="hp-btn hp-btn-ghost" href="{% url 'home' %}">Ke beranda</a>
         </div>
     </div>
 </div>
-{% endblock %} 
+{% endblock %}

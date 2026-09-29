@@ -1,98 +1,71 @@
 {% extends 'base.html' %}
 {% load widget_tweaks %}
 
-{% block title %}Sign Up - Mulai Gym{% endblock %}
+{% block title %}Daftar | Mulai Gym{% endblock %}
+{% block extra_head %}<meta name="robots" content="noindex">{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6 mx-auto" style="margin: 1rem 6rem 7rem 6rem;">
-        <div class="bg-transparent p-4">
-            <h2 class="mb-4 text-white fw-bold text-center">Buat Akun</h2>
-            <div class="bg-transparent text-white">
-                <form method="post">
-                    {% csrf_token %}
-                    
-                    {# Display name field #}
-                    <div class="mb-3">
-                        <label for="{{ form.name.id_for_label }}" class="form-label text-white fw-bold">Nama</label>
-                        {{ form.name|add_class:"form-control bg-transparent text-white border-light" }}
-                        {% if form.name.errors %}
-                            <div class="text-danger fw-bold fst-italic">{{ form.name.errors }}</div>
-                        {% endif %}
-                        {% if form.name.help_text %}
-                            <div class="form-text text-white">{{ form.name.help_text }}</div>
-                        {% endif %}
-                    </div>
-                    
-                    {# Display email field #}
-                    <div class="mb-3">
-                        <label for="{{ form.email.id_for_label }}" class="form-label text-white fw-bold">Email</label>
-                        {{ form.email|add_class:"form-control bg-transparent text-white border-light" }}
-                        {% if form.email.errors %}
-                            <div class="text-danger fw-bold fst-italic">{{ form.email.errors }}</div>
-                        {% endif %}
-                        {% if form.email.help_text %}
-                            <div class="form-text text-white">{{ form.email.help_text }}</div>
-                        {% endif %}
-                    </div>
-                    
-                    {# Display phone number fields #}
-                    <div class="mb-3">
-                        <label class="form-label text-white fw-bold">Nomor HP</label>
-                        <div style="display: flex; align-items: center;">
-                            {{ form.country_code|add_class:"form-control bg-transparent text-white border-light" }}
-                            {{ form.phone_number_display|add_class:"form-control bg-transparent text-white border-light" }}
-                        </div>
-                        {% if form.country_code.errors %}
-                            <div class="text-danger fw-bold fst-italic">{{ form.country_code.errors }}</div>
-                        {% endif %}
-                        {% if form.phone_number_display.errors %}
-                            <div class="text-danger fw-bold fst-italic">{{ form.phone_number_display.errors }}</div>
-                        {% endif %}
-                    </div>
-                    
-                    {# Display the remaining fields #}
-                    {% for field in form %}
-                        {% if field.name != 'name' and field.name != 'email' and field.name != 'country_code' and field.name != 'phone_number_display' %}
-                            <div class="mb-3">
-                                <label for="{{ field.id_for_label }}" class="form-label text-white fw-bold">
-                                    {% if field.name == 'gender' %}
-                                        Jenis Kelamin
-                                    {% elif field.name == 'age' %}
-                                        Usia (tahun)
-                                    {% elif field.name == 'height' %}
-                                        Tinggi (cm)
-                                    {% elif field.name == 'weight' %}
-                                        Berat Badan (kg)
-                                    {% elif field.name == 'address' %}
-                                        Tinggal di daerah mana?
-                                    {% elif field.name == 'years_of_working_out' %}
-                                        Sudah pernah rutin nge-Gym? Kalau sudah, berapa lama?
-                                    {% elif field.name == 'goals' %}
-                                        Tujuan kamu nge-Gym supaya apa?
-                                    {% elif field.name == 'know_mulai_gym_from' %}
-                                        Kenal Mulai Gym dari mana?
-                                    {% else %}
-                                        {{ field.label }}
-                                    {% endif %}
-                                </label>
-                                {{ field|add_class:"form-control bg-transparent text-white border-light" }}
-                                {% if field.errors %}
-                                    <div class="text-danger fw-bold fst-italic">{{ field.errors }}</div>
-                                {% endif %}
-                                {% if field.help_text %}
-                                    <div class="form-text text-white">{{ field.help_text }}</div>
-                                {% endif %}
-                            </div>
-                        {% endif %}
-                    {% endfor %}
-                    
-                    <div class="text-center mt-4">
-                        <button type="submit" class="btn btn-secondary" style="width: 66%;">Daftar</button>
-                    </div>
-                </form>
+{% comment %}
+Usually filled in by somebody new, often at the desk. Same fields as always
+(the admins read them), in three short groups so it does not look like one
+long exam, with the optional ones marked by the form itself.
+{% endcomment %}
+<div class="hp fm">
+    <div class="hp-wrap fm-wrap">
+        <p class="hp-kicker">Daftar</p>
+        <h1 class="fm-title">Bikin akun <em>Mulai Gym.</em></h1>
+        <p class="hp-lede">Isi sekali aja. Habis itu kamu bisa check-in, booking kelas, dan lihat progresmu sendiri.</p>
+
+        <form method="post" class="fm-card" novalidate>
+            {% csrf_token %}
+            {% for error in form.non_field_errors %}<p class="fm-alert" role="alert">{{ error }}</p>{% endfor %}
+
+            <h2 class="fm-section">Kenalan dulu</h2>
+            {% include "accounts/_fm_field.html" with field=form.name %}
+            {% include "accounts/_fm_field.html" with field=form.email %}
+
+            <div class="fm-field">
+                <label class="fm-label" for="{{ form.phone_number_display.id_for_label }}">{{ form.phone_number_display.label }}</label>
+                <div class="fm-phone">
+                    {{ form.country_code|add_class:"fm-input fm-phone-code"|attr:"aria-label:Kode negara" }}
+                    {% if form.phone_number_display.errors %}
+                        {{ form.phone_number_display|add_class:"fm-input"|attr:"aria-invalid:true" }}
+                    {% else %}
+                        {{ form.phone_number_display|add_class:"fm-input" }}
+                    {% endif %}
+                </div>
+                {% if form.country_code.errors %}<p class="fm-error">{{ form.country_code.errors|striptags }}</p>{% endif %}
+                {% if form.phone_number_display.errors %}<p class="fm-error">{{ form.phone_number_display.errors|striptags }}</p>{% endif %}
             </div>
-        </div>
+
+            <fieldset class="fm-field">
+                <legend class="fm-label">{{ form.gender.label }}</legend>
+                <div class="fm-chips">
+                    {% for radio in form.gender %}
+                    <label class="fm-chip" for="{{ radio.id_for_label }}">{{ radio.tag }}<span>{{ radio.choice_label }}</span></label>
+                    {% endfor %}
+                </div>
+                {% if form.gender.errors %}<p class="fm-error">{{ form.gender.errors|striptags }}</p>{% endif %}
+            </fieldset>
+
+            <h2 class="fm-section">Buat catatan progresmu</h2>
+            <div class="fm-row fm-row-3">
+                {% include "accounts/_fm_field.html" with field=form.age %}
+                {% include "accounts/_fm_field.html" with field=form.height %}
+                {% include "accounts/_fm_field.html" with field=form.weight %}
+            </div>
+            {% include "accounts/_fm_field.html" with field=form.years_of_working_out %}
+            {% include "accounts/_fm_field.html" with field=form.goals %}
+
+            <h2 class="fm-section">Terakhir</h2>
+            {% include "accounts/_fm_field.html" with field=form.know_mulai_gym_from %}
+            {% include "accounts/_fm_field.html" with field=form.why_choose_mulai %}
+            {% include "accounts/_fm_field.html" with field=form.address %}
+            {% include "accounts/_fm_field.html" with field=form.social_media_username %}
+
+            <button type="submit" class="hp-btn hp-btn-primary fm-submit">Daftar</button>
+            <p class="fm-note">Udah punya akun? <a href="{% url 'member_login' %}">Masuk di sini</a></p>
+        </form>
     </div>
 </div>
-{% endblock %} 
+{% endblock %}

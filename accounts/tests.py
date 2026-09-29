@@ -2707,3 +2707,76 @@ class LoginBoxTest(TestCase):
 
         self.assertEqual(self.client.session.get("member_email"), "budi@example.com")
         self.assertNotEqual(self.client.session.session_key, before)
+
+
+class SignupPageTest(TestCase):
+    def setUp(self):
+        self.budi = _member("budi@example.com", "6281234567890")
+
+    def valid(self, **changes):
+        data = {
+            "name": "Sari",
+            "email": "sari@example.com",
+            "country_code": "+62",
+            "phone_number_display": "0812 9999 0000",
+            "gender": "F",
+            "age": 24,
+            "height": 158,
+            "weight": 52,
+            "years_of_working_out": "belum pernah",
+            "goals": "sehat",
+            "know_mulai_gym_from": "instagram",
+        }
+        data.update(changes)
+        return data
+
+    def test_every_field_of_the_form_is_on_the_page(self):
+        from .forms import MemberSignUpForm
+
+        body = self.client.get(reverse("signup")).content.decode()
+
+        for name in MemberSignUpForm().fields:
+            with self.subTest(field=name):
+                self.assertIn(f'name="{name}"', body)
+
+    def test_gender_is_two_chips_with_no_dashes(self):
+        body = self.client.get(reverse("signup")).content.decode()
+
+        self.assertIn('type="radio" name="gender" value="F"', body)
+        self.assertIn('type="radio" name="gender" value="M"', body)
+        self.assertNotIn("---------", body)
+
+    def test_only_the_optional_fields_say_so(self):
+        body = self.client.get(reverse("signup")).content.decode()
+
+        self.assertEqual(body.count("(opsional)"), 3)
+        for label in ("Tinggal di daerah mana?", "Instagram / TikTok", "Kenapa pilih Mulai Gym?"):
+            self.assertIn(f"{label} <span>(opsional)</span>", body)
+
+    def test_errors_are_in_indonesian(self):
+        response = self.client.post(reverse("signup"), {"country_code": "+62"})
+
+        self.assertContains(response, "Yang ini wajib diisi ya.")
+        self.assertNotContains(response, "This field is required")
+
+    def test_a_taken_number_or_email_says_to_log_in_instead(self):
+        response = self.client.post(
+            reverse("signup"),
+            self.valid(email="budi@example.com", phone_number_display="81234567890"),
+        )
+
+        self.assertContains(response, "Nomor ini udah terdaftar. Coba masuk aja")
+        self.assertContains(response, "Email ini udah terdaftar. Coba masuk aja")
+        self.assertNotContains(response, "already")
+
+    def test_a_new_member_is_saved_and_logged_in_under_a_fresh_key(self):
+        self.client.get(reverse("signup"))
+        self.client.session.save()
+        before = self.client.session.session_key
+
+        response = self.client.post(reverse("signup"), self.valid())
+
+        self.assertRedirects(response, reverse("signup_success"))
+        self.assertEqual(Member.objects.get(email="sari@example.com").phone_number, "6281299990000")
+        self.assertEqual(self.client.session["member_email"], "sari@example.com")
+        self.assertNotEqual(self.client.session.session_key, before)

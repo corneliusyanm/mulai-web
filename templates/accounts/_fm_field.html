@@ -1,0 +1,15 @@
+{% load widget_tweaks %}
+{% comment %}
+One labelled field on an fm-card form. Marks itself "(opsional)" when the form
+does not require it, so the template never keeps its own list of which fields
+are optional. Needs `field`.
+{% endcomment %}
+<div class="fm-field">
+    <label class="fm-label" for="{{ field.id_for_label }}">{{ field.label }}{% if not field.field.required %} <span>(opsional)</span>{% endif %}</label>
+    {% if field.errors %}
+        {{ field|add_class:"fm-input"|attr:"aria-invalid:true" }}
+        <p class="fm-error">{{ field.errors|striptags }}</p>
+    {% else %}
+        {{ field|add_class:"fm-input" }}
+    {% endif %}
+</div>

@@ -118,22 +118,20 @@ class TamuForm(forms.ModelForm):
         return instance
 
 
+# Django's defaults, in the words a member reads on /daftar.
+SIGNUP_ERRORS = {
+    "required": "Yang ini wajib diisi ya.",
+    "invalid_choice": "Pilih salah satu ya.",
+    "max_digits": "Angkanya kayaknya kebanyakan, coba cek lagi.",
+    "max_whole_digits": "Angkanya kayaknya kebanyakan, coba cek lagi.",
+    "max_decimal_places": "Angkanya kayaknya kebanyakan, coba cek lagi.",
+    "max_length": "Kepanjangan, coba disingkat ya.",
+}
+
+
 class MemberSignUpForm(forms.ModelForm):
-    country_code = forms.CharField(
-        max_length=5,
-        initial="+62",
-        label="Country Code",
-        widget=forms.TextInput(attrs={"style": "width: 80px; display: inline-block;"}),
-    )
-    phone_number_display = forms.CharField(
-        max_length=15,
-        label="Phone Number",
-        widget=forms.TextInput(
-            attrs={
-                "style": "width: calc(100% - 95px); display: inline-block; margin-left: 5px;"
-            }
-        ),
-    )
+    country_code = forms.CharField(max_length=5, initial="+62", label="Kode negara")
+    phone_number_display = forms.CharField(max_length=15, label="Nomor HP (WhatsApp)")
 
     class Meta:
         model = Member
@@ -202,19 +200,47 @@ class MemberSignUpForm(forms.ModelForm):
             ),
         }
         labels = {
+            "name": "Nama",
+            "email": "Email",
+            "gender": "Jenis kelamin",
+            "age": "Usia",
             "height": "Tinggi (cm)",
             "weight": "Berat (kg)",
-            "years_of_working_out": "Sudah pernah nge-Gym berapa lama?",
-            "goals": "Tujuan kamu nge-Gym supaya apa?",
+            "address": "Tinggal di daerah mana?",
+            "social_media_username": "Instagram / TikTok",
+            "years_of_working_out": "Udah pernah rutin nge-gym? Kalau udah, berapa lama?",
+            "goals": "Tujuan kamu nge-gym supaya apa?",
             "know_mulai_gym_from": "Kenal Mulai Gym dari mana?",
             "why_choose_mulai": "Kenapa pilih Mulai Gym?",
         }
-        help_texts = {
-            # Remove help text and use placeholder instead
+        error_messages = {
+            "email": {"unique": "Email ini udah terdaftar. Coba masuk aja, atau tanya admin."},
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Chips, not a dropdown that opens on "---------".
+        self.fields["gender"].widget = forms.RadioSelect()
+        self.fields["gender"].choices = Member.GENDER_CHOICES
+        self.fields["name"].widget.attrs.update({"autocomplete": "name"})
+        self.fields["email"].widget.attrs.update(
+            {"autocomplete": "email", "autocapitalize": "none", "spellcheck": "false"}
+        )
+        self.fields["country_code"].widget.attrs.update(
+            {"inputmode": "tel", "autocomplete": "tel-country-code"}
+        )
+        self.fields["phone_number_display"].widget.attrs.update(
+            {"inputmode": "tel", "autocomplete": "tel-national", "placeholder": "0812..."}
+        )
+        self.fields["age"].widget.attrs.update({"inputmode": "numeric"})
+        self.fields["social_media_username"].widget.attrs.update({"placeholder": "@username"})
+        # Django's own messages are English; a member signing up reads these.
+        for field in self.fields.values():
+            field.error_messages.update(SIGNUP_ERRORS)
+        self.fields["email"].error_messages["invalid"] = "Email-nya kayaknya belum bener, coba cek lagi."
+        for name in ("age", "height", "weight"):
+            self.fields[name].error_messages["invalid"] = "Isi pakai angka aja ya."
+
         # If instance exists and has phone_number, pre-fill the fields
         if self.instance and self.instance.phone_number:
             phone = self.instance.phone_number
@@ -241,7 +267,7 @@ class MemberSignUpForm(forms.ModelForm):
 
         # Validate country code format
         if not country_code:
-            raise ValidationError({"country_code": "Country code is required"})
+            raise ValidationError({"country_code": "Kode negaranya diisi ya, misal +62."})
         if not country_code.startswith("+"):
             country_code = "+" + country_code
 
@@ -287,7 +313,9 @@ class MemberSignUpForm(forms.ModelForm):
             .exists()
         ):
             raise ValidationError(
-                {"phone_number_display": "This phone number is already registered"}
+                {
+                    "phone_number_display": "Nomor ini udah terdaftar. Coba masuk aja, atau tanya admin."
+                }
             )
 
         # Set the cleaned phone_number field
@@ -479,7 +507,7 @@ class MemberEditForm(forms.ModelForm):
 
         # Validate country code format
         if not country_code:
-            raise ValidationError({"country_code": "Country code is required"})
+            raise ValidationError({"country_code": "Kode negaranya diisi ya, misal +62."})
         if not country_code.startswith("+"):
             country_code = "+" + country_code
 
@@ -527,7 +555,9 @@ class MemberEditForm(forms.ModelForm):
             .exists()
         ):
             raise ValidationError(
-                {"phone_number_display": "This phone number is already registered"}
+                {
+                    "phone_number_display": "Nomor ini udah terdaftar. Coba masuk aja, atau tanya admin."
+                }
             )
 
         # Set the cleaned phone_number field
