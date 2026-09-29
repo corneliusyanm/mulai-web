@@ -233,6 +233,11 @@ LOGGING = {
 }
 
 # Security
+# HSTS comes from the proxy in front (Nginx on the droplet or Cloudflare): the
+# live site answers "strict-transport-security: max-age=31536000;
+# includeSubDomains" (checked 29 Sep 2026). SECURE_HSTS_SECONDS is left unset
+# so Django does not add a second copy; these two lines only take effect if it
+# is ever set here.
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
