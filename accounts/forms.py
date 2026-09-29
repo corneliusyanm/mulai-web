@@ -231,7 +231,8 @@ class MemberSignUpForm(forms.ModelForm):
             {"inputmode": "tel", "autocomplete": "tel-country-code"}
         )
         self.fields["phone_number_display"].widget.attrs.update(
-            {"inputmode": "tel", "autocomplete": "tel-national", "placeholder": "0812..."}
+            # the +62 is in the box next to it, so no leading 0 here
+            {"inputmode": "tel", "autocomplete": "tel-national", "placeholder": "8123..."}
         )
         self.fields["age"].widget.attrs.update({"inputmode": "numeric"})
         # Three boxes share one row on a phone; the unit is in the label, and

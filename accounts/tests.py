@@ -2739,6 +2739,17 @@ class SignupPageTest(TestCase):
             with self.subTest(field=name):
                 self.assertIn(f'name="{name}"', body)
 
+    def test_the_number_hint_has_no_0_after_the_62_box(self):
+        body = self.client.get(reverse("signup")).content.decode()
+
+        self.assertIn('placeholder="8123..."', body)
+        self.assertNotIn('placeholder="0812..."', body)
+
+    def test_a_number_typed_with_its_0_anyway_is_saved_the_same(self):
+        self.client.post(reverse("signup"), self.valid(phone_number_display="0812 9999 0000"))
+
+        self.assertEqual(Member.objects.get(email="sari@example.com").phone_number, "6281299990000")
+
     def test_gender_is_two_chips_with_no_dashes(self):
         body = self.client.get(reverse("signup")).content.decode()
 
