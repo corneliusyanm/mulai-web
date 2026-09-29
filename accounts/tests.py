@@ -2879,3 +2879,46 @@ class RegisteringCannotShadowALoginTest(TestCase):
         nudge = _membership_nudge(member, date(2026, 9, 29))
 
         self.assertIn(quote("03 Okt 2026"), nudge["whatsapp_url"])
+
+
+class MembershipEndsAtJakartaMidnightTest(TestCase):
+    """A membership ending on the 14th is over at 00:00 on the 15th, Jakarta time."""
+
+    def at(self, year, month, day, hour, minute):
+        # UTC-aware, the shape the real timezone.now() returns
+        moment = timezone.make_aware(datetime(year, month, day, hour, minute)).astimezone(dt_timezone.utc)
+        return patch("django.utils.timezone.now", return_value=moment)
+
+    def setUp(self):
+        last_day = timezone.make_aware(datetime(2026, 9, 14, 23, 59))
+        self.member = _member(
+            "habis@example.com",
+            "6281233334444",
+            active_until=last_day,
+            pemula_active_until=last_day,
+            semi_private_active_until=last_day,
+        )
+
+    def test_at_0630_the_next_morning_it_has_ended(self):
+        # 06:30 WIB is still the 14th in UTC, which is how it used to slip through
+        with self.at(2026, 9, 15, 6, 30):
+            self.assertFalse(self.member.is_active_member)
+            self.assertFalse(self.member.is_pemula_active_member)
+            self.assertFalse(self.member.is_semi_private_active_member)
+
+    def test_late_on_its_last_day_it_is_still_active(self):
+        with self.at(2026, 9, 14, 23, 30):
+            self.assertTrue(self.member.is_active_member)
+            self.assertTrue(self.member.is_pemula_active_member)
+            self.assertTrue(self.member.is_semi_private_active_member)
+
+    def test_the_active_members_admin_list_uses_the_same_midnight(self):
+        from .admin import ActiveMemberAdmin
+
+        request = RequestFactory().get("/")
+        request.user = User.objects.create_superuser("desk", "desk@example.com", "pass12345")
+        admin = ActiveMemberAdmin(ActiveMember, admin_site)
+        with self.at(2026, 9, 15, 6, 30):
+            self.assertFalse(admin.get_queryset(request).filter(pk=self.member.pk).exists())
+        with self.at(2026, 9, 14, 23, 30):
+            self.assertTrue(admin.get_queryset(request).filter(pk=self.member.pk).exists())

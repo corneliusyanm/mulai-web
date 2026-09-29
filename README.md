@@ -431,7 +431,7 @@ The banner is fetched via a tiny JSON endpoint instead of a context processor so
 - **`Member` (`accounts/models.py`)**
   - `phone_number`: CharField (Unique, stores digits only, e.g., 628123...)
   - `active_until`: DateTimeField (nullable)
-  - `is_active_member` property: Checks if `active_until >= today`.
+  - `is_active_member` property: Checks if `active_until >= start_of_local_day()`, i.e. the membership counts through the whole of its last day **in Jakarta**. Same for `is_pemula_active_member` and `is_semi_private_active_member`, the Active Members admin list and the Weekly Metrics count. It used to compare against `timezone.now().replace(hour=0)`, which is UTC midnight (07:00 WIB), so a membership that ended yesterday could still check in until 07:00 today.
   - **Admin Tracking Flags** (boolean fields for admin operations):
     - `asked_referral`: Flag to track members who have been asked for referrals (contacts who might be interested in joining the gym)
     - `asked_google_review`: Flag to track members who have been asked to leave a Google review

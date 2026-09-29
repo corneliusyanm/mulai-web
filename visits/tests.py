@@ -2182,3 +2182,21 @@ class ExpiredCheckInTest(TestCase):
 
         self.assertIn("belum aktif", body)
         self.assertNotIn("Habis", body)
+
+
+class LapsedAtDawnTest(TestCase):
+    def test_a_membership_that_ended_yesterday_cannot_check_in_at_0630(self):
+        from unittest.mock import patch
+
+        dawn = timezone.make_aware(datetime(2026, 9, 15, 6, 30)).astimezone(dt_timezone.utc)
+        with patch("django.utils.timezone.now", return_value=dawn):
+            member = _gym_member(active_until=timezone.make_aware(datetime(2026, 9, 14, 23, 59)))
+            session = self.client.session
+            session["member_email"] = member.email
+            session.save()
+
+            response = self.client.get(reverse("check_in_page"))
+
+        self.assertTemplateUsed(response, "visits/check_in_failed.html")
+        self.assertContains(response, "Habis kemarin")
+        self.assertFalse(Visit.objects.exists())

@@ -1,10 +1,24 @@
 import uuid
+from datetime import datetime, time
 
 from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
 from django.conf import settings
+
+
+def start_of_local_day(day=None):
+    """00:00 in Jakarta at the start of `day` (today by default), as an aware datetime.
+
+    A membership counts through the whole of its last day, so "still active"
+    is `active_until >= start_of_local_day()`. The old spelling,
+    `timezone.now().replace(hour=0, ...)`, reads the same but is UTC midnight,
+    07:00 in Jakarta: a membership that ended yesterday could still check in
+    until 07:00 today.
+    """
+    day = day or timezone.localdate()
+    return timezone.make_aware(datetime.combine(day, time.min))
 
 
 class User(AbstractUser):
@@ -123,25 +137,19 @@ class Member(models.Model):
 
     @property
     def is_active_member(self):
-        if not self.active_until:
-            return False
-        # Consider active if end date is today or in the future
-        today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
-        return self.active_until >= today_start
+        # Active through the whole of its last day, in Jakarta
+        return bool(self.active_until) and self.active_until >= start_of_local_day()
 
     @property
     def is_pemula_active_member(self):
-        if not self.pemula_active_until:
-            return False
-        today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
-        return self.pemula_active_until >= today_start
+        return bool(self.pemula_active_until) and self.pemula_active_until >= start_of_local_day()
 
     @property
     def is_semi_private_active_member(self):
-        if not self.semi_private_active_until:
-            return False
-        today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
-        return self.semi_private_active_until >= today_start
+        return (
+            bool(self.semi_private_active_until)
+            and self.semi_private_active_until >= start_of_local_day()
+        )
 
     @property
     def is_pt_active_member(self):

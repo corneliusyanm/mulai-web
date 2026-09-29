@@ -24,7 +24,7 @@ import csv
 from decimal import Decimal
 
 from .models import Visit
-from accounts.models import Member, Tamu
+from accounts.models import Member, Tamu, start_of_local_day
 from payments.models import Payment, Package
 from purchases.models import Sale, Product, SaleItem
 from equipment.models import Equipment
@@ -1200,8 +1200,7 @@ def weekly_metrics_view(request):
 
     # Additional all-time metrics
     total_equipment_views = Equipment.objects.aggregate(total=Sum("total_views"))["total"] or 0
-    today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
-    total_active_members = Member.objects.filter(active_until__gte=today_start).count()
+    total_active_members = Member.objects.filter(active_until__gte=start_of_local_day()).count()
 
     context = {
         **admin_site.each_context(request),

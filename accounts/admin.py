@@ -9,7 +9,7 @@ import csv
 
 from visits.admin import admin_site
 from .forms import member_style_phone
-from .models import Member, ActiveMember, User, Tamu, Masukkan, Prospect
+from .models import Member, ActiveMember, User, Tamu, Masukkan, Prospect, start_of_local_day
 from payments.models import Payment
 from purchases.models import Sale, SaleItem
 from visits.models import Visit
@@ -656,8 +656,7 @@ class ActiveMemberAdmin(MemberAdmin):
 
     def get_queryset(self, request):
         """Filter to only show active members"""
-        today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
-        return super().get_queryset(request).filter(active_until__gte=today_start)
+        return super().get_queryset(request).filter(active_until__gte=start_of_local_day())
 
     def get_urls(self):
         """Override to use different URL names for active member exports"""
