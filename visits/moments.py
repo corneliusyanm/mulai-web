@@ -66,6 +66,14 @@ def membership_ending(member, today):
     return None
 
 
+def membership_lapsed(member, today):
+    """{"days", "on"} for a membership that has ended, None if there never was one."""
+    if not member.active_until:
+        return None
+    ended_on = timezone.localdate(member.active_until)
+    return {"days": max((today - ended_on).days, 0), "on": ended_on}
+
+
 def workout_length(visit):
     """"1 jam 22 menit", or "" when the length is not a real workout."""
     if not visit.check_out_time:

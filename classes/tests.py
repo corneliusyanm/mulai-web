@@ -3008,8 +3008,8 @@ class ClassReviewPromptTest(TestCase):
 
         self.assertContains(response, "Gimana kelasnya?")
         self.assertEqual(len(response.context["pending_reviews"]), 1)
-        # The 5 second bounce to /akun is off while a question is on screen.
-        self.assertNotContains(response, "Kembali ke beranda dalam")
+        # The bounce to /akun is off while a question is on screen.
+        self.assertNotContains(response, "data-ci-countdown")
 
     def test_the_checkout_screen_still_counts_down_with_nothing_to_ask(self):
         ClassReview.objects.create(
@@ -3021,4 +3021,4 @@ class ClassReviewPromptTest(TestCase):
 
         response = self.client.get(reverse("check_out_page"))
 
-        self.assertContains(response, "Kembali ke beranda dalam")
+        self.assertContains(response, "data-ci-countdown")

@@ -1,39 +1,36 @@
 {% extends 'base.html' %}
+{% load id_dates %}
 
-{% block title %}Check In Gagal - Mulai Gym{% endblock %}
+{% block title %}Check-in | Mulai Gym{% endblock %}
+{% block extra_head %}<meta name="robots" content="noindex">{% endblock %}
 
 {% block content %}
-<div class="container py-4">
-    <div class="row justify-content-center">
-        <div class="col-md-6 mx-auto" style="margin: 1rem 6rem 7rem 6rem;">
-            <div class="bg-transparent p-4">
-                <h2 class="mb-4 text-white fw-bold text-center">Check In Gagal</h2>
-                <div class="bg-transparent text-white text-center">
-                    <div class="alert alert-danger mb-4">
-                        {% if has_active_visit %}
-                            <h4 class="alert-heading">Sudah Check In</h4>
-                            <p>Kamu sudah melakukan check in. Silakan check out terlebih dahulu sebelum check in lagi.</p>
-                        {% else %}
-                            <h4 class="alert-heading">Membership Kadaluarsa</h4>
-                            <p>Membership kamu sudah kadaluarsa. Silakan perpanjang membership untuk dapat menggunakan fasilitas gym.</p>
-                            <hr>
-                            <p class="mb-0">
-                                <strong>Aktif Hingga:</strong> {{ member.active_until|date:"d M Y" }}
-                            </p>
-                        {% endif %}
-                    </div>
-                    {% if has_active_visit %}
-                        <p>Silakan <a href="{% url 'check_out_page' %}" class="text-secondary">check out</a> terlebih dahulu.</p>
-                    {% else %}
-                        <p>Silakan hubungi staff gym untuk memperpanjang membership.</p>
-                    {% endif %}
-                    
-                    <div class="mt-4">
-                        <a href="/" class="btn btn-secondary">Kembali ke Beranda</a>
-                    </div>
-                </div>
-            </div>
+{% comment %}
+A member whose membership has run out, standing at the desk. The worst moment
+to sound like an error message: this is somebody who came back, so it is warm,
+says since when, and sends them to the admin. No price (see README, Business
+facts).
+{% endcomment %}
+<div class="hp fm">
+    <div class="hp-wrap fm-wrap fm-narrow fm-done">
+        <span class="fm-done-icon"><i class="fas fa-hourglass-end" aria-hidden="true"></i></span>
+        {% if lapsed %}
+            <h1 class="fm-title">Membership kamu <em>udah habis.</em></h1>
+            <p class="hp-lede">
+                Habis {% if lapsed.days == 0 %}hari ini{% elif lapsed.days == 1 %}kemarin{% else %}{{ lapsed.days }} hari lalu{% endif %}, {{ lapsed.on|indonesian_date }}.
+                Nggak apa-apa, bilang aja ke admin di depan, nanti dibantu perpanjang.
+            </p>
+        {% else %}
+            <h1 class="fm-title">Membership kamu <em>belum aktif.</em></h1>
+            <p class="hp-lede">Bilang aja ke admin di depan, nanti dibantu aktifin.</p>
+        {% endif %}
+        {% if total_visits %}
+        <p class="fm-done-note"><i class="fas fa-dumbbell" aria-hidden="true"></i> Kamu udah {{ total_visits }} kali latihan di sini. Yuk lanjut!</p>
+        {% endif %}
+        <div class="fm-actions">
+            <a class="hp-btn hp-btn-lime" href="{% url 'member_details' %}">Ke Akun Saya</a>
         </div>
+        <p class="fm-switch">Bukan {{ member.name }}? <a href="{% url 'forget_member' %}">Ganti akun</a></p>
     </div>
 </div>
-{% endblock %} 
+{% endblock %}

@@ -260,7 +260,7 @@ class VisitViewsTest(TestCase):
 
         response = self.client.get(reverse("check_out_page"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Check Out Gagal")
+        self.assertContains(response, "check-in hari ini.")
 
     def test_forget_member_view(self):
         """
@@ -1966,3 +1966,194 @@ class CheckInScreenTest(TestCase):
         )
 
         self.assertNotIn("Membership kamu habis", self.screen())
+
+
+class CheckOutScreenTest(TestCase):
+    """What the check-out screen says, and where a second scan lands."""
+
+    def setUp(self):
+        from unittest.mock import patch
+
+        patcher = patch("django.utils.timezone.now", return_value=PINNED_NOW)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.budi = _gym_member()
+        session = self.client.session
+        session["member_email"] = self.budi.email
+        session.save()
+        self.pemula = Class.objects.create(name="Kelas Pemula", description="Dasar.", max_members=6)
+
+    def checked_in(self, minutes_ago):
+        visit = Visit.objects.create(member=self.budi)
+        Visit.objects.filter(pk=visit.pk).update(check_in_time=PINNED_NOW - timedelta(minutes=minutes_ago))
+
+    def booked(self, day, start, status="OPEN"):
+        # one schedule per slot: a schedule has at most one instance a day
+        schedule = ClassSchedule.objects.create(
+            class_obj=self.pemula, day_of_week=day.weekday(), start_time=start, end_time=time(start.hour + 1)
+        )
+        instance = ClassInstance.objects.create(
+            class_schedule=schedule,
+            date=day,
+            start_time=start,
+            end_time=time(start.hour + 1, start.minute),
+            status=status,
+        )
+        instance.booked_members.add(self.budi)
+        return instance
+
+    def screen(self):
+        return self.client.get(reverse("check_out_page")).content.decode()
+
+    def test_a_real_workout_says_how_long_it_was(self):
+        self.checked_in(minutes_ago=82)
+
+        body = self.screen()
+
+        self.assertIn("Kamu latihan 1 jam 22 menit", body)
+        self.assertIn("Selasa, 15 September 2026", body)
+        self.assertNotIn("Tuesday", body)
+
+    def test_a_check_in_and_out_in_one_go_or_a_forgotten_check_out_shows_no_length(self):
+        for minutes in (3, 5 * 60):
+            with self.subTest(minutes=minutes):
+                self.checked_in(minutes_ago=minutes)
+                self.assertNotIn("Kamu latihan", self.screen())
+
+    def test_a_class_later_today_is_the_next_one(self):
+        self.checked_in(minutes_ago=60)
+        self.booked(PINNED_NOW.date(), time(17, 0))
+
+        body = self.screen()
+
+        self.assertIn("Sampai ketemu nanti jam 17:00", body)
+        self.assertIn("Di Kelas Pemula, udah kamu booking.", body)
+
+    def test_a_class_that_already_started_or_was_cancelled_is_skipped(self):
+        self.checked_in(minutes_ago=60)
+        self.booked(PINNED_NOW.date(), time(9, 0))
+        self.booked(PINNED_NOW.date() + timedelta(days=1), time(7, 0), status="CANCELLED")
+        self.booked(PINNED_NOW.date() + timedelta(days=1), time(16, 0))
+
+        self.assertIn("Sampai ketemu besok jam 16:00", self.screen())
+
+    def test_a_class_later_in_the_week_prints_its_day(self):
+        self.checked_in(minutes_ago=60)
+        self.booked(PINNED_NOW.date() + timedelta(days=2), time(17, 0))
+
+        self.assertIn("Sampai ketemu Kamis, 17 Sep jam 17:00", self.screen())
+
+    def test_no_booked_class_points_at_the_schedule(self):
+        self.checked_in(minutes_ago=60)
+
+        body = self.screen()
+
+        self.assertIn("Mau ikut kelas berikutnya?", body)
+        self.assertIn(reverse("classes:class_list"), body)
+
+    def test_it_moves_on_to_the_account_page(self):
+        self.checked_in(minutes_ago=60)
+
+        body = self.screen()
+
+        self.assertIn('data-ci-countdown="8"', body)
+        self.assertNotIn("beranda", body)
+
+    def test_the_account_page_says_see_you_not_goodbye(self):
+        self.checked_in(minutes_ago=60)
+        self.screen()
+
+        body = self.client.get(reverse("member_details")).content.decode()
+
+        self.assertIn("Sampai ketemu lagi, Budi Santoso!", body)
+        self.assertNotIn("Selamat tinggal", body)
+
+    def test_a_second_scan_says_when_they_checked_out(self):
+        self.checked_in(minutes_ago=60)
+        self.screen()
+
+        body = self.screen()
+
+        self.assertIn("Udah check-out <em>jam 10.00.</em>", body)
+        self.assertNotIn("Gagal", body)
+
+    def test_no_check_in_today_says_to_tell_the_admin(self):
+        visit = Visit.objects.create(member=self.budi)
+        Visit.objects.filter(pk=visit.pk).update(
+            check_in_time=PINNED_NOW - timedelta(days=1),
+            check_out_time=PINNED_NOW - timedelta(days=1) + timedelta(hours=1),
+        )
+
+        body = self.screen()
+
+        self.assertIn("check-in hari ini.", body)
+        self.assertIn("bilang ke admin", body)
+
+    def test_a_phone_that_does_not_know_the_member_gets_the_box_then_checks_out(self):
+        self.checked_in(minutes_ago=60)
+        self.client.logout()
+        self.client.session.flush()
+
+        body = self.client.get(reverse("check_out_page")).content.decode()
+        self.assertIn('name="identifier"', body)
+
+        response = self.client.post(reverse("check_out_page"), {"identifier": "081234567890"})
+
+        self.assertContains(response, "Kamu latihan 1 jam")
+        self.assertFalse(Visit.objects.filter(check_out_time__isnull=True).exists())
+
+    def test_switching_account_on_the_way_out_goes_back_to_check_out(self):
+        response = self.client.get(reverse("forget_member") + "?next=check_out")
+
+        self.assertRedirects(response, reverse("check_out_page"))
+        self.assertNotIn("member_email", self.client.session)
+
+    def test_switching_account_never_follows_a_url_from_the_request(self):
+        for bad in ("https://evil.example.com/", "//evil.example.com", "check_in"):
+            with self.subTest(bad=bad):
+                response = self.client.get(reverse("forget_member"), {"next": bad})
+                self.assertRedirects(response, reverse("check_in_page"))
+
+
+class ExpiredCheckInTest(TestCase):
+    """A member whose membership ran out, standing at the desk."""
+
+    def setUp(self):
+        from unittest.mock import patch
+
+        patcher = patch("django.utils.timezone.now", return_value=PINNED_NOW)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def screen(self, active_until, visits=0):
+        member = _gym_member(active_until=active_until)
+        for _ in range(visits):
+            Visit.objects.create(member=member, check_out_time=PINNED_NOW)
+        session = self.client.session
+        session["member_email"] = member.email
+        session.save()
+        response = self.client.get(reverse("check_in_page"))
+        self.assertTemplateUsed(response, "visits/check_in_failed.html")
+        return response.content.decode()
+
+    def test_it_says_since_when_in_indonesian_and_sends_them_to_the_admin(self):
+        # ended at 23:59 on Sunday 30 August, Jakarta
+        body = self.screen(timezone.make_aware(datetime(2026, 8, 30, 23, 59)), visits=18)
+
+        self.assertIn("Habis 16 hari lalu, Minggu, 30 Agu.", body)
+        self.assertIn("bilang aja ke admin", body)
+        self.assertIn("Kamu udah 18 kali latihan di sini.", body)
+        self.assertNotIn("Rp", body)
+        self.assertNotIn("Aug", body)
+
+    def test_yesterday_says_yesterday(self):
+        body = self.screen(timezone.make_aware(datetime(2026, 9, 14, 23, 59)))
+
+        self.assertIn("Habis kemarin", body)
+        self.assertNotIn("kali latihan", body)
+
+    def test_a_member_who_never_had_a_membership_is_told_it_is_not_active_yet(self):
+        body = self.screen(None)
+
+        self.assertIn("belum aktif", body)
+        self.assertNotIn("Habis", body)

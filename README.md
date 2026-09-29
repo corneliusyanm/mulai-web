@@ -458,7 +458,7 @@ The banner is fetched via a tiny JSON endpoint instead of a context processor so
   - This view handles both manual login via `POST` and automatic check-in for already logged-in users via `GET`.
   - For a `POST` request (user not logged in), it reads the one login box (`MemberLoginForm`, see Accounts), logs the member in, and then proceeds to the automatic check-in logic. Nobody found re-renders the box with the error under it; no visit is created.
   - For a `GET` request (user is logged in), it idempotently checks the user in using `get_or_create`. This means a new `Visit` is only created if the member does not already have an active (not checked-out) visit.
-  - If the member is inactive, it renders a failure page.
+  - If the member is inactive, it renders `check_in_failed.html`. That is somebody who came back, standing at the desk, so it reads like it: "Membership kamu udah habis. Habis 16 hari lalu, Minggu, 13 Sep. Nggak apa-apa, bilang aja ke admin di depan, nanti dibantu perpanjang." plus "Kamu udah 18 kali latihan di sini. Yuk lanjut!" when they have visits (`membership_lapsed()`). "Belum aktif" for a member who never had a membership. No price. It used to be a red "Check In Gagal" box with an English-style date.
   - On a successful check-in (or if the member was already checked in), it redirects to `/check-in/success`.
 - **`check_in_success`** (`/check-in/success`)
   - This view is purely for displaying the result of a check-in.
@@ -468,20 +468,22 @@ The banner is fetched via a tiny JSON endpoint instead of a context processor so
     - **Which visit this is** (`visit_moment()`): "Kunjungan pertamamu!" on the first, "Kunjungan ke-25!" with its badge on any `VISIT_MILESTONES` number (the same badges as `/akun`), otherwise "Kunjungan ke-24" with "1 lagi ke badge 25 kunjungan" and a bar. In production (90 days) that was about 110 badge moments and 50 first visits. Counted up to the visit shown, so a later visit cannot change it.
     - **Membership ending this week** (`membership_ending()`): only within `NUDGE_DAYS_BEFORE` (7) days, same rules as the `/akun` nudge, so nothing for `skip_auto_reminder` members. "Membership kamu habis 5 hari lagi. Aktif sampai Minggu, 4 Okt. Mau lanjut? Bilang aja ke admin." No price and no WhatsApp link: they are standing at the desk.
 - **`check_out_page`** (`/check-out`)
-  1. Checks session for `member_email` (renders fail if not logged in).
-  2. Tries to find an active `Visit` for the member.
-     - Finds latest active `Visit` for member.
-     - Sets `check_out_time`, saves `Visit`.
-     - Renders success/failure template.
+  1. A phone that does not know the member gets the login box (`check_out.html`, the same `_login_box.html`), and checks out as soon as it matches someone. It used to be a "Belum Login" error pointing at `/masuk`.
+  2. Finds the latest open `Visit`, sets `check_out_time`, and renders `quick_check_out.html`:
+     - **Workout length** under the time, "Kamu latihan 1 jam 22 menit" (`workout_length()`), only between 15 minutes and 4 hours (`WORKOUT_MINUTES_SHOWN`). In production (180 days) 43 visits were under 5 minutes (a check-in and check-out in one go) and 25 over 4 hours (a forgotten check-out); the other 5,200 sit in between, median 82 minutes.
+     - **The class question** (Penilaian Kelas) when there is one, with the countdown off.
+     - **Next class** (`next_class()`): the next booked class that has not started, within `NEXT_CLASS_DAYS` (14), skipping cancelled ones: "Sampai ketemu nanti jam 19:00" (later today), "besok jam 07:15", or "Kamis, 1 Okt jam 17:00", with the class name. With nothing booked, a link to the class schedule.
+     - The pantun stays. The Django message shown on `/akun` afterwards is "Check-out berhasil. Sampai ketemu lagi, {nama}!" (it was "Selamat tinggal", which reads as goodbye for good).
+  3. No open visit renders `check_out_failed.html`, which is one of two things. Already checked out today (scanned twice on the way out): "Udah check-out jam 12.18. Nggak perlu check-out lagi." Never checked in today: "Kalau tadi lupa check-in, bilang ke admin ya, biar kunjungan dan kelasmu hari ini tetap kecatat", since a class booked today with no check-in that day counts as missed (see No-Show Penalty).
 - **`forget_member`** (`/forget-member`)
-  - Clears `member_email` from session.
+  - Clears `member_email` from session, then goes back to `/check-in`, or to `/check-out` with `?next=check_out` (`FORGET_NEXT`, a fixed list, never a URL from the request). The failure screens link it as "Bukan {nama}? Ganti akun"; from check-out it has to go back to check-out, because logging in on `/check-in` would check the other account in on its way out.
 
 ### Check-in/Out Flow Diagram
 ```mermaid
 graph TD
     subgraph Check-in Process
         A[Visit /check-in] --> B{Logged In?}
-        B -->|No| C[Show Email/Phone Form]
+        B -->|No| C[Show the login box]
         C -->|POST| D{Find Member}
         D -->|Not Found| E[Show Error]
         D -->|Found| F[Log In User<br>Create Session]
@@ -497,17 +499,18 @@ graph TD
         L -->|No| M[Redirect to /check-in]
         L -->|Yes| N[Find Latest Visit<br>Active or Not]
         N --> O[Show Success Page<br>quick_check_in.html]
-        O --> O2[Auto-redirect to /akun<br>after 5 seconds]
+        O --> O2[Auto-redirect to /akun<br>after 8 seconds]
     end
 
     subgraph Check-out Process
         P[Visit /check-out] --> Q{Logged In?}
-        Q -->|No| R[Show Failure: Not Logged In]
+        Q -->|No| R[Show the login box]
+        R -->|POST, found| S
         Q -->|Yes| S{Has Active Visit?}
-        S -->|No| T[Show Failure: No Active Visit]
+        S -->|No| T[Already checked out today,<br>or never checked in today]
         S -->|Yes| U[Auto Check-out]
         U --> U2[Show Success Page]
-        U2 --> U3[Auto-redirect to /akun<br>after 5 seconds]
+        U2 --> U3[Auto-redirect to /akun<br>after 8 seconds,<br>unless a class question is showing]
     end
 ```
 
@@ -531,11 +534,9 @@ These links are hidden in production.
   - Member must exist.
   - Must be active member (logged in even if check-in fails here).
   - No duplicate active visits (logged in even if check-in fails here).
-  - Messages: "Already Checked In", "Membership Expired", "Member not found", "Please provide email or phone".
 - Check-out:
-  - Must be logged in
-  - Must have active visit
-  - Messages: "Not Logged In", "No Active Visit Found"
+  - Not logged in: the login box, then check-out.
+  - Must have an open visit; otherwise "udah check-out jam ..." or "belum check-in hari ini" (see `check_out_page`).
 
 ## Accounts
 

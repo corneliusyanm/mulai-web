@@ -1,35 +1,29 @@
 {% extends 'base.html' %}
 
-{% block title %}Check Out Gagal - Mulai Gym{% endblock %}
+{% block title %}Check-out | Mulai Gym{% endblock %}
+{% block extra_head %}<meta name="robots" content="noindex">{% endblock %}
 
 {% block content %}
-<div class="container py-4">
-    <div class="row justify-content-center">
-        <div class="col-md-6 mx-auto" style="margin: 1rem 6rem 7rem 6rem;">
-            <div class="bg-transparent p-4">
-                <h2 class="mb-4 text-white fw-bold text-center">Check Out Gagal</h2>
-                <div class="bg-transparent text-white text-center">
-                    <div class="alert alert-danger mb-4">
-                        {% if member %}
-                            <h4 class="alert-heading">Tidak Ada Kunjungan Aktif</h4>
-                            <p>Kamu tidak memiliki check-in aktif. Silakan check in terlebih dahulu sebelum check out.</p>
-                        {% else %}
-                            <h4 class="alert-heading">Belum Login</h4>
-                            <p>Silakan login terlebih dahulu untuk melakukan check out.</p>
-                        {% endif %}
-                    </div>
-                    {% if not member %}
-                        <p>Silakan <a href="{% url 'member_login' %}" class="text-secondary">login</a> untuk melanjutkan.</p>
-                    {% else %}
-                        <p>Jika kamu merasa ada kesalahan, silakan hubungi staff gym.</p>
-                    {% endif %}
-                    
-                    <div class="mt-4">
-                        <a href="/" class="btn btn-secondary">Kembali ke Beranda</a>
-                    </div>
-                </div>
-            </div>
+{% comment %}
+No open visit. Either they already checked out (scanned twice on the way out,
+nothing wrong), or they never checked in today, which matters: a class booked
+today with no check-in counts as missed, so it says to tell the admin.
+{% endcomment %}
+<div class="hp fm">
+    <div class="hp-wrap fm-wrap fm-narrow fm-done">
+        {% if done_today %}
+            <span class="fm-done-icon"><i class="fas fa-check" aria-hidden="true"></i></span>
+            <h1 class="fm-title">Udah check-out <em>jam {{ done_today.check_out_time|time:"H.i" }}.</em></h1>
+            <p class="hp-lede">Nggak perlu check-out lagi. Sampai ketemu lagi ya!</p>
+        {% else %}
+            <span class="fm-done-icon"><i class="fas fa-circle-question" aria-hidden="true"></i></span>
+            <h1 class="fm-title">Kamu belum <em>check-in hari ini.</em></h1>
+            <p class="hp-lede">Kalau tadi lupa check-in, bilang ke admin ya, biar kunjungan dan kelasmu hari ini tetap kecatat.</p>
+        {% endif %}
+        <div class="fm-actions">
+            <a class="hp-btn hp-btn-lime" href="{% url 'member_details' %}">Ke Akun Saya</a>
         </div>
+        <p class="fm-switch">Bukan {{ member.name }}? <a href="{% url 'forget_member' %}?next=check_out">Ganti akun</a></p>
     </div>
 </div>
-{% endblock %} 
+{% endblock %}

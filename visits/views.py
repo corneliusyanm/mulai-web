@@ -1,5 +1,5 @@
 from django.contrib import messages
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import redirect, render
 from django.utils import timezone
 
 from accounts.forms import MemberLoginForm
@@ -8,7 +8,13 @@ from accounts.views import log_member_in
 from classes.reviews import FACES as REVIEW_FACES, pending_reviews
 
 from .models import Visit
-from .moments import membership_ending, visit_moment
+from .moments import (
+    membership_ending,
+    membership_lapsed,
+    next_class,
+    visit_moment,
+    workout_length,
+)
 
 # How long the check-in and check-out screens stay up before moving on to /akun.
 # Long enough to read a line, and the move matters: a tab left open on
@@ -48,7 +54,15 @@ def check_in_page(request):
         return render(request, "visits/check_in.html", {"form": MemberLoginForm()})
 
     if not member.is_active_member:
-        return render(request, "visits/check_in_failed.html", {"member": member})
+        return render(
+            request,
+            "visits/check_in_failed.html",
+            {
+                "member": member,
+                "lapsed": membership_lapsed(member, timezone.localdate()),
+                "total_visits": Visit.objects.filter(member=member).count(),
+            },
+        )
 
     Visit.objects.get_or_create(
         member=member,
@@ -86,51 +100,77 @@ def check_in_success(request):
 
 
 def check_out_page(request):
-    # Check if user is logged in first
-    member_email = request.session.get("member_email")
-    if not member_email:
-        return render(request, "visits/check_out_failed.html", {"member": None})
+    """Check the member out of their open visit.
 
-    # Try to auto check-out
-    try:
-        member = Member.objects.get(email=member_email)
-        # Find the latest unchecked-out visit
-        try:
-            visit = Visit.objects.filter(
-                member=member, check_out_time__isnull=True
-            ).latest("check_in_time")
+    A phone that does not know the member gets the login box first, and checks
+    out as soon as it matches someone, the same way /check-in does.
+    """
+    form = MemberLoginForm(request.POST) if request.method == "POST" else None
+    if form is not None:
+        if not form.is_valid():
+            return render(request, "visits/check_out.html", {"form": form})
+        log_member_in(request, form.member)
 
-            visit.check_out_time = timezone.now()
-            visit.save()
+    member = _session_member(request)
+    if member is None:
+        return render(request, "visits/check_out.html", {"form": MemberLoginForm()})
 
-            messages.success(
-                request, f"Selamat tinggal, {member.name}! Check-out berhasil."
+    now = timezone.now()
+    visit = (
+        Visit.objects.filter(member=member, check_out_time__isnull=True)
+        .order_by("-check_in_time")
+        .first()
+    )
+    if visit is None:
+        # Scanned twice on the way out, or never checked in today. The second
+        # one matters: with no check-in today, a class booked today counts as
+        # missed, so the screen says to tell the admin.
+        done_today = (
+            Visit.objects.filter(
+                member=member,
+                check_out_time__isnull=False,
+                check_in_time__date=timezone.localdate(now),
             )
-            # The best moment to ask how the class was is the one where they are
-            # still standing in the room it happened in. Only the newest class
-            # here, though: this screen is somebody on their way out of the door,
-            # and the account page picks up whatever they leave behind.
-            return render(
-                request,
-                "visits/quick_check_out.html",
-                {
-                    "member": member,
-                    "success": True,
-                    "visit": visit,
-                    "pending_reviews": pending_reviews(member)[:1],
-                    "review_faces": REVIEW_FACES,
-                    "review_next": "akun",
-                },
-            )
-        except Visit.DoesNotExist:
-            return render(request, "visits/check_out_failed.html", {"member": member})
-    except Member.DoesNotExist:
-        request.session.pop("member_email", None)
-        return render(request, "visits/check_out_failed.html", {"member": None})
+            .order_by("-check_out_time")
+            .first()
+        )
+        return render(
+            request,
+            "visits/check_out_failed.html",
+            {"member": member, "done_today": done_today},
+        )
 
-    return render(request, "visits/check_out.html")
+    visit.check_out_time = now
+    visit.save()
+
+    messages.success(request, f"Check-out berhasil. Sampai ketemu lagi, {member.name}!")
+    # The best moment to ask how the class was is the one where they are
+    # still standing in the room it happened in. Only the newest class
+    # here, though: this screen is somebody on their way out of the door,
+    # and the account page picks up whatever they leave behind.
+    return render(
+        request,
+        "visits/quick_check_out.html",
+        {
+            "member": member,
+            "visit": visit,
+            "visit_day": timezone.localdate(visit.check_out_time),
+            "workout": workout_length(visit),
+            "next_class": next_class(member, now),
+            "pending_reviews": pending_reviews(member)[:1],
+            "review_faces": REVIEW_FACES,
+            "review_next": "akun",
+            "success_seconds": SUCCESS_SECONDS,
+        },
+    )
+
+
+# Where "Ganti akun" goes afterwards. Only these, never a URL from the request.
+# From the check-out screens it has to be check-out: logging in on /check-in
+# would check the other account in on its way out of the door.
+FORGET_NEXT = {"check_out": "check_out_page"}
 
 
 def forget_member(request):
     request.session.pop("member_email", None)
-    return redirect("check_in_page")
+    return redirect(FORGET_NEXT.get(request.GET.get("next"), "check_in_page"))

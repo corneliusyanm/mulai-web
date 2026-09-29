@@ -5771,13 +5771,41 @@ section {
 .ci-banner-top, .ci-banner-bot { font-size: clamp(3.6rem, 18vw, 5rem); }
 .ci-banner-bot { align-self: flex-end; }
 .ci-banner-pantun .ci-banner-top,
-.ci-banner-pantun .ci-banner-bot { font-size: clamp(1.5rem, 7.4vw, 2rem); }
+.ci-banner-pantun .ci-banner-bot { font-size: clamp(1.35rem, 6.6vw, 2rem); }
 .ci-banner-pantun { align-items: center; padding: 28px 16px; text-shadow: 3px 4px 2px rgba(0, 0, 0, 0.3); }
 .ci-banner-pantun .ci-banner-bot { align-self: center; }
 
-.ci .review-prompt { max-width: 440px; margin: 0 auto; text-align: left; }
+.ci .review-prompt { margin: 0; text-align: left; }
 
 @media (prefers-reduced-motion: reduce) {
   .ci-banner .dancing-text-top, .ci-banner .dancing-text-bot,
   .ci-banner .shake-text-top, .ci-banner .shake-text-bot { animation: none; }
 }
+
+.ci-workout {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: var(--hp-lime);
+  color: var(--hp-ink);
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.fm-done-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 18px 0 0;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.fm-switch { margin: 18px 0 0; color: rgba(255, 255, 255, 0.8); font-size: 0.9rem; }
+.fm-switch a { color: var(--hp-lime); font-weight: 700; }
