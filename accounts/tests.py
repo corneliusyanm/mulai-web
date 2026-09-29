@@ -178,7 +178,7 @@ class MemberViewsTest(TestCase):
         Test that a member can log in with their email.
         """
         response = self.client.post(
-            reverse("member_login"), {"email": "test@example.com"}
+            reverse("member_login"), {"identifier": "test@example.com"}
         )
         self.assertEqual(response.status_code, 302)  # Should redirect on success
         self.assertEqual(self.client.session.get("member_email"), "test@example.com")
@@ -188,8 +188,7 @@ class MemberViewsTest(TestCase):
         Test that a member can log in with their phone number.
         """
         response = self.client.post(
-            reverse("member_login"),
-            {"country_code": "+62", "phone_number_display": "81234567890"},
+            reverse("member_login"), {"identifier": "081234567890"}
         )
         self.assertEqual(response.status_code, 302)
         self.assertEqual(self.client.session.get("member_email"), "test@example.com")
@@ -199,7 +198,7 @@ class MemberViewsTest(TestCase):
         Test that a member cannot log in with a wrong email.
         """
         response = self.client.post(
-            reverse("member_login"), {"email": "wrong@example.com"}
+            reverse("member_login"), {"identifier": "wrong@example.com"}
         )
         self.assertEqual(response.status_code, 200)  # Should re-render the form
         self.assertIsNone(self.client.session.get("member_email"))
@@ -209,8 +208,7 @@ class MemberViewsTest(TestCase):
         Test that a member cannot log in with a wrong phone number.
         """
         response = self.client.post(
-            reverse("member_login"),
-            {"country_code": "+62", "phone_number_display": "11111111111"},
+            reverse("member_login"), {"identifier": "11111111111"}
         )
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(self.client.session.get("member_email"))
@@ -2617,3 +2615,95 @@ class GuestAdminSearchTest(TestCase):
     def test_a_name_search_still_works(self):
         self.assertIn("Tamu Lama", self.search("Lama"))
 
+
+
+def _member(email, phone, **extra):
+    fields = dict(
+        name="Budi Santoso",
+        email=email,
+        phone_number=phone,
+        gender="M",
+        age=25,
+        height=170,
+        weight=65,
+        years_of_working_out="belum pernah",
+        goals="sehat",
+        know_mulai_gym_from="teman",
+    )
+    fields.update(extra)
+    return Member.objects.create(**fields)
+
+
+class FindMemberTest(TestCase):
+    """One box takes an email or a number, typed any way, stored any way."""
+
+    def setUp(self):
+        self.budi = _member("Budi@Example.com", "6281234567890")
+
+    def find(self, identifier):
+        from .forms import find_member
+
+        return find_member(identifier)
+
+    def test_every_way_a_number_gets_typed_finds_the_member(self):
+        for typed in ("081234567890", "81234567890", "+62 812-3456-7890", "6281234567890", "0062 812 3456 7890"):
+            with self.subTest(typed=typed):
+                self.assertEqual(self.find(typed), self.budi)
+
+    def test_an_email_matches_whatever_its_case(self):
+        self.assertEqual(self.find("budi@example.com"), self.budi)
+        self.assertEqual(self.find("  Budi@Example.com "), self.budi)
+
+    def test_numbers_stored_the_old_ways_are_found_too(self):
+        old = _member("lama@example.com", "081299998888")
+        odd = _member("odd@example.com", "ID81277776666")
+
+        self.assertEqual(self.find("+6281299998888"), old)
+        self.assertEqual(self.find("081277776666"), odd)
+
+    def test_emails_that_differ_only_in_case_find_nobody_rather_than_guess(self):
+        _member("budi@example.com", "6281200001111")
+
+        # the exact spelling still wins
+        self.assertEqual(self.find("Budi@Example.com"), self.budi)
+        self.assertIsNone(self.find("BUDI@EXAMPLE.COM"))
+
+    def test_a_blank_a_short_number_or_a_word_finds_nobody(self):
+        _member("kosong@example.com", "")
+        for typed in ("", "   ", "0812", "budi", "---"):
+            with self.subTest(typed=typed):
+                self.assertIsNone(self.find(typed))
+
+
+class LoginBoxTest(TestCase):
+    def setUp(self):
+        self.budi = _member("budi@example.com", "6281234567890")
+
+    def test_the_login_page_shows_one_labelled_box(self):
+        body = self.client.get(reverse("member_login")).content.decode()
+
+        self.assertIn(">Email atau nomor HP</label>", body)
+        self.assertIn('name="identifier"', body)
+        self.assertNotIn('name="country_code"', body)
+
+    def test_nobody_found_says_so_next_to_the_box(self):
+        response = self.client.post(reverse("member_login"), {"identifier": "0899000000"})
+
+        self.assertContains(response, "Belum ketemu")
+        self.assertContains(response, 'aria-invalid="true"')
+        self.assertIsNone(self.client.session.get("member_email"))
+
+    def test_an_empty_box_asks_in_indonesian(self):
+        response = self.client.post(reverse("member_login"), {"identifier": ""})
+
+        self.assertContains(response, "Isi email atau nomor HP kamu dulu ya.")
+
+    def test_logging_in_starts_a_fresh_session_key(self):
+        self.client.get(reverse("member_login"))
+        self.client.session.save()
+        before = self.client.session.session_key
+
+        self.client.post(reverse("member_login"), {"identifier": "081234567890"})
+
+        self.assertEqual(self.client.session.get("member_email"), "budi@example.com")
+        self.assertNotEqual(self.client.session.session_key, before)

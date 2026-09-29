@@ -2,67 +2,54 @@ from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
+from accounts.forms import MemberLoginForm
 from accounts.models import Member
+from accounts.views import log_member_in
 from classes.reviews import FACES as REVIEW_FACES, pending_reviews
 
 from .models import Visit
 
 
+def _session_member(request):
+    """The member this phone is logged in as, or None.
+
+    A session naming a member who no longer exists is cleared, so the next
+    page shows the login box instead of failing the same way again.
+    """
+    email = request.session.get("member_email")
+    if not email:
+        return None
+    member = Member.objects.filter(email=email).first()
+    if member is None:
+        request.session.pop("member_email", None)
+    return member
+
+
 def check_in_page(request):
-    # Handles both manual login (POST) and auto-check-in (GET for logged-in users).
-    if request.method == "POST":
-        email = request.POST.get("email", "").strip()
-        phone = request.POST.get("phone", "").strip()
-        country_code = request.POST.get("country_code", "+62").strip()
+    """Check in straight away when this phone knows the member.
 
-        if not email and not phone:
-            messages.error(request, "Mohon masukkan email atau nomor telepon")
-            return redirect("check_in_page")
+    Otherwise show the login box, and check in as soon as it matches someone.
+    Checking in twice is harmless: an open visit is reused, not duplicated.
+    """
+    form = MemberLoginForm(request.POST) if request.method == "POST" else None
+    if form is not None:
+        if not form.is_valid():
+            return render(request, "visits/check_in.html", {"form": form})
+        log_member_in(request, form.member)
 
-        try:
-            if email:
-                member = Member.objects.get(email=email)
-            elif phone:
-                if not country_code.startswith("+"):
-                    country_code = "+" + country_code
-                if phone.startswith("+"):
-                    phone = phone[1:]
-                phone = phone.lstrip("0")
-                formatted_phone = country_code.replace("+", "") + phone
-                member = Member.objects.get(phone_number=formatted_phone)
-            else:
-                raise Member.DoesNotExist
+    member = _session_member(request)
+    if member is None:
+        return render(request, "visits/check_in.html", {"form": MemberLoginForm()})
 
-            request.session["member_email"] = member.email
-            # Fall through to the GET logic after successful login
-        except Member.DoesNotExist:
-            messages.error(
-                request,
-                "Member tidak ditemukan. Silakan periksa kembali email atau nomor telepon Anda.",
-            )
-            return redirect("check_in_page")
+    if not member.is_active_member:
+        return render(request, "visits/check_in_failed.html", {"member": member})
 
-    member_email = request.session.get("member_email")
-    if member_email:
-        try:
-            member = Member.objects.get(email=member_email)
-            if not member.is_active_member:
-                return render(
-                    request, "visits/check_in_failed.html", {"member": member}
-                )
-
-            # Idempotently create a visit if one isn't active.
-            Visit.objects.get_or_create(
-                member=member,
-                check_out_time__isnull=True,
-                defaults={"check_in_time": timezone.now()},
-            )
-            return redirect("check_in_success")
-
-        except Member.DoesNotExist:
-            request.session.pop("member_email", None)
-
-    return render(request, "visits/check_in.html")
+    Visit.objects.get_or_create(
+        member=member,
+        check_out_time__isnull=True,
+        defaults={"check_in_time": timezone.now()},
+    )
+    return redirect("check_in_success")
 
 
 def check_in_success(request):

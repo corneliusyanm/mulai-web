@@ -456,7 +456,7 @@ The banner is fetched via a tiny JSON endpoint instead of a context processor so
 ### Views (`visits/views.py`)
 - **`check_in_page`** (`/check-in`)
   - This view handles both manual login via `POST` and automatic check-in for already logged-in users via `GET`.
-  - For a `POST` request (user not logged in), it validates the member's email or phone number, creates a session, and then proceeds to the automatic check-in logic.
+  - For a `POST` request (user not logged in), it reads the one login box (`MemberLoginForm`, see Accounts), logs the member in, and then proceeds to the automatic check-in logic. Nobody found re-renders the box with the error under it; no visit is created.
   - For a `GET` request (user is logged in), it idempotently checks the user in using `get_or_create`. This means a new `Visit` is only created if the member does not already have an active (not checked-out) visit.
   - If the member is inactive, it renders a failure page.
   - On a successful check-in (or if the member was already checked in), it redirects to `/check-in/success`.
@@ -524,7 +524,7 @@ These links are hidden in production.
 
 ### Validations & Messages
 - Check-in:
-  - Must provide Email or Phone Number on login.
+  - One box, email or phone number, the same one `/masuk` uses. Empty: "Isi email atau nomor HP kamu dulu ya." Nobody found: "Belum ketemu. Coba cek lagi email atau nomor HP-nya, atau tanya admin ya."
   - Member must exist.
   - Must be active member (logged in even if check-in fails here).
   - No duplicate active visits (logged in even if check-in fails here).
@@ -547,17 +547,14 @@ The account-related pages are accessible at the following URLs:
 
 ### Forms (`accounts/forms.py`)
 - **`MemberSignUpForm`, `MemberEditForm`**: Include `country_code` (default +62) and `phone_number_display` fields. The `clean` method standardizes the phone number (e.g., removes +, strips leading 0) and stores it in the `phone_number` model field (digits only). Performs uniqueness validation.
-- **`MemberLoginForm`**: Includes `email` (optional), `country_code` (optional), and `phone_number_display` (optional). Requires either email or phone to be provided. Formats phone number if provided.
+- **`MemberLoginForm`**: one `identifier` box, "Email atau nomor HP", used by `/masuk`, `/check-in` and `/check-out` through `templates/accounts/_login_box.html`, so the three never drift. The matched member is `form.member`. It replaced an email box, the word "ATAU", and a separate `+62` box; the labels on that card were white on white, so members saw two unlabelled boxes.
+- **`find_member(identifier)`**: the one lookup behind that box. Anything with an `@` is an email: the exact spelling first, then case-insensitive (24 members signed up with capitals), and two rows that differ only in case find nobody rather than guess between them. Anything else is a number, normalised with `member_style_phone()` (0812, 812, +62 812, 0062 812), under `MIN_PHONE_DIGITS` (9) finds nobody, and matches every way numbers have been stored: `62812...` (almost everyone), `0812...` and `ID812...` (a handful of older rows, whose owners could never log in by phone before).
 
 ### Views (`accounts/views.py`)
-- **`member_login`** (`/masuk/`): Accepts POST data from `MemberLoginForm`. 
-  - Validates that either email or phone was provided.
-  - If email provided, finds `Member` by email.
-  - If phone provided (and no email), finds `Member` by formatted `phone_number`.
-  - On success, stores `member.email` in session (`member_email`) and redirects to details.
-  - On failure (not found, invalid form), shows error message.
+- **`member_login`** (`/masuk/`): Accepts POST data from `MemberLoginForm`. On success, `log_member_in()` and redirect to `/akun`; otherwise the box re-renders with the error under it.
+- **`log_member_in(request, member)`**: the one way a member gets logged in (login, check-in, check-out, signup). It cycles the session key before storing `member_email`, so a session key planted before the login does not carry over (session fixation).
 - **`member_logout`** (`/keluar/`): Logs the member out by clearing the session.
-- **`MemberSignUpView`** (`/daftar/`): After successful signup, stores `member.email` in session (`member_email`) for auto-login.
+- **`MemberSignUpView`** (`/daftar/`): After successful signup, logs the new member in with `log_member_in()`.
 - **`MemberDetailView`** (`/akun/`): Member's own page. Each history section is trimmed (5 visits, 5 payments, 10 past classes, see the `*_LIMIT` constants in `accounts/views.py`). When there is more than that, a "Lihat Semua ..." button with the total count links to the full history page.
 - **Account page extras** (all in `MemberDetailView`):
   - **Class countdown**: each upcoming class carries a `when_label` ("40 menit lagi", "3 jam lagi", "Besok 16:00", "3 hari lagi", "Sedang berlangsung") plus `when_soon`, which turns the badge red for anything today or already running. Built by `_class_when_label()`.
@@ -600,8 +597,7 @@ Members open `/akun` constantly, so the site can live on their home screen inste
 - **`templates/accounts/_install_hint.html`** is a dismissible strip at the bottom of `/akun`. It starts `hidden` and is only revealed by its own script, since the whole instruction is about a browser menu and there is nothing to say with JS off. Hidden when already running standalone (`display-mode: standalone`, or `navigator.standalone` on iOS), and dismissal is remembered in `localStorage`. Where the browser fires `beforeinstallprompt` it shows a real "Simpan" button that triggers the native prompt; otherwise it explains the manual route, with no browser named (the same phone may be on Safari or Chrome).
 
 ### Templates
-- `login.html`: Updated to include email and phone number fields (with country code).
-- `check_in.html`: Updated to include email and phone number fields (with country code).
+- `login.html`, `visits/check_in.html`: a heading plus `_login_box.html`, on the `fm-*` form styles (Kotak Masukkan, Buku Tamu). Both `noindex`.
 - `signup.html`, `member_edit.html`: Include country code and phone number fields.
 - `member_history.html`: Full history page. Segmented tab bar, summary tiles, a calendar section, month groups, and a floating back-to-top button for long lists. Below `576px` the tab bar drops its icons: three labels plus three counts plus three icons clear each other by a couple of pixels on a phone, which reads as the tabs being glued together.
 

@@ -1,60 +1,15 @@
 {% extends 'base.html' %}
-{% load widget_tweaks %}
 
-{% block title %}Masuk - Mulai Gym{% endblock %}
+{% block title %}Masuk | Mulai Gym{% endblock %}
+{% block extra_head %}<meta name="robots" content="noindex">{% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-6 col-lg-5">
-            <div class="card border-0 shadow-sm rounded-3 my-5">
-                <div class="card-body p-4 p-md-5">
-                    <h2 class="text-center mb-4">Masuk</h2>
-                    
-                    {% if messages %}
-                        {% for message in messages %}
-                            <div class="alert alert-danger">
-                                <strong><em>{{ message }}</em></strong>
-                            </div>
-                        {% endfor %}
-                    {% endif %}
-                    
-                    <form method="post">
-                        {% csrf_token %}
-                        <p class="text-center text-muted mb-4">Masuk dengan Email atau Nomor Telepon</p>
-                        
-                        <div class="mb-4">
-                            <label for="{{ form.email.id_for_label }}" class="form-label">Email</label>
-                            {{ form.email.errors }}
-                            {{ form.email|add_class:"form-control form-control-lg" }}
-                        </div>
-                        
-                        <p class="text-center my-4">ATAU</p>
-                        
-                        <div class="mb-4">
-                            <label class="form-label">Nomor Telepon</label>
-                            <div class="d-flex">
-                                {{ form.country_code|add_class:"form-control form-control-lg" }}
-                                {{ form.phone_number_display|add_class:"form-control form-control-lg" }}
-                            </div>
-                            {% if form.country_code.errors %}
-                                <div class="text-danger font-italic">{{ form.country_code.errors }}</div>
-                            {% endif %}
-                            {% if form.phone_number_display.errors %}
-                                <div class="text-danger font-italic">{{ form.phone_number_display.errors }}</div>
-                            {% endif %}
-                        </div>
-                        
-                        <div class="d-grid mt-5">
-                            <button type="submit" class="btn btn-primary btn-lg">Masuk</button>
-                        </div>
-                    </form>
-                    <div class="mt-4 text-center">
-                        <p>Belum punya akun? <a href="{% url 'signup' %}" class="text-primary fw-bold">Daftar sekarang</a></p>
-                    </div>
-                </div>
-            </div>
-        </div>
+<div class="hp fm">
+    <div class="hp-wrap fm-wrap fm-narrow">
+        <p class="hp-kicker">Masuk</p>
+        <h1 class="fm-title">Halo lagi, <em>yuk masuk.</em></h1>
+        <p class="hp-lede">Cukup sekali di HP ini. Habis itu kamu tetap masuk, tinggal buka aja.</p>
+        {% include "accounts/_login_box.html" with button="Masuk" %}
     </div>
 </div>
-{% endblock %} 
+{% endblock %}

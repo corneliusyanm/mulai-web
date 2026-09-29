@@ -1,54 +1,19 @@
 {% extends 'base.html' %}
-{% load widget_tweaks %}
 
-{% block title %}Check In - Mulai Gym{% endblock %}
+{% block title %}Check-in | Mulai Gym{% endblock %}
+{% block extra_head %}<meta name="robots" content="noindex">{% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-6 col-lg-5">
-            <div class="card border-0 shadow-sm rounded-3 my-5">
-                <div class="card-body p-4 p-md-5">
-                    <h2 class="text-center mb-4">Check In</h2>
-                    
-                    {% if messages %}
-                        {% for message in messages %}
-                            <div class="alert alert-danger">
-                                <strong><em>{{ message }}</em></strong>
-                            </div>
-                        {% endfor %}
-                    {% endif %}
-                    
-                    <form method="post">
-                        {% csrf_token %}
-                        <p class="text-center text-muted mb-4">Check In dengan Email atau Nomor Telepon</p>
-                        
-                        <div class="mb-4">
-                            <label for="email" class="form-label">Email</label>
-                            <input type="email" class="form-control form-control-lg" id="email" name="email">
-                        </div>
-                        
-                        <p class="text-center my-4">ATAU</p>
-                        
-                        <div class="mb-4">
-                            <label class="form-label">Nomor Telepon</label>
-                            <div class="d-flex">
-                                <input type="text" class="form-control form-control-lg" id="country_code" name="country_code" value="+62" style="width: 100px;">
-                                <input type="text" class="form-control form-control-lg" id="phone" name="phone" style="flex: 1; margin-left: 8px;">
-                            </div>
-                        </div>
-                        
-                        <div class="d-grid mt-5">
-                            <button type="submit" class="btn btn-primary btn-lg">Check In</button>
-                        </div>
-                    </form>
-                    
-                    <div class="mt-4 text-center">
-                        <p>Belum punya akun? <a href="{% url 'signup' %}" class="text-primary fw-bold">Daftar sekarang</a></p>
-                    </div>
-                </div>
-            </div>
-        </div>
+{% comment %}
+Only seen the first time on a phone: after this the session remembers the
+member, and scanning the QR at the desk checks them in straight away.
+{% endcomment %}
+<div class="hp fm">
+    <div class="hp-wrap fm-wrap fm-narrow">
+        <p class="hp-kicker">Check-in</p>
+        <h1 class="fm-title">Halo, <em>yuk check-in.</em></h1>
+        <p class="hp-lede">Cukup sekali di HP ini. Habis itu tinggal scan QR-nya, langsung masuk.</p>
+        {% include "accounts/_login_box.html" with button="Check-in" %}
     </div>
 </div>
-{% endblock %} 
+{% endblock %}

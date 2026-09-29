@@ -1,0 +1,26 @@
+{% load widget_tweaks %}
+{% comment %}
+One box for email or phone, shared by /masuk, /check-in and /check-out so the
+three can never look or behave differently. Posts back to the page it is on.
+Needs `form` (MemberLoginForm) and `button` (the submit label).
+{% endcomment %}
+<form method="post" class="fm-card" novalidate>
+    {% csrf_token %}
+    {% if messages %}
+        {% for message in messages %}
+            <p class="fm-alert" role="alert">{{ message }}</p>
+        {% endfor %}
+    {% endif %}
+    <div class="fm-field">
+        <label class="fm-label" for="{{ form.identifier.id_for_label }}">{{ form.identifier.label }}</label>
+        {% if form.identifier.errors %}
+            {{ form.identifier|add_class:"fm-input"|attr:"aria-invalid:true"|attr:"aria-describedby:login-error" }}
+            <p class="fm-error" id="login-error">{{ form.identifier.errors|striptags }}</p>
+        {% else %}
+            {{ form.identifier|add_class:"fm-input" }}
+        {% endif %}
+        <p class="fm-help">Yang kamu pakai waktu daftar. Nomor boleh pakai 0812 atau +62.</p>
+    </div>
+    <button type="submit" class="hp-btn hp-btn-primary fm-submit">{{ button }}</button>
+    <p class="fm-note">Belum punya akun? <a href="{% url 'signup' %}">Daftar di sini</a>, atau tanya admin.</p>
+</form>

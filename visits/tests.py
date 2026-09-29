@@ -120,7 +120,7 @@ class VisitViewsTest(TestCase):
         redirected to the success page.
         """
         response = self.client.post(
-            reverse("check_in_page"), {"email": self.active_member.email}
+            reverse("check_in_page"), {"identifier": self.active_member.email}
         )
         self.assertRedirects(response, reverse("check_in_success"))
         self.assertTrue(
@@ -156,7 +156,7 @@ class VisitViewsTest(TestCase):
         """
         Visit.objects.create(member=self.active_member)
         response = self.client.post(
-            reverse("check_in_page"), {"email": self.active_member.email}
+            reverse("check_in_page"), {"identifier": self.active_member.email}
         )
         self.assertRedirects(response, reverse("check_in_success"))
         # Should only be one active visit
@@ -172,7 +172,7 @@ class VisitViewsTest(TestCase):
         An inactive member cannot check in and is shown a failure page.
         """
         response = self.client.post(
-            reverse("check_in_page"), {"email": self.inactive_member.email}
+            reverse("check_in_page"), {"identifier": self.inactive_member.email}
         )
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "visits/check_in_failed.html")
@@ -1802,3 +1802,58 @@ class ClassReviewDashboardTest(TestCase):
         self._review(self.members[0], rating=ClassReview.MANTAP)
 
         self.assertEqual(review_dashboard_label(), "Penilaian Kelas")
+
+
+def _gym_member(email="budi@example.com", phone="6281234567890", **extra):
+    fields = dict(
+        name="Budi Santoso",
+        email=email,
+        phone_number=phone,
+        gender="M",
+        age=25,
+        height=170,
+        weight=65,
+        years_of_working_out="belum pernah",
+        goals="sehat",
+        know_mulai_gym_from="teman",
+        active_until=timezone.now() + timedelta(days=30),
+    )
+    fields.update(extra)
+    return Member.objects.create(**fields)
+
+
+class CheckInLoginBoxTest(TestCase):
+    """A phone that does not know the member yet gets the same box as /masuk."""
+
+    def setUp(self):
+        self.budi = _gym_member()
+
+    def test_a_number_in_the_box_logs_in_and_checks_in(self):
+        response = self.client.post(reverse("check_in_page"), {"identifier": "0812 3456 7890"})
+
+        self.assertRedirects(response, reverse("check_in_success"))
+        self.assertEqual(self.client.session["member_email"], self.budi.email)
+        self.assertTrue(Visit.objects.filter(member=self.budi, check_out_time__isnull=True).exists())
+
+    def test_nobody_found_stays_on_the_box_and_checks_nobody_in(self):
+        response = self.client.post(reverse("check_in_page"), {"identifier": "0899000000"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Belum ketemu")
+        self.assertFalse(Visit.objects.exists())
+
+    def test_the_box_is_labelled(self):
+        response = self.client.get(reverse("check_in_page"))
+
+        self.assertContains(response, ">Email atau nomor HP</label>")
+        self.assertContains(response, 'name="identifier"')
+
+    def test_a_session_for_a_deleted_member_falls_back_to_the_box(self):
+        session = self.client.session
+        session["member_email"] = "gone@example.com"
+        session.save()
+
+        response = self.client.get(reverse("check_in_page"))
+
+        self.assertContains(response, 'name="identifier"')
+        self.assertNotIn("member_email", self.client.session)

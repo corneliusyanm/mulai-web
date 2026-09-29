@@ -5519,6 +5519,7 @@ section {
 
 .fm-input::placeholder { color: #9a9ac0; }
 .fm-input:focus { outline: none; border-color: var(--primary); background: #fff; }
+.fm-input[aria-invalid="true"] { border-color: #d42b3a; }
 .fm-textarea { min-height: 140px; resize: vertical; }
 
 .fm-error { margin: 6px 0 0; color: #d42b3a; font-size: 0.88rem; font-weight: 600; }
@@ -5553,6 +5554,20 @@ section {
 .fm-row { display: grid; gap: 0 14px; }
 .fm-submit { width: 100%; margin-top: 4px; }
 .fm-note { margin: 12px 0 0; color: var(--hp-muted); font-size: 0.88rem; text-align: center; }
+.fm-note a { color: var(--primary); font-weight: 700; }
+
+/* login, check-in and check-out: one box, so a narrower column */
+.fm-narrow { max-width: 480px; }
+
+.fm-alert {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #fff1f2;
+  color: #b4232f;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
 
 /* Kamu bilang, kami lakukan */
 .fm-wins { margin-top: 40px; }

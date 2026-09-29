@@ -7,6 +7,10 @@ from .models import Member, Tamu, Masukkan
 BELUM_VARIATIONS = ["belum", "belom", "blm", "blum", "belm", "blon", "belon"]
 TAHUN_VARIATIONS = ["tahun", "thn", "year"]
 
+# Shortest Indonesian mobile number with its 62 prefix. Anything shorter is a
+# typo, and matching it could only find the wrong person.
+MIN_PHONE_DIGITS = 9
+
 
 class MasukkanForm(forms.ModelForm):
     class Meta:
@@ -88,7 +92,7 @@ class TamuForm(forms.ModelForm):
         membership without rewriting both sides first.
         """
         digits = member_style_phone(self.cleaned_data.get("phone_number", ""))
-        if len(digits) < 9:
+        if len(digits) < MIN_PHONE_DIGITS:
             raise forms.ValidationError("Nomornya kayaknya kurang, coba cek lagi ya.")
         return digits
 
@@ -316,83 +320,63 @@ class MemberSignUpForm(forms.ModelForm):
         return instance
 
 
+def find_member(identifier):
+    """The member an email or a phone number belongs to, or None.
+
+    One box on /masuk, /check-in and /check-out takes either, since members
+    remember one or the other. Emails match regardless of case (24 members
+    signed up with capitals), and a number matches however it was typed and
+    however it was stored: most are "62812...", but a few older rows are
+    "0812..." or "ID812...", and those members could never log in by phone.
+    """
+    raw = (identifier or "").strip()
+    if not raw:
+        return None
+
+    if "@" in raw:
+        exact = Member.objects.filter(email=raw).first()
+        if exact:
+            return exact
+        # Two rows can differ only in case; guessing between them would log
+        # somebody into a stranger's account, so that case finds nobody.
+        matches = list(Member.objects.filter(email__iexact=raw)[:2])
+        return matches[0] if len(matches) == 1 else None
+
+    digits = member_style_phone(raw)
+    if len(digits) < MIN_PHONE_DIGITS:
+        return None
+    local = digits[2:] if digits.startswith("62") else digits
+    candidates = [digits, "0" + local, "ID" + local, local]
+    found = {m.phone_number: m for m in Member.objects.filter(phone_number__in=candidates)}
+    return next((found[c] for c in candidates if c in found), None)
+
+
 class MemberLoginForm(forms.Form):
-    email = forms.EmailField(label="Email", required=False)
-    country_code = forms.CharField(
-        max_length=5,
-        initial="+62",
-        label="Country Code",
-        required=False,
-        widget=forms.TextInput(attrs={"style": "width: 80px; display: inline-block;"}),
-    )
-    phone_number_display = forms.CharField(
-        max_length=15,
-        label="Phone Number",
-        required=False,
+    """Email or phone number in one box. The matched member is `self.member`."""
+
+    identifier = forms.CharField(
+        label="Email atau nomor HP",
+        max_length=254,
+        error_messages={"required": "Isi email atau nomor HP kamu dulu ya."},
         widget=forms.TextInput(
             attrs={
-                "style": "width: calc(100% - 95px); display: inline-block; margin-left: 5px;"
+                "autocomplete": "username",
+                "autocapitalize": "none",
+                "autocorrect": "off",
+                "spellcheck": "false",
+                "placeholder": "0812... atau nama@email.com",
             }
         ),
     )
 
-    def clean(self):
-        cleaned_data = super().clean()
-        email = cleaned_data.get("email")
-        country_code = cleaned_data.get("country_code", "").strip()
-        phone_number = cleaned_data.get("phone_number_display", "").strip()
-
-        # Check if at least one of email or phone number is provided
-        if not email and not phone_number:
-            raise ValidationError("Mohon masukkan email atau nomor telepon")
-
-        # If phone number is provided, format it properly
-        if phone_number:
-            # Check if phone number contains invalid characters
-            allowed_chars = set("0123456789- ")
-            if not all(char in allowed_chars for char in phone_number):
-                raise ValidationError(
-                    {
-                        "phone_number_display": "Phone number should only contain numbers, spaces, and hyphens"
-                    }
-                )
-
-            # Clean up the phone number by removing spaces and hyphens
-            cleaned_phone = "".join(char for char in phone_number if char.isdigit())
-
-            # Validate that there's actual digits after cleanup
-            if not cleaned_phone:
-                raise ValidationError(
-                    {"phone_number_display": "Phone number must contain digits"}
-                )
-
-            # Use the cleaned phone number for further processing
-            phone_number = cleaned_phone
-
-            # Validate country code format
-            if not country_code:
-                country_code = "+62"  # Default
-            elif not country_code.startswith("+"):
-                country_code = "+" + country_code
-
-            # Remove any '+' sign from the phone number part
-            if phone_number.startswith("+"):
-                phone_number = phone_number[1:]
-
-            # Remove country code from phone number if it's there
-            if country_code.startswith("+") and phone_number.startswith(
-                country_code[1:]
-            ):
-                phone_number = phone_number[len(country_code) - 1 :]
-
-            # Remove leading zeros if any
-            phone_number = phone_number.lstrip("0")
-
-            # Create the standardized phone number, removing the '+' from country code
-            final_phone = country_code.replace("+", "") + phone_number
-            cleaned_data["formatted_phone"] = final_phone
-
-        return cleaned_data
+    def clean_identifier(self):
+        identifier = self.cleaned_data["identifier"].strip()
+        self.member = find_member(identifier)
+        if self.member is None:
+            raise ValidationError(
+                "Belum ketemu. Coba cek lagi email atau nomor HP-nya, atau tanya admin ya."
+            )
+        return identifier
 
 
 class MemberEditForm(forms.ModelForm):

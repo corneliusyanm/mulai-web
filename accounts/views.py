@@ -285,45 +285,31 @@ class MemberSignUpView(CreateView):
     success_url = reverse_lazy("signup_success")
 
     def form_valid(self, form):
-        member = form.save()
-        # Log the member in after signup by storing their email
-        self.request.session["member_email"] = member.email
-        return super().form_valid(form)
+        response = super().form_valid(form)
+        log_member_in(self.request, self.object)
+        return response
 
 
 def signup_success(request):
     return render(request, "accounts/signup_success.html")
 
 
+def log_member_in(request, member):
+    """Remember this member on this phone, under a fresh session key.
+
+    The new key is what stops session fixation: a key somebody planted before
+    the login does not carry over into the logged-in session.
+    """
+    request.session.cycle_key()
+    request.session["member_email"] = member.email
+
+
 def member_login(request):
     if request.method == "POST":
         form = MemberLoginForm(request.POST)
         if form.is_valid():
-            email = form.cleaned_data["email"]
-            formatted_phone = form.cleaned_data.get("formatted_phone")
-
-            try:
-                # First try to find by email if provided
-                if email:
-                    member = Member.objects.get(email=email)
-                # If no email or member not found by email, try by phone
-                elif formatted_phone:
-                    member = Member.objects.get(phone_number=formatted_phone)
-                else:
-                    raise Member.DoesNotExist
-
-                # If we get here, we found a member
-                request.session["member_email"] = member.email
-                return redirect("member_details")
-
-            except Member.DoesNotExist:
-                messages.error(
-                    request,
-                    "Member tidak ditemukan. Silakan periksa kembali email atau nomor telepon Anda.",
-                )
-        else:
-            for error in form.non_field_errors():
-                messages.error(request, error)
+            log_member_in(request, form.member)
+            return redirect("member_details")
     else:
         form = MemberLoginForm()
     return render(request, "accounts/login.html", {"form": form})
